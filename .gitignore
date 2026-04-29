@@ -1,0 +1,30 @@
+# Runtime secrets
+.env
+.env.local
+*.local
+
+# Python leftovers from the removed prototype
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Vue
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Java / Spring Boot
+server/target/
+*.class
+
+# Generated runtime artifacts
+output/
+tmp/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

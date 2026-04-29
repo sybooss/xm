@@ -1,0 +1,20 @@
+:root {
+  --app-bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --line: #d8dee8;
+  --line-soft: #e7ebf0;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --brand: #2563eb;
+  --brand-soft: #eff6ff;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --info: #0284c7;
+  --sidebar: #111827;
+  --sidebar-muted: #9ca3af;
+  --radius: 8px;
+  --header-height: 56px;
+  --sidebar-width: 232px;
+}

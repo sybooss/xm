@@ -1,0 +1,40 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: returns-assistant
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/test3?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:1234}
+
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    org.springframework.jdbc.support.JdbcTransactionManager: info
+
+app:
+  ai:
+    enabled: ${AI_ENABLED:false}
+    provider: openai-compatible
+    model-name: ${OPENAI_MODEL:gpt-4o-mini}
+    model-options: ${OPENAI_MODEL_OPTIONS:gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini}
+    fallback-enabled: true
+
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      model-name: ${OPENAI_MODEL:gpt-4o-mini}
+      temperature: ${OPENAI_TEMPERATURE:0.2}
+      max-retries: ${OPENAI_MAX_RETRIES:2}
+      timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:30}
+      log-requests: false
+      log-responses: false
