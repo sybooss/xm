@@ -12,6 +12,10 @@ export const useChatStore = defineStore('chat', () => {
   const sending = ref(false)
 
   const currentSessionId = computed(() => currentSession.value?.id)
+  const lastUserQuestion = computed(() => {
+    const userMessages = messages.value.filter(item => item.role === 'USER')
+    return userMessages.length ? userMessages[userMessages.length - 1].content : ''
+  })
 
   async function loadSessions(params = {}) {
     loading.value = true
@@ -109,6 +113,13 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  function mergeTicket(ticket) {
+    insight.value = {
+      ...insight.value,
+      ticket
+    }
+  }
+
   return {
     sessions,
     total,
@@ -118,9 +129,11 @@ export const useChatStore = defineStore('chat', () => {
     loading,
     sending,
     currentSessionId,
+    lastUserQuestion,
     loadSessions,
     startSession,
     loadSession,
-    ask
+    ask,
+    mergeTicket
   }
 })

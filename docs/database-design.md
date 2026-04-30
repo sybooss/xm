@@ -35,6 +35,8 @@ erDiagram
     chat_message ||--o{ retrieval_log : searches
     chat_message ||--o{ ai_call_log : calls
     chat_message ||--o{ process_trace : traces
+    chat_session ||--o{ service_ticket : escalates
+    demo_order ||--o{ service_ticket : relates
     knowledge_category ||--o{ knowledge_doc : contains
     knowledge_doc ||--o{ retrieval_log : hit_by
 ```
@@ -362,13 +364,48 @@ erDiagram
 - `KNOWLEDGE_RETRIEVAL`：检索知识库
 - `RULE_DECISION`：执行业务规则判断
 - `AI_GENERATION`：调用 LangChain4j 生成回复
-- `FALLBACK_REPLY`：触发本地模板兜底
+- `HUMAN_TICKET_CHECK`：判断是否需要人工工单
+- `TICKET_CREATED`：创建或复用人工工单
 - `FINAL_REPLY`：返回最终回复
 
 建议索引：
 
 - `idx_trace_message(message_id)`
 - `idx_trace_session(session_id, created_at)`
+
+### 4.12 人工工单表 `service_ticket`
+
+用途：承接投诉、人工客服、物流异常升级等场景，让智能客服从“回答问题”扩展为“生成可处理的服务单据”。
+
+| 字段名 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | BIGINT | 主键，自增 | 工单 ID |
+| ticket_no | VARCHAR(40) | 唯一，非空 | 工单号 |
+| session_id | BIGINT | 外键，非空 | 来源会话 |
+| message_id | BIGINT | 外键，可空 | 触发工单的用户消息 |
+| order_id | BIGINT | 外键，可空 | 关联订单 |
+| user_id | BIGINT | 外键，可空 | 关联用户 |
+| intent_code | VARCHAR(50) | 可空 | 触发意图 |
+| priority | VARCHAR(20) | 非空 | 优先级 |
+| status | VARCHAR(20) | 非空 | 处理状态 |
+| customer_issue | VARCHAR(500) | 非空 | 用户原始诉求 |
+| ai_summary | VARCHAR(1000) | 可空 | AI 生成的工单摘要 |
+| suggested_action | VARCHAR(1000) | 可空 | 给人工客服的处理建议 |
+| assigned_to | VARCHAR(80) | 可空 | 处理人 |
+| resolved_at | DATETIME | 可空 | 解决时间 |
+| deleted | TINYINT | 非空 | 逻辑删除 |
+
+建议枚举：
+
+- `priority`：`LOW`、`NORMAL`、`HIGH`、`URGENT`
+- `status`：`PENDING`、`PROCESSING`、`RESOLVED`、`CLOSED`
+
+建议索引：
+
+- `idx_ticket_session(session_id, status)`
+- `idx_ticket_order(order_id)`
+- `idx_ticket_status(status, priority, created_at)`
+- `idx_ticket_intent(intent_code)`
 
 ## 5. 字段命名与公共规范
 
@@ -439,12 +476,13 @@ erDiagram
 6. `retrieval_log` 保存命中文档及快照。
 7. `process_trace` 保存每个处理步骤。
 8. `ai_call_log` 记录 LangChain4j 是否参与生成。
-9. `chat_message` 保存最终系统回复。
+9. 如果用户要求投诉或转人工，`service_ticket` 保存人工工单。
+10. `chat_message` 保存最终系统回复。
 
 如果 AI 调用失败：
 
 1. `ai_call_log.status` 写入 `FAILED`。
-2. `process_trace` 增加 `FALLBACK_REPLY` 步骤。
+2. `process_trace` 在 `AI_GENERATION` 步骤记录失败和兜底信息。
 3. `chat_message.source_type` 写入 `FALLBACK`。
 4. 系统仍然返回基于规则和知识库的稳定回复。
 
@@ -467,6 +505,7 @@ erDiagram
 第三批完成 AI 增强和展示：
 
 - `ai_call_log`
+- `service_ticket`
 - `after_sale_record`
 - `user_account`
 
@@ -480,4 +519,3 @@ erDiagram
 - `seed.sql`：保存分类、知识文档、演示用户、演示订单和测试会话。
 
 如果使用 MyBatis Plus，可以让实体类字段和本文档保持一致；如果使用 JPA，也应以本文档为准建立实体关系，避免后端代码和数据库说明不一致。
-

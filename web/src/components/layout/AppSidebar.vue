@@ -25,6 +25,10 @@
         <el-icon><Tickets /></el-icon>
         <span>订单管理</span>
       </el-menu-item>
+      <el-menu-item index="/service-tickets">
+        <el-icon><Service /></el-icon>
+        <span>人工工单</span>
+      </el-menu-item>
       <el-menu-item index="/logs">
         <el-icon><Document /></el-icon>
         <span>日志中心</span>
@@ -39,7 +43,7 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
-import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Tickets } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Service, Tickets } from '@element-plus/icons-vue'
 
 const route = useRoute()
 </script>

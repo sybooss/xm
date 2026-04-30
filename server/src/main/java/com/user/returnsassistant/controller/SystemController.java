@@ -93,6 +93,18 @@ public class SystemController {
                         Map.of("code", "POLICY", "name", "平台规则"),
                         Map.of("code", "SCRIPT", "name", "客服话术"),
                         Map.of("code", "NOTICE", "name", "通知说明")
+                ),
+                "ticketStatuses", List.of(
+                        Map.of("code", "PENDING", "name", "待处理"),
+                        Map.of("code", "PROCESSING", "name", "处理中"),
+                        Map.of("code", "RESOLVED", "name", "已解决"),
+                        Map.of("code", "CLOSED", "name", "已关闭")
+                ),
+                "ticketPriorities", List.of(
+                        Map.of("code", "LOW", "name", "低"),
+                        Map.of("code", "NORMAL", "name", "普通"),
+                        Map.of("code", "HIGH", "name", "高"),
+                        Map.of("code", "URGENT", "name", "紧急")
                 )
         ));
     }

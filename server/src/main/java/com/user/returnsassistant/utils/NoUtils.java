@@ -18,6 +18,10 @@ public class NoUtils {
         return "AS" + now() + random();
     }
 
+    public static String ticketNo() {
+        return "T" + now() + random();
+    }
+
     private static String now() {
         return LocalDateTime.now().format(FORMATTER);
     }

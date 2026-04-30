@@ -1181,3 +1181,52 @@ public class ChatSessionController {
 - `assistantMessage.sourceType=FALLBACK`：回复来自本地规则兜底。
 
 因此真实模型接入不会改变已有 RESTful 路径，只扩展 AI 状态字段和日志内容。
+
+## 15. 高分增强接口
+
+### 15.1 `POST /chat-sessions/{id}/messages`
+
+聊天主接口在原有字段基础上新增三类可解释结果：
+
+| 字段 | 说明 |
+| --- | --- |
+| `context` | 多轮上下文解析结果，包含 `followUp`、`inheritedIntent`、`resolvedIntent`、`summary` |
+| `trace` | 当前会话处理轨迹，前端按最新消息展示上下文、意图、订单、知识库、AI、工单、最终回复节点 |
+| `ticket` | 人工工单判定结果，包含是否需要工单、是否已创建、工单号、优先级、状态和处理建议 |
+
+示例响应片段：
+
+```json
+{
+  "context": {
+    "followUp": true,
+    "inheritedIntent": "RETURN_APPLY",
+    "resolvedIntent": "REFUND_PROGRESS",
+    "method": "HYBRID",
+    "summary": "上一轮意图：RETURN_APPLY；最近用户问题：这个订单能不能退货？"
+  },
+  "ticket": {
+    "created": true,
+    "needed": true,
+    "ticketNo": "T202604301230001234",
+    "priority": "HIGH",
+    "status": "PENDING"
+  }
+}
+```
+
+### 15.2 人工工单资源
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/service-tickets` | 分页查询工单，支持 `keyword`、`status`、`priority`、`intentCode` |
+| `POST` | `/service-tickets` | 手动创建工单 |
+| `GET` | `/service-tickets/{id}` | 查询单个工单 |
+| `PUT` | `/service-tickets/{id}` | 更新工单状态、优先级、处理人和处理建议 |
+| `DELETE` | `/service-tickets/{id}` | 逻辑删除工单 |
+| `GET` | `/chat-sessions/{id}/service-tickets` | 查询某个会话的工单 |
+| `POST` | `/chat-sessions/{id}/service-tickets` | 从某个会话手动转人工 |
+
+工单状态：`PENDING`、`PROCESSING`、`RESOLVED`、`CLOSED`。
+
+工单优先级：`LOW`、`NORMAL`、`HIGH`、`URGENT`。

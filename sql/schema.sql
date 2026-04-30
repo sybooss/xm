@@ -216,6 +216,39 @@ CREATE TABLE IF NOT EXISTS ai_call_log (
   INDEX idx_ai_status (status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS service_ticket (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  ticket_no VARCHAR(40) NOT NULL,
+  session_id BIGINT NOT NULL,
+  message_id BIGINT NULL,
+  order_id BIGINT NULL,
+  user_id BIGINT NULL,
+  intent_code VARCHAR(50) NULL,
+  priority VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  customer_issue VARCHAR(500) NOT NULL,
+  ai_summary VARCHAR(1000) NULL,
+  suggested_action VARCHAR(1000) NULL,
+  assigned_to VARCHAR(80) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  resolved_at DATETIME NULL,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  CONSTRAINT uk_ticket_no UNIQUE (ticket_no),
+  CONSTRAINT fk_ticket_session FOREIGN KEY (session_id) REFERENCES chat_session(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ticket_message FOREIGN KEY (message_id) REFERENCES chat_message(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ticket_order FOREIGN KEY (order_id) REFERENCES demo_order(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ticket_user FOREIGN KEY (user_id) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT ck_ticket_intent CHECK (intent_code IS NULL OR intent_code IN ('PRE_SALE', 'RETURN_APPLY', 'EXCHANGE_APPLY', 'REFUND_PROGRESS', 'LOGISTICS_QUERY', 'RULE_EXPLAIN', 'COMPLAINT_TRANSFER')),
+  CONSTRAINT ck_ticket_priority CHECK (priority IN ('LOW', 'NORMAL', 'HIGH', 'URGENT')),
+  CONSTRAINT ck_ticket_status CHECK (status IN ('PENDING', 'PROCESSING', 'RESOLVED', 'CLOSED')),
+  CONSTRAINT ck_ticket_deleted CHECK (deleted IN (0, 1)),
+  INDEX idx_ticket_session (session_id, status),
+  INDEX idx_ticket_order (order_id),
+  INDEX idx_ticket_status (status, priority, created_at),
+  INDEX idx_ticket_intent (intent_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS process_trace (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   session_id BIGINT NOT NULL,

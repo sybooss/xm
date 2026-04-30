@@ -10,7 +10,9 @@
 - 订单与售后：内置订单样例，支持订单查询、售后记录维护和订单上下文融合。
 - AI 接入：通过 LangChain4j 调用 OpenAI-compatible 接口，可接入 OpenAI 或本地 sub2api 网关。
 - 模型切换：前端顶部可运行时切换模型，例如 `gpt-4o-mini`、`gpt-4.1-mini`。
-- 日志追踪：记录 AI 调用日志、知识检索日志和处理轨迹，便于调试和答辩展示。
+- 多轮追问：结合会话摘要和最近消息承接上一轮语境，支持退货后追问退款、物流异常后追问投诉等连续咨询。
+- 人工工单：投诉、人工客服和异常升级场景可自动生成工单，也支持客服手动转人工。
+- 日志追踪：记录 AI 调用日志、知识检索日志和可视化处理轨迹，便于调试和答辩展示。
 
 ## 技术栈
 
@@ -189,6 +191,7 @@ http://localhost:5173
 | 系统总览 | `/dashboard` | 查看数据库、AI、模型和快速入口 |
 | 知识库 | `/knowledge` | 管理知识文档，调试检索 |
 | 订单管理 | `/orders` | 查看订单和售后上下文 |
+| 人工工单 | `/service-tickets` | 查看人工转接工单、优先级、AI 摘要和处理状态 |
 | 日志中心 | `/logs` | 查看 AI 调用日志、检索日志、处理轨迹 |
 | AI 测试 | `/ai-test` | 测试真实模型连通性 |
 
@@ -218,6 +221,14 @@ DELETE /knowledge-docs/{id}
 GET    /orders
 GET    /orders/no/{orderNo}
 GET    /after-sale-records
+
+GET    /service-tickets
+POST   /service-tickets
+GET    /service-tickets/{id}
+PUT    /service-tickets/{id}
+DELETE /service-tickets/{id}
+GET    /chat-sessions/{id}/service-tickets
+POST   /chat-sessions/{id}/service-tickets
 
 GET    /ai-call-logs
 GET    /retrieval-logs
@@ -315,5 +326,7 @@ mvn -q -DskipTests package
 - 后端项目文档：[docs/backend-project-doc.md](docs/backend-project-doc.md)
 - 前端项目文档：[docs/frontend-project-doc.md](docs/frontend-project-doc.md)
 - LangChain4j 接入说明：[docs/langchain4j-real-model-integration.md](docs/langchain4j-real-model-integration.md)
+- 高分增强功能设计：[docs/high-score-feature-enhancement-design.md](docs/high-score-feature-enhancement-design.md)
+- Agent 协作规则：[AGENTS.md](AGENTS.md)
 - 演示脚本：[docs/demo-script.md](docs/demo-script.md)
 - 测试用例：[docs/test-cases.md](docs/test-cases.md)

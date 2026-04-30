@@ -11,6 +11,7 @@ $created = @{
     orderId = $null
     afterSaleId = $null
     sessionId = $null
+    ticketId = $null
 }
 
 function U($codes) {
@@ -18,6 +19,8 @@ function U($codes) {
 }
 
 $chatQuestion = U @(0x8fd9,0x4e2a,0x8ba2,0x5355,0x80fd,0x4e0d,0x80fd,0x9000,0x8d27,0xff1f)
+$followQuestion = U @(0x90a3,0x9000,0x6b3e,0x591a,0x4e45,0x5230,0x8d26,0xff1f)
+$ticketQuestion = U @(0x5546,0x5bb6,0x4e00,0x76f4,0x4e0d,0x5904,0x7406,0x53ef,0x4ee5,0x8f6c,0x4eba,0x5de5,0x6295,0x8bc9,0x5417,0xff1f)
 
 function Add-Result($name, $ok, $detail = "") {
     $passed = $false
@@ -205,13 +208,44 @@ try {
     $chatOk = $chat.intent.intentCode -eq "RETURN_APPLY" -and $chat.assistantMessage.sourceType -eq "AI_ENHANCED" -and $chat.ai.status -eq "SUCCESS"
     Add-Result "chat AI enhanced flow" $chatOk "intent=$($chat.intent.intentCode), source=$($chat.assistantMessage.sourceType), ai=$($chat.ai.status)"
 
+    $followChat = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
+        content = $followQuestion
+        orderNo = "DD202604290001"
+        useAi = $true
+    }
+    $followOk = $followChat.context.followUp -eq $true -and $followChat.intent.intentCode -eq "REFUND_PROGRESS" -and $followChat.intent.method -eq "HYBRID"
+    Add-Result "multi-turn follow-up context" $followOk "followUp=$($followChat.context.followUp), intent=$($followChat.intent.intentCode), method=$($followChat.intent.method)"
+
+    $ticketChat = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
+        content = $ticketQuestion
+        orderNo = "DD202604290001"
+        useAi = $true
+    }
+    $created.ticketId = $ticketChat.ticket.id
+    $ticketOk = $ticketChat.ticket.needed -eq $true -and $null -ne $ticketChat.ticket.ticketNo -and $ticketChat.intent.intentCode -eq "COMPLAINT_TRANSFER"
+    Add-Result "chat service ticket auto handoff" $ticketOk "ticket=$($ticketChat.ticket.ticketNo), priority=$($ticketChat.ticket.priority)"
+
+    $ticketPage = Api-Get "/service-tickets?page=1&pageSize=10&status=PENDING"
+    Add-Result "service ticket page" ($ticketPage.total -ge 1) "total=$($ticketPage.total)"
+
+    $ticketDetail = Api-Get "/service-tickets/$($created.ticketId)"
+    $ticketDetail.status = "PROCESSING"
+    Api-Put "/service-tickets/$($created.ticketId)" $ticketDetail | Out-Null
+    $ticketUpdated = Api-Get "/service-tickets/$($created.ticketId)"
+    Add-Result "service ticket get/update" ($ticketUpdated.status -eq "PROCESSING") "status=$($ticketUpdated.status)"
+
+    $sessionTickets = Api-Get "/chat-sessions/$($created.sessionId)/service-tickets"
+    $sessionTicketCount = @($sessionTickets).Count
+    Add-Result "session service tickets subresource" ($sessionTicketCount -ge 1) "count=$sessionTicketCount"
+
     $messages = Api-Get "/chat-sessions/$($created.sessionId)/messages"
     $messageCount = @($messages).Count
-    Add-Result "chat messages list" ($messageCount -ge 2) "count=$messageCount"
+    Add-Result "chat messages list" ($messageCount -ge 6) "count=$messageCount"
 
     $traces = Api-Get "/chat-sessions/$($created.sessionId)/process-traces"
     $traceCount = @($traces).Count
-    Add-Result "process traces" ($traceCount -ge 5) "count=$traceCount"
+    $hasContextTrace = $null -ne ($traces | Where-Object { $_.stepName -eq "CONTEXT_RESOLVE" } | Select-Object -First 1)
+    Add-Result "process traces" ($traceCount -ge 7 -and $hasContextTrace) "count=$traceCount, contextTrace=$hasContextTrace"
 
     $aiLogs = Api-Get "/ai-call-logs?page=1&pageSize=10&status=SUCCESS"
     Add-Result "ai call logs" ($aiLogs.total -ge 1) "total=$($aiLogs.total)"
@@ -221,6 +255,7 @@ try {
 
     Api-Delete "/chat-sessions/$($created.sessionId)" | Out-Null
     $created.sessionId = $null
+    $created.ticketId = $null
     Add-Result "chat session delete" $true "deleted"
 
     Api-Delete "/after-sale-records/$($created.afterSaleId)" | Out-Null
@@ -245,6 +280,9 @@ catch {
 finally {
     try {
         if ($created.sessionId) { Api-Delete "/chat-sessions/$($created.sessionId)" | Out-Null }
+    } catch {}
+    try {
+        if ($created.ticketId) { Api-Delete "/service-tickets/$($created.ticketId)" | Out-Null }
     } catch {}
     try {
         if ($created.afterSaleId) { Api-Delete "/after-sale-records/$($created.afterSaleId)" | Out-Null }

@@ -100,6 +100,17 @@
         </section>
 
         <section>
+          <h4>上下文承接</h4>
+          <el-descriptions v-if="chatStore.insight?.context" :column="1" size="small" border>
+            <el-descriptions-item label="追问">{{ chatStore.insight.context.followUp ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="上轮意图">{{ chatStore.insight.context.inheritedIntent || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="本轮意图">{{ chatStore.insight.context.resolvedIntent || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="摘要">{{ chatStore.insight.context.summary }}</el-descriptions-item>
+          </el-descriptions>
+          <p v-else class="muted">暂无上下文</p>
+        </section>
+
+        <section>
           <h4>订单上下文</h4>
           <el-descriptions v-if="chatStore.insight?.orderContext?.hasOrder" :column="1" size="small" border>
             <el-descriptions-item label="订单号">{{ chatStore.insight.orderContext.orderNo }}</el-descriptions-item>
@@ -123,18 +134,20 @@
         </section>
 
         <section>
-          <h4>处理轨迹</h4>
-          <el-timeline v-if="chatStore.insight?.trace?.length">
-            <el-timeline-item
-              v-for="trace in chatStore.insight.trace"
-              :key="trace.id"
-              :type="trace.stepStatus === 'SUCCESS' ? 'success' : 'info'"
-              :timestamp="trace.stepStatus"
-            >
-              {{ trace.stepName }}
-            </el-timeline-item>
-          </el-timeline>
-          <p v-else class="muted">暂无轨迹</p>
+          <h4>人工转接</h4>
+          <TicketPanel
+            :ticket="chatStore.insight?.ticket"
+            :session-id="chatStore.currentSessionId"
+            :order-no="orderNo"
+            :last-question="chatStore.lastUserQuestion"
+            :intent-code="chatStore.insight?.intent?.intentCode"
+            @created="chatStore.mergeTicket"
+          />
+        </section>
+
+        <section>
+          <h4>回答过程</h4>
+          <ProcessFlowPanel :traces="chatStore.insight?.trace || []" />
         </section>
       </div>
     </aside>
@@ -145,6 +158,8 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Promotion, Search } from '@element-plus/icons-vue'
+import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
+import TicketPanel from '../components/chat/TicketPanel.vue'
 import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { useChatStore } from '../stores/chatStore'

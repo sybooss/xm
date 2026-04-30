@@ -10,6 +10,17 @@ public interface ChatMessageMapper {
     @Select("select * from chat_message where session_id=#{sessionId} order by seq_no asc")
     List<ChatMessage> listBySessionId(Long sessionId);
 
+    @Select("""
+            select * from (
+                select * from chat_message
+                where session_id=#{sessionId}
+                order by seq_no desc
+                limit #{limit}
+            ) recent
+            order by seq_no asc
+            """)
+    List<ChatMessage> listRecentBySessionId(@Param("sessionId") Long sessionId, @Param("limit") int limit);
+
     @Select("select coalesce(max(seq_no), 0) from chat_message where session_id=#{sessionId}")
     int maxSeqNo(Long sessionId);
 
