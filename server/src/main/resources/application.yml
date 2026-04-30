@@ -20,6 +20,10 @@ logging:
     org.springframework.jdbc.support.JdbcTransactionManager: info
 
 app:
+  auth:
+    admin-password: ${APP_AUTH_ADMIN_PASSWORD:123456}
+    customer-password: ${APP_AUTH_CUSTOMER_PASSWORD:123456}
+    token-hours: ${APP_AUTH_TOKEN_HOURS:8}
   ai:
     enabled: ${AI_ENABLED:false}
     provider: openai-compatible

@@ -36,6 +36,8 @@ const label = computed(() => {
     LOW: '低',
     HIGH: '高',
     URGENT: '紧急',
+    ADMIN: '管理员',
+    CUSTOMER: '客户',
     SIGNED: '已签收',
     PAID: '已支付',
     SHIPPED: '已发货',
@@ -48,7 +50,7 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED'].includes(normalized.value)) return 'success'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN'].includes(normalized.value)) return 'success'
   if (['FAILED', 'DISABLED', 'URGENT'].includes(normalized.value)) return 'danger'
   if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW'].includes(normalized.value)) return 'info'
   if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH'].includes(normalized.value)) return 'warning'

@@ -1,6 +1,7 @@
 package com.user.returnsassistant.controller;
 
 import com.user.returnsassistant.pojo.Result;
+import com.user.returnsassistant.anno.OperatorAnno;
 import com.user.returnsassistant.service.AiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,6 +52,7 @@ public class SystemController {
     }
 
     @PutMapping("/ai-models/current")
+    @OperatorAnno
     public Result switchAiModel(@RequestBody Map<String, String> request) {
         String modelName = request == null ? "" : request.get("modelName");
         try {

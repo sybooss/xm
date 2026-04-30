@@ -6,6 +6,7 @@ import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.*;
 import com.user.returnsassistant.pojo.*;
 import com.user.returnsassistant.service.AiService;
+import com.user.returnsassistant.service.AiBusinessToolService;
 import com.user.returnsassistant.service.ChatService;
 import com.user.returnsassistant.service.ServiceTicketService;
 import com.user.returnsassistant.utils.NoUtils;
@@ -41,6 +42,8 @@ public class ChatServiceImpl implements ChatService {
     private ProcessTraceMapper processTraceMapper;
     @Autowired
     private AiService aiService;
+    @Autowired
+    private AiBusinessToolService aiBusinessToolService;
     @Autowired
     private ServiceTicketService ticketService;
 
@@ -192,7 +195,13 @@ public class ChatServiceImpl implements ChatService {
                         "summary", hits.isEmpty() ? "未命中精确规则，使用本地流程模板兜底" : "已命中可用于回答的规则依据"));
 
         String localReply = buildReply(intent, order, hits, conversationContext);
-        String aiPrompt = buildAiPrompt(request.getContent(), intent, orderContext, hits, localReply, conversationContext);
+        Map<String, Object> businessTools = buildBusinessToolEvidence(order, request.getContent(), intent);
+        trace(id, userMessage.getId(), "BUSINESS_TOOL_CALLS", "SUCCESS",
+                detail("title", "LangChain4j 业务工具",
+                        "tools", businessTools.get("tools"),
+                        "summary", "已把订单查询、知识检索和工单能力封装为可调用工具，并将结果注入模型上下文"));
+
+        String aiPrompt = buildAiPrompt(request.getContent(), intent, orderContext, hits, localReply, conversationContext, businessTools);
         boolean useAi = request.getUseAi() == null || request.getUseAi();
         AiService.AiResult aiResult = useAi
                 ? aiService.generate(aiPrompt)
@@ -234,6 +243,7 @@ public class ChatServiceImpl implements ChatService {
         data.put("context", conversationContext.toResponse(intent));
         data.put("orderContext", orderContext);
         data.put("knowledgeHits", hits);
+        data.put("businessTools", businessTools);
         Map<String, Object> ai = new LinkedHashMap<>();
         ai.put("used", aiResult.used());
         ai.put("status", aiResult.status());
@@ -398,7 +408,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private String buildAiPrompt(String userMessage, IntentRecord intent, Map<String, Object> orderContext, List<KnowledgeDoc> hits,
-                                 String localReply, ConversationContext context) {
+                                 String localReply, ConversationContext context, Map<String, Object> businessTools) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("你是电商退换货智能客服系统的回复生成模块。请基于已给出的业务判断、订单上下文、对话上下文和知识库依据，生成一段简洁、可靠、可执行的中文客服回复。\n\n");
         prompt.append("回复要求：\n");
@@ -418,6 +428,7 @@ public class ChatServiceImpl implements ChatService {
                 .append(intent.getConfidence()).append("，方法 ")
                 .append(intent.getMethod()).append("\n\n");
         prompt.append("订单上下文：\n").append(orderContext).append("\n\n");
+        prompt.append("LangChain4j 业务工具结果：\n").append(businessTools).append("\n\n");
         prompt.append("知识库命中：\n");
         if (hits.isEmpty()) {
             prompt.append("无精确命中。\n");
@@ -434,6 +445,16 @@ public class ChatServiceImpl implements ChatService {
         prompt.append("\n业务规则初步判断：\n").append(localReply).append("\n\n");
         prompt.append("请输出最终客服回复，不要输出分析过程。");
         return prompt.toString();
+    }
+
+    private Map<String, Object> buildBusinessToolEvidence(DemoOrder order, String question, IntentRecord intent) {
+        String orderNo = order == null ? "" : order.getOrderNo();
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("tools", List.of("queryOrderStatus", "searchAfterSaleKnowledge", "createServiceTicket"));
+        data.put("orderStatus", aiBusinessToolService.queryOrderStatus(orderNo));
+        data.put("knowledgeEvidence", aiBusinessToolService.searchAfterSaleKnowledge(question, intent.getIntentCode()));
+        data.put("ticketTool", "当用户触发投诉、人工客服或异常升级时，业务链路会调用 createServiceTicket 创建或复用工单");
+        return data;
     }
 
     private Map<String, Object> handleTicketHandoff(ChatSession session, DemoOrder order, ChatMessage userMessage,

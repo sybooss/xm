@@ -73,6 +73,7 @@ function stepLabel(stepName, title) {
     INTENT_RECOGNIZE: '意图识别',
     ORDER_CONTEXT: '订单上下文',
     KNOWLEDGE_RETRIEVAL: '知识库检索',
+    BUSINESS_TOOL_CALLS: '业务工具调用',
     AI_GENERATION: 'AI 回答生成',
     HUMAN_TICKET_CHECK: '人工工单判定',
     TICKET_CREATED: '创建人工工单',

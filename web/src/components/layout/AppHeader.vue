@@ -6,6 +6,10 @@
     </div>
     <div class="status-line">
       <el-button :icon="Refresh" circle @click="refresh" />
+      <span class="status-item user-chip">
+        {{ authStore.user?.displayName || authStore.user?.username }}
+        <StatusTag :value="authStore.user?.role" />
+      </span>
       <span class="status-item">
         数据库
         <StatusTag :value="systemStore.database.status" />
@@ -32,6 +36,7 @@
           :value="model"
         />
       </el-select>
+      <el-button size="small" @click="logout">退出</el-button>
     </div>
   </header>
 </template>
@@ -40,12 +45,16 @@
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import StatusTag from '../common/StatusTag.vue'
+import { useAuthStore } from '../../stores/authStore'
 import { useSystemStore } from '../../stores/systemStore'
 
 const route = useRoute()
+const router = useRouter()
 const systemStore = useSystemStore()
+const authStore = useAuthStore()
 const selectedModel = ref('')
 const title = computed(() => route.meta.title || '电商退换货智能客服系统')
 const refresh = () => systemStore.loadStatus().catch(() => {})
@@ -66,6 +75,11 @@ async function changeModel(modelName) {
   } catch (error) {
     selectedModel.value = systemStore.selectedModelName
   }
+}
+
+async function logout() {
+  await authStore.logout()
+  await router.replace('/login')
 }
 </script>
 

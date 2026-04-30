@@ -4,6 +4,7 @@ $base = "http://localhost:8081"
 $front = "http://localhost:5173"
 $sub2api = "http://127.0.0.1:8080"
 $stamp = Get-Date -Format "yyyyMMddHHmmss"
+$authToken = $null
 $results = New-Object System.Collections.Generic.List[object]
 $created = @{
     categoryId = $null
@@ -35,7 +36,8 @@ function Add-Result($name, $ok, $detail = "") {
 }
 
 function Api-Get($path) {
-    $response = Invoke-RestMethod -Uri "$base$path" -Method Get -TimeoutSec 60
+    $headers = Auth-Headers
+    $response = Invoke-RestMethod -Uri "$base$path" -Method Get -Headers $headers -TimeoutSec 60
     if ($response.code -ne 1) {
         throw "$path failed: $($response.msg)"
     }
@@ -44,7 +46,8 @@ function Api-Get($path) {
 
 function Api-Post($path, $body) {
     $json = $body | ConvertTo-Json -Depth 12
-    $response = Invoke-RestMethod -Uri "$base$path" -Method Post -ContentType "application/json; charset=utf-8" -Body $json -TimeoutSec 120
+    $headers = Auth-Headers
+    $response = Invoke-RestMethod -Uri "$base$path" -Method Post -Headers $headers -ContentType "application/json; charset=utf-8" -Body $json -TimeoutSec 120
     if ($response.code -ne 1) {
         throw "$path failed: $($response.msg)"
     }
@@ -53,7 +56,8 @@ function Api-Post($path, $body) {
 
 function Api-Put($path, $body) {
     $json = $body | ConvertTo-Json -Depth 12
-    $response = Invoke-RestMethod -Uri "$base$path" -Method Put -ContentType "application/json; charset=utf-8" -Body $json -TimeoutSec 60
+    $headers = Auth-Headers
+    $response = Invoke-RestMethod -Uri "$base$path" -Method Put -Headers $headers -ContentType "application/json; charset=utf-8" -Body $json -TimeoutSec 60
     if ($response.code -ne 1) {
         throw "$path failed: $($response.msg)"
     }
@@ -61,11 +65,19 @@ function Api-Put($path, $body) {
 }
 
 function Api-Delete($path) {
-    $response = Invoke-RestMethod -Uri "$base$path" -Method Delete -TimeoutSec 60
+    $headers = Auth-Headers
+    $response = Invoke-RestMethod -Uri "$base$path" -Method Delete -Headers $headers -TimeoutSec 60
     if ($response.code -ne 1) {
         throw "$path failed: $($response.msg)"
     }
     return $response.data
+}
+
+function Auth-Headers() {
+    if ($script:authToken) {
+        return @{ Authorization = "Bearer $script:authToken" }
+    }
+    return @{}
 }
 
 try {
@@ -80,6 +92,13 @@ try {
 
     $enums = Api-Get "/system/enums"
     Add-Result "system enums" ($enums.intentCodes.Count -ge 7) "intentCodes=$($enums.intentCodes.Count)"
+
+    $auth = Api-Post "/auth/login" @{ username = "admin"; password = "123456" }
+    $script:authToken = $auth.token
+    Add-Result "auth login" ($auth.role -eq "ADMIN" -and $null -ne $auth.token) "user=$($auth.username), role=$($auth.role)"
+
+    $me = Api-Get "/auth/me"
+    Add-Result "auth me" ($me.username -eq "admin" -and $me.role -eq "ADMIN") "role=$($me.role)"
 
     $ai = Api-Post "/ai-tests" @{ prompt = "Reply exactly: AI smoke test success." }
     Add-Result "ai-tests real model" ($ai.status -eq "SUCCESS" -and $ai.used -eq $true) "status=$($ai.status), used=$($ai.used), latency=$($ai.latencyMs)"

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { createSession, getSession, pageSessions, sendMessage } from '../api/chatApi'
+import { createSession, getSession, pageSessions, sendMessageStream } from '../api/chatApi'
 
 export const useChatStore = defineStore('chat', () => {
   const sessions = ref([])
@@ -81,12 +81,34 @@ export const useChatStore = defineStore('chat', () => {
       ai: { status: 'THINKING' }
     }
     try {
-      const data = await sendMessage(currentSessionId.value, { content, orderNo, useAi })
+      const data = await sendMessageStream(
+        currentSessionId.value,
+        { content, orderNo, useAi },
+        {
+          onProgress: progress => {
+            messages.value = messages.value.map(message => {
+              if (message.id !== tempAssistantId) {
+                return message
+              }
+              return {
+                ...message,
+                content: progress?.message || message.content,
+                streamStage: progress?.stage || message.streamStage
+              }
+            })
+            insight.value = {
+              ...insight.value,
+              stream: progress
+            }
+          }
+        }
+      )
       const persistedMessages = [data.userMessage, data.assistantMessage].filter(Boolean)
       messages.value = messages.value
         .filter(message => message.id !== tempUserId && message.id !== tempAssistantId)
         .concat(persistedMessages)
       insight.value = data
+      await animateAssistant(data.assistantMessage?.id, data.assistantMessage?.content)
       await loadSession(currentSessionId.value)
       return data
     } catch (error) {
@@ -118,6 +140,41 @@ export const useChatStore = defineStore('chat', () => {
       ...insight.value,
       ticket
     }
+  }
+
+  async function animateAssistant(messageId, fullText) {
+    if (!messageId || !fullText) {
+      return
+    }
+    const step = Math.max(2, Math.ceil(fullText.length / 36))
+    for (let i = 0; i <= fullText.length; i += step) {
+      const current = fullText.slice(0, i)
+      messages.value = messages.value.map(message => {
+        if (message.id !== messageId) {
+          return message
+        }
+        return {
+          ...message,
+          content: current,
+          streaming: i < fullText.length
+        }
+      })
+      await sleep(18)
+    }
+    messages.value = messages.value.map(message => {
+      if (message.id !== messageId) {
+        return message
+      }
+      return {
+        ...message,
+        content: fullText,
+        streaming: false
+      }
+    })
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   return {

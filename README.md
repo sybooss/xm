@@ -9,9 +9,12 @@
 - 知识库管理：支持分类、文档 CRUD、关键词检索和命中依据展示。
 - 订单与售后：内置订单样例，支持订单查询、售后记录维护和订单上下文融合。
 - AI 接入：通过 LangChain4j 调用 OpenAI-compatible 接口，可接入 OpenAI 或本地 sub2api 网关。
+- 业务工具：订单查询、知识库检索、人工工单创建已封装为 LangChain4j `@Tool` 风格工具，并注入模型上下文。
 - 模型切换：前端顶部可运行时切换模型，例如 `gpt-4o-mini`、`gpt-4.1-mini`。
 - 多轮追问：结合会话摘要和最近消息承接上一轮语境，支持退货后追问退款、物流异常后追问投诉等连续咨询。
+- 流式反馈：聊天发送后立即显示处理进度，最终回复采用逐字呈现效果。
 - 人工工单：投诉、人工客服和异常升级场景可自动生成工单，也支持客服手动转人工。
+- 登录权限：提供演示管理员登录，并对新增、修改、删除类操作进行角色拦截。
 - 日志追踪：记录 AI 调用日志、知识检索日志和可视化处理轨迹，便于调试和答辩展示。
 
 ## 技术栈
@@ -60,7 +63,7 @@ mysql --version
 ## 1. 克隆项目
 
 ```powershell
-git clone https://github.com/sybooss/--.git returns-assistant
+git clone https://github.com/sybooss/xm.git returns-assistant
 cd returns-assistant
 ```
 
@@ -127,6 +130,8 @@ OPENAI_API_KEY=replace-with-your-key
 OPENAI_BASE_URL=http://127.0.0.1:8080/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_MODEL_OPTIONS=gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini
+APP_AUTH_ADMIN_PASSWORD=123456
+APP_AUTH_TOKEN_HOURS=8
 ```
 
 说明：
@@ -135,6 +140,7 @@ OPENAI_MODEL_OPTIONS=gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini
 - 使用官方 OpenAI 时，`OPENAI_BASE_URL` 可改为 `https://api.openai.com/v1`。
 - `OPENAI_API_KEY` 不要提交到 Git；仓库已通过 `.gitignore` 忽略 `.env`。
 - 如果没有配置 AI，系统仍可使用本地规则兜底，但 AI 测试和 AI 增强回复会显示跳过或失败。
+- 默认演示管理员为 `admin / 123456`，可通过 `APP_AUTH_ADMIN_PASSWORD` 修改密码。
 
 ## 4. 启动后端
 
@@ -187,6 +193,7 @@ http://localhost:5173
 
 | 页面 | 路径 | 说明 |
 | --- | --- | --- |
+| 登录 | `/login` | 管理员登录，进入后台工作台 |
 | 咨询工作台 | `/chat` | 发送售后问题，查看 AI 回复、意图、依据和轨迹 |
 | 系统总览 | `/dashboard` | 查看数据库、AI、模型和快速入口 |
 | 知识库 | `/knowledge` | 管理知识文档，调试检索 |
@@ -205,10 +212,15 @@ GET    /system/enums
 GET    /system/ai-models
 PUT    /system/ai-models/current
 
+POST   /auth/login
+GET    /auth/me
+POST   /auth/logout
+
 POST   /chat-sessions
 GET    /chat-sessions
 GET    /chat-sessions/{id}
 POST   /chat-sessions/{id}/messages
+POST   /chat-sessions/{id}/message-stream
 GET    /chat-sessions/{id}/process-traces
 
 GET    /knowledge-categories

@@ -6,6 +6,14 @@ const request = axios.create({
   timeout: 45000
 })
 
+request.interceptors.request.use(config => {
+  const token = localStorage.getItem('returns_assistant_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 request.interceptors.response.use(
   response => {
     const result = response.data
@@ -14,6 +22,13 @@ request.interceptors.response.use(
     }
     if (result.code !== 1) {
       ElMessage.error(result.msg || '请求失败')
+      if (result.msg?.includes('登录')) {
+        localStorage.removeItem('returns_assistant_token')
+        localStorage.removeItem('returns_assistant_user')
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+      }
       return Promise.reject(result)
     }
     return result.data

@@ -31,7 +31,9 @@ page.on('pageerror', error => pageErrors.push(error.message))
 
 try {
   await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 })
-  await expectText(page, '咨询工作台', 'home redirects to chat')
+  await expectText(page, '管理员登录', 'home redirects to login')
+  await page.getByRole('button', { name: /^登录$/ }).click()
+  await expectText(page, '咨询工作台', 'login redirects to chat')
   await expectText(page, '退换货客服', 'layout brand visible')
   await page.screenshot({ path: path.join(artifactDir, '01-chat-initial.png'), fullPage: true })
 

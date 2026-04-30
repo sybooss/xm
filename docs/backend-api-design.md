@@ -1230,3 +1230,40 @@ public class ChatSessionController {
 工单状态：`PENDING`、`PROCESSING`、`RESOLVED`、`CLOSED`。
 
 工单优先级：`LOW`、`NORMAL`、`HIGH`、`URGENT`。
+
+### 15.3 登录与 RBAC
+
+系统提供轻量演示级登录，不引入复杂 Spring Security。新增、修改、删除等后台操作使用 `@OperatorAnno` 标记，并由拦截器校验管理员 token。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `POST` | `/auth/login` | 登录，默认演示账号 `admin / 123456` |
+| `GET` | `/auth/me` | 查询当前登录用户 |
+| `POST` | `/auth/logout` | 注销 token |
+
+前端请求通过 `Authorization: Bearer <token>` 传递 token。非管理员访问 `@OperatorAnno` 接口时返回 `权限不足，仅管理员可执行该操作`。
+
+### 15.4 消息流式反馈
+
+为了让用户点击发送后立即看到系统正在处理，新增：
+
+```http
+POST /chat-sessions/{id}/message-stream
+Accept: text/event-stream
+```
+
+事件类型：
+
+- `progress`：阶段进度，例如已收到、分析中、生成完成。
+- `final`：最终聊天响应，数据结构与 `POST /chat-sessions/{id}/messages` 一致。
+- `error`：流式处理失败摘要。
+
+### 15.5 LangChain4j 业务工具
+
+后端新增 `AiBusinessToolService`，使用 LangChain4j `@Tool` 风格封装：
+
+- `queryOrderStatus(orderNo)`：查询订单、物流、售后状态。
+- `searchAfterSaleKnowledge(query, intentCode)`：检索售后知识库依据。
+- `createServiceTicket(sessionId, orderNo, intentCode, customerIssue)`：创建或复用人工客服工单。
+
+当前实现由 Spring Boot 业务链路统一编排工具调用结果，再注入模型提示词，避免模型绕过业务校验直接改库。

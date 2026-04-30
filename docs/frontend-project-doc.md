@@ -579,6 +579,13 @@ export const testAi = data => request.post('/ai-tests', data)
 
 优先级最高的是咨询工作台，因为它最能体现系统主题和 LangChain4j 接入效果。
 
+补充增强：
+
+- 新增 `/login` 演示登录页，默认账号 `admin / 123456`。
+- 前端请求统一注入 `Authorization` token，后台新增、修改、删除操作需要管理员权限。
+- 聊天发送优先使用 `POST /chat-sessions/{id}/message-stream`，先展示处理进度，再展示最终回复。
+- 咨询工作台继续保留本地临时气泡，用户点击发送后消息立即出现在页面中，不再等模型完整响应后才显示。
+
 ## 11. 联调验收
 
 ### 11.1 基础联调
