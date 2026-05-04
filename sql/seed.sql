@@ -1,9 +1,9 @@
 USE test3;
 
-INSERT IGNORE INTO user_account(username, display_name, role, phone, status)
+INSERT IGNORE INTO user_account(username, password, display_name, role, phone, status)
 VALUES
-('demo_customer', '演示用户', 'CUSTOMER', '13800000000', 1),
-('admin', '系统管理员', 'ADMIN', '13900000000', 1);
+('demo_customer', NULL, '演示用户', 'CUSTOMER', '13800000000', 1),
+('admin', NULL, '系统管理员', 'ADMIN', '13900000000', 1);
 
 INSERT IGNORE INTO knowledge_category(category_code, category_name, sort_order, enabled)
 VALUES

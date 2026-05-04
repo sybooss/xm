@@ -1238,6 +1238,7 @@ public class ChatSessionController {
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `POST` | `/auth/login` | 登录，默认演示账号 `admin / 123456` |
+| `POST` | `/auth/register` | 注册客户账号，默认角色为 `CUSTOMER`，注册成功后返回登录 token |
 | `GET` | `/auth/me` | 查询当前登录用户 |
 | `POST` | `/auth/logout` | 注销 token |
 

@@ -23,6 +23,9 @@ server/target/
 output/
 tmp/
 
+# Local peer project used as merge input
+xiangmu/
+
 # IDE / OS
 .idea/
 .vscode/

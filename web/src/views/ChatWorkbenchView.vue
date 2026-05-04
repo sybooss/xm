@@ -17,8 +17,11 @@
           :class="{ active: session.id === chatStore.currentSessionId }"
           @click="selectSession(session.id)"
         >
-          <span class="session-title">{{ session.title || session.sessionNo }}</span>
-          <span class="session-meta">{{ session.currentIntent || '未识别意图' }}</span>
+          <span class="session-copy">
+            <span class="session-title">{{ session.title || session.sessionNo }}</span>
+            <span class="session-meta">{{ session.currentIntent || '未识别意图' }}</span>
+          </span>
+          <el-button class="session-delete" :icon="Delete" link @click.stop="deleteSession(session.id)" />
         </button>
       </div>
       <EmptyState v-else text="暂无会话" />
@@ -77,7 +80,27 @@
           @keydown.ctrl.enter="submit"
         />
         <div class="composer-actions">
-          <el-switch v-model="useAi" active-text="AI" inactive-text="兜底" />
+          <div class="composer-left">
+            <el-switch v-model="useAi" active-text="AI" inactive-text="兜底" />
+            <el-select
+              v-model="selectedModel"
+              class="model-select"
+              size="small"
+              filterable
+              allow-create
+              default-first-option
+              :reserve-keyword="false"
+              :loading="systemStore.modelSwitching"
+              @change="changeModel"
+            >
+              <el-option
+                v-for="model in systemStore.modelOptions"
+                :key="model"
+                :label="model"
+                :value="model"
+              />
+            </el-select>
+          </div>
           <el-button type="primary" :icon="Promotion" :loading="chatStore.sending" :disabled="chatStore.sending" @click="submit">
             发送
           </el-button>
@@ -155,20 +178,23 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus, Promotion, Search } from '@element-plus/icons-vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Plus, Promotion, Search } from '@element-plus/icons-vue'
 import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
 import TicketPanel from '../components/chat/TicketPanel.vue'
 import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { useChatStore } from '../stores/chatStore'
+import { useSystemStore } from '../stores/systemStore'
 
 const chatStore = useChatStore()
+const systemStore = useSystemStore()
 const orderNo = ref('DD202604290001')
 const draft = ref('这个订单能不能退货？')
 const useAi = ref(true)
 const messageScrollRef = ref(null)
+const selectedModel = ref('')
 
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
 const lastSourceType = computed(() => chatStore.insight?.assistantMessage?.sourceType || (chatStore.sending ? 'THINKING' : 'FALLBACK'))
@@ -182,6 +208,26 @@ async function selectSession(id) {
   await chatStore.loadSession(id)
   chatStore.insight = {}
   await scrollBottom()
+}
+
+async function deleteSession(id) {
+  try {
+    await ElMessageBox.confirm('确定删除该会话吗？', '删除会话', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await chatStore.removeSession(id)
+    await chatStore.loadSessions()
+    if (chatStore.sessions.length) {
+      await selectSession(chatStore.sessions[0].id)
+    }
+    ElMessage.success('会话已删除')
+  } catch (error) {
+    if (error !== 'cancel') {
+      throw error
+    }
+  }
 }
 
 async function submit() {
@@ -211,8 +257,25 @@ async function scrollBottom() {
   }
 }
 
+watch(
+  () => systemStore.selectedModelName,
+  value => {
+    selectedModel.value = value || ''
+  },
+  { immediate: true }
+)
+
+async function changeModel(modelName) {
+  if (!modelName) return
+  await systemStore.changeModel(modelName)
+  ElMessage.success(`已切换模型：${modelName}`)
+}
+
 onMounted(async () => {
   await chatStore.loadSessions()
+  if (!systemStore.status) {
+    await systemStore.loadStatus().catch(() => {})
+  }
   if (chatStore.sessions.length) {
     await selectSession(chatStore.sessions[0].id)
   }
@@ -255,7 +318,9 @@ onMounted(async () => {
 }
 
 .session-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 10px;
   border: 1px solid transparent;
@@ -277,6 +342,20 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.session-delete {
+  visibility: hidden;
+  color: #94a3b8;
+}
+
+.session-item:hover .session-delete {
+  visibility: visible;
 }
 
 .session-meta {
@@ -404,6 +483,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   margin-top: 10px;
+}
+
+.composer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.model-select {
+  width: 150px;
 }
 
 .insight-body {

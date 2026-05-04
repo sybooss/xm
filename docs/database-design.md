@@ -59,6 +59,7 @@ erDiagram
 | --- | --- | --- | --- |
 | id | BIGINT | 主键，自增 | 用户 ID |
 | username | VARCHAR(50) | 唯一，非空 | 登录名或演示用户名 |
+| password | VARCHAR(100) | 可空 | 注册用户密码摘要；演示内置账号为空时使用环境变量兜底密码 |
 | display_name | VARCHAR(80) | 非空 | 展示名称 |
 | role | VARCHAR(20) | 非空 | `CUSTOMER`、`ADMIN` |
 | phone | VARCHAR(20) | 可空 | 演示手机号 |

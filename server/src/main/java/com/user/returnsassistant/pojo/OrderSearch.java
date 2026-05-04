@@ -9,4 +9,5 @@ public class OrderSearch extends BaseSearch {
     private String orderStatus;
     private String logisticsStatus;
     private String afterSaleStatus;
+    private Long userId;
 }

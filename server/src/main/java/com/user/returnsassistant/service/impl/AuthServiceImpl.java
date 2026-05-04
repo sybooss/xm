@@ -3,13 +3,18 @@ package com.user.returnsassistant.service.impl;
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.UserAccountMapper;
 import com.user.returnsassistant.pojo.LoginResponse;
+import com.user.returnsassistant.pojo.RegisterRequest;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +59,27 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public LoginResponse register(RegisterRequest request) {
+        if (request == null || !hasText(request.getUsername()) || !hasText(request.getPassword())) {
+            throw new BusinessException("账号和密码不能为空");
+        }
+        String username = request.getUsername().trim();
+        if (userAccountMapper.getByUsername(username) != null) {
+            throw new BusinessException("用户名已存在");
+        }
+
+        UserAccount user = new UserAccount();
+        user.setUsername(username);
+        user.setPassword(hashPassword(request.getPassword()));
+        user.setDisplayName(hasText(request.getDisplayName()) ? request.getDisplayName().trim() : username);
+        user.setPhone(request.getPhone());
+        user.setRole("CUSTOMER");
+        user.setStatus(1);
+        userAccountMapper.insert(user);
+        return login(username, request.getPassword());
+    }
+
+    @Override
     public UserAccount requireUser(String token) {
         String normalized = normalize(token);
         if (!hasText(normalized)) {
@@ -76,6 +102,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private boolean passwordMatches(UserAccount user, String password) {
+        if (hasText(user.getPassword())) {
+            return user.getPassword().equals(hashPassword(password)) || user.getPassword().equals(password);
+        }
         String expected = "ADMIN".equals(user.getRole()) ? adminPassword : customerPassword;
         return password.equals(expected);
     }
@@ -97,6 +126,16 @@ public class AuthServiceImpl implements AuthService {
 
     private boolean hasText(String text) {
         return text != null && !text.isBlank();
+    }
+
+    private String hashPassword(String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            return "SHA256:" + HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 
     private record AuthSession(UserAccount user, long expiresAt) {

@@ -46,6 +46,8 @@ public class ChatServiceImpl implements ChatService {
     private AiBusinessToolService aiBusinessToolService;
     @Autowired
     private ServiceTicketService ticketService;
+    @Autowired
+    private AfterSaleRecordMapper afterSaleRecordMapper;
 
     @Override
     public PageResult<ChatSession> page(ChatSessionSearch search) {
@@ -386,6 +388,16 @@ public class ChatServiceImpl implements ChatService {
         map.put("logisticsStatus", order.getLogisticsStatus());
         map.put("afterSaleStatus", order.getAfterSaleStatus());
         map.put("signedDays", signedDays(order));
+        AfterSaleRecord latestAfterSale = latestAfterSale(order);
+        if (latestAfterSale != null) {
+            map.put("latestAfterSale", detail(
+                    "afterSaleNo", latestAfterSale.getAfterSaleNo(),
+                    "serviceType", latestAfterSale.getServiceType(),
+                    "serviceTypeText", afterSaleTypeText(latestAfterSale.getServiceType()),
+                    "status", latestAfterSale.getStatus(),
+                    "statusText", afterSaleStatusText(latestAfterSale),
+                    "reason", latestAfterSale.getReason()));
+        }
         return map;
     }
 
@@ -396,10 +408,19 @@ public class ChatServiceImpl implements ChatService {
         String basis = hits.isEmpty() ? "当前知识库没有精确命中规则，以下回复基于本地售后流程模板。" : "已参考知识库：" + hits.get(0).getTitle() + "。";
         String orderText = order == null ? "你还没有提供订单号，建议补充订单号后我可以结合订单状态判断。" :
                 "当前订单号为 " + order.getOrderNo() + "，订单状态为 " + order.getOrderStatus() + "，售后状态为 " + order.getAfterSaleStatus() + "。";
+        AfterSaleRecord latestAfterSale = latestAfterSale(order);
+        String existingAfterSaleText = latestAfterSale == null ? "" :
+                "该订单已有" + afterSaleTypeText(latestAfterSale.getServiceType()) + "记录，当前状态：" + afterSaleStatusText(latestAfterSale) + "。";
         return contextText + switch (intent.getIntentCode()) {
-            case "RETURN_APPLY" -> orderText + basis + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
-            case "EXCHANGE_APPLY" -> orderText + basis + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
-            case "REFUND_PROGRESS" -> orderText + basis + " 退款一般会在商家确认收货或审核通过后按原支付渠道退回，具体到账时间以支付渠道为准。";
+            case "RETURN_APPLY" -> latestAfterSale != null
+                    ? orderText + existingAfterSaleText + "暂时不建议重复提交退货申请，请按当前售后单状态继续等待、补充凭证或转人工核实。"
+                    : orderText + basis + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
+            case "EXCHANGE_APPLY" -> latestAfterSale != null
+                    ? orderText + existingAfterSaleText + "暂时不建议重复提交换货申请，请按当前售后单状态继续等待、补充凭证或转人工核实。"
+                    : orderText + basis + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
+            case "REFUND_PROGRESS" -> latestAfterSale != null
+                    ? orderText + existingAfterSaleText + "退款进度需结合该售后单审核和收货节点判断，建议查看售后单详情或让人工客服核实。"
+                    : orderText + basis + " 退款一般会在商家确认收货或审核通过后按原支付渠道退回，具体到账时间以支付渠道为准。";
             case "LOGISTICS_QUERY" -> orderText + basis + " 如果物流长时间不更新，建议先查看最新物流节点，必要时联系商家或申请平台介入。";
             case "COMPLAINT_TRANSFER" -> orderText + basis + " 我已将问题整理成人工客服工单，后续客服可以根据订单、意图和对话摘要继续处理。";
             case "PRE_SALE" -> basis + " 你可以补充商品型号、预算和使用场景，我会按售后规则和商品信息给出咨询建议。";
@@ -416,7 +437,8 @@ public class ChatServiceImpl implements ChatService {
         prompt.append("2. 如果订单信息不足，要引导用户补充订单号或必要信息。\n");
         prompt.append("3. 如果知识库依据为空，只能给出通用建议。\n");
         prompt.append("4. 如果本轮是追问，要自然承接上一轮，不要像重新开场。\n");
-        prompt.append("5. 回复适合展示在客服工作台，语气礼貌清楚，控制在 180 字以内。\n\n");
+        prompt.append("5. 如果订单上下文已有 latestAfterSale，不要重复引导用户新建同类售后申请，要围绕当前售后单状态说明下一步。\n");
+        prompt.append("6. 回复适合展示在客服工作台，语气礼貌清楚，控制在 180 字以内。\n\n");
         prompt.append("用户本轮问题：\n").append(nullToEmpty(userMessage)).append("\n\n");
         prompt.append("多轮上下文：\n").append(context.summary()).append("\n");
         for (String line : context.recentPromptLines()) {
@@ -525,6 +547,39 @@ public class ChatServiceImpl implements ChatService {
         String orderPart = order == null ? "未绑定订单" : "订单 " + order.getOrderNo();
         String followPart = context.followUp() ? "，本轮为多轮追问" : "";
         return trim(orderPart + "，当前意图：" + intent.getIntentName() + followPart + "；最近问题：" + nullToEmpty(content), 1000);
+    }
+
+    private AfterSaleRecord latestAfterSale(DemoOrder order) {
+        if (order == null || order.getId() == null) {
+            return null;
+        }
+        List<AfterSaleRecord> records = afterSaleRecordMapper.listByOrderId(order.getId());
+        return records.isEmpty() ? null : records.get(0);
+    }
+
+    private String afterSaleTypeText(String serviceType) {
+        return switch (nullToEmpty(serviceType)) {
+            case "EXCHANGE" -> "换货";
+            case "REFUND" -> "退款";
+            case "COMPLAINT" -> "投诉";
+            default -> "退货";
+        };
+    }
+
+    private String afterSaleStatusText(AfterSaleRecord record) {
+        if (record == null) {
+            return "-";
+        }
+        return switch (nullToEmpty(record.getStatus())) {
+            case "APPLIED" -> "已申请，待商家审核";
+            case "APPROVED" -> "已批准，请按提示处理";
+            case "REJECTED" -> "已拒绝" + (hasText(record.getReason()) ? "，原因：" + record.getReason() : "");
+            case "WAIT_BUYER_SEND" -> "待买家寄回商品";
+            case "WAIT_SELLER_CONFIRM" -> "待商家确认收货";
+            case "REFUNDING" -> "退款中";
+            case "FINISHED" -> "已完成";
+            default -> record.getStatus();
+        };
     }
 
     private String firstText(String... texts) {

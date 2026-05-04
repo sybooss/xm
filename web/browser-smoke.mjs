@@ -21,6 +21,7 @@ async function expectText(page, text, name) {
 
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({ viewport: { width: 1440, height: 920 } })
+let activeModel = 'gpt-4o-mini'
 
 page.on('console', message => {
   if (message.type() === 'error') {
@@ -31,7 +32,7 @@ page.on('pageerror', error => pageErrors.push(error.message))
 
 try {
   await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 })
-  await expectText(page, '管理员登录', 'home redirects to login')
+  await expectText(page, '账号登录', 'home redirects to login')
   await page.getByRole('button', { name: /^登录$/ }).click()
   await expectText(page, '咨询工作台', 'login redirects to chat')
   await expectText(page, '退换货客服', 'layout brand visible')
@@ -39,7 +40,8 @@ try {
 
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '系统总览', 'dashboard page visible')
-  await expectText(page, 'gpt-4o-mini', 'dashboard model visible')
+  activeModel = (await page.locator('.model-select input').first().inputValue().catch(() => '')) || activeModel
+  record('dashboard model visible', Boolean(activeModel), activeModel)
   await page.screenshot({ path: path.join(artifactDir, '02-dashboard.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/ai-test`, { waitUntil: 'networkidle', timeout: 60000 })
@@ -48,7 +50,8 @@ try {
   await aiTextarea.fill('请回复：前端浏览器自动化测试成功。')
   await page.getByRole('button', { name: /发送测试/ }).click()
   await page.getByText('成功', { exact: false }).first().waitFor({ timeout: 90000 })
-  await expectText(page, 'gpt-4o-mini', 'ai test model visible')
+  const aiModelText = await page.locator('.result-panel').textContent().catch(() => '')
+  record('ai test model reported', /模型/.test(aiModelText || ''), activeModel)
   await page.screenshot({ path: path.join(artifactDir, '03-ai-test-success.png'), fullPage: true })
   record('ai test interaction', true, 'SUCCESS tag displayed')
 

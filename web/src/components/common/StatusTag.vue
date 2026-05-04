@@ -38,9 +38,32 @@ const label = computed(() => {
     URGENT: '紧急',
     ADMIN: '管理员',
     CUSTOMER: '客户',
+    UNPAID: '未支付',
+    REFUNDING: '退款中',
+    REFUNDED: '已退款',
+    PENDING_PAY: '待支付',
     SIGNED: '已签收',
     PAID: '已支付',
     SHIPPED: '已发货',
+    COMPLETED: '已完成',
+    NOT_SHIPPED: '未发货',
+    IN_TRANSIT: '运输中',
+    DELIVERED: '已送达',
+    ABNORMAL: '异常',
+    NONE: '无售后',
+    RETURN_APPLYING: '退货申请中',
+    RETURNING: '退货中',
+    EXCHANGE_APPLYING: '换货申请中',
+    FINISHED: '已完成',
+    REJECTED: '已拒绝',
+    RETURN: '退货',
+    EXCHANGE: '换货',
+    REFUND: '退款',
+    COMPLAINT: '投诉',
+    APPLIED: '已申请',
+    APPROVED: '已批准',
+    WAIT_BUYER_SEND: '待买家寄回',
+    WAIT_SELLER_CONFIRM: '待商家确认',
     AFTER_SALE: '售后中'
   }
   if (typeof props.value === 'boolean') {
@@ -50,10 +73,10 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN'].includes(normalized.value)) return 'success'
-  if (['FAILED', 'DISABLED', 'URGENT'].includes(normalized.value)) return 'danger'
-  if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW'].includes(normalized.value)) return 'info'
-  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH'].includes(normalized.value)) return 'warning'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'PAID', 'SIGNED', 'COMPLETED', 'DELIVERED', 'FINISHED', 'APPROVED'].includes(normalized.value)) return 'success'
+  if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED', 'COMPLAINT'].includes(normalized.value)) return 'danger'
+  if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'UNPAID', 'NOT_SHIPPED'].includes(normalized.value)) return 'info'
+  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'PENDING_PAY', 'SHIPPED', 'IN_TRANSIT', 'REFUNDING', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'APPLIED', 'WAIT_BUYER_SEND', 'WAIT_SELLER_CONFIRM'].includes(normalized.value)) return 'warning'
   return 'primary'
 })
 </script>

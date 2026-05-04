@@ -1,6 +1,7 @@
 package com.user.returnsassistant.controller;
 
 import com.user.returnsassistant.pojo.LoginRequest;
+import com.user.returnsassistant.pojo.RegisterRequest;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,11 @@ public class AuthController {
     @PostMapping("/login")
     public Result login(@RequestBody LoginRequest request) {
         return Result.success(authService.login(request.getUsername(), request.getPassword()));
+    }
+
+    @PostMapping("/register")
+    public Result register(@RequestBody RegisterRequest request) {
+        return Result.success(authService.register(request));
     }
 
     @GetMapping("/me")

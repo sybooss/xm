@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { createSession, getSession, pageSessions, sendMessageStream } from '../api/chatApi'
+import { createSession, deleteSession, getSession, pageSessions, sendMessageStream } from '../api/chatApi'
 
 export const useChatStore = defineStore('chat', () => {
   const sessions = ref([])
@@ -46,6 +46,16 @@ export const useChatStore = defineStore('chat', () => {
     currentSession.value = data
     messages.value = data?.messages || []
     return data
+  }
+
+  async function removeSession(id) {
+    await deleteSession(id)
+    sessions.value = sessions.value.filter(session => session.id !== id)
+    if (currentSession.value?.id === id) {
+      currentSession.value = null
+      messages.value = []
+      insight.value = {}
+    }
   }
 
   async function ask(content, orderNo, useAi = true) {
@@ -190,6 +200,7 @@ export const useChatStore = defineStore('chat', () => {
     loadSessions,
     startSession,
     loadSession,
+    removeSession,
     ask,
     mergeTicket
   }

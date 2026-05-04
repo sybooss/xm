@@ -8,39 +8,63 @@
       </div>
 
       <el-form class="login-form" label-position="top" @submit.prevent="submit">
-        <h2>管理员登录</h2>
+        <div class="form-head">
+          <h2>{{ mode === 'login' ? '账号登录' : '客户注册' }}</h2>
+          <el-segmented v-model="mode" :options="modeOptions" size="small" />
+        </div>
         <el-form-item label="账号">
           <el-input v-model="form.username" placeholder="admin" size="large" />
+        </el-form-item>
+        <el-form-item v-if="mode === 'register'" label="昵称">
+          <el-input v-model="form.displayName" placeholder="例如：演示客户" size="large" />
+        </el-form-item>
+        <el-form-item v-if="mode === 'register'" label="手机号">
+          <el-input v-model="form.phone" placeholder="可选" size="large" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="form.password" placeholder="123456" size="large" type="password" show-password @keydown.enter="submit" />
         </el-form-item>
         <el-button class="login-button" type="primary" size="large" :loading="authStore.loading" @click="submit">
-          登录
+          {{ mode === 'login' ? '登录' : '注册并登录' }}
         </el-button>
-        <p class="login-tip">演示账号：admin / 123456</p>
+        <p class="login-tip">演示账号：admin / 123456；新注册账号默认为客户角色</p>
       </el-form>
     </div>
   </section>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const form = reactive({ username: 'admin', password: '123456' })
+const mode = ref('login')
+const modeOptions = [
+  { label: '登录', value: 'login' },
+  { label: '注册', value: 'register' }
+]
+const form = reactive({ username: 'admin', password: '123456', displayName: '', phone: '' })
 
 async function submit() {
   if (!form.username || !form.password) {
     ElMessage.warning('请输入账号和密码')
     return
   }
-  await authStore.login(form.username, form.password)
-  ElMessage.success('登录成功')
+  if (mode.value === 'register') {
+    await authStore.register({
+      username: form.username,
+      password: form.password,
+      displayName: form.displayName,
+      phone: form.phone
+    })
+    ElMessage.success('注册成功，已登录')
+  } else {
+    await authStore.login(form.username, form.password)
+    ElMessage.success('登录成功')
+  }
   await router.replace('/chat')
 }
 </script>
@@ -103,8 +127,16 @@ h1 {
 }
 
 h2 {
-  margin: 0 0 18px;
+  margin: 0;
   font-size: 20px;
+}
+
+.form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 .login-button {
