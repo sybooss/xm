@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class AfterSaleRecordServiceImpl implements AfterSaleRecordService {
@@ -58,15 +59,36 @@ public class AfterSaleRecordServiceImpl implements AfterSaleRecordService {
         orderMapper.updateAfterSaleStatus(record.getOrderId(), toOrderAfterSaleStatus(record.getServiceType()));
     }
 
+    @Transactional
     @Override
     public void update(Long id, AfterSaleRecord record) {
+        AfterSaleRecord old = getById(id);
         record.setId(id);
+        if (record.getOrderId() == null) {
+            record.setOrderId(old.getOrderId());
+        }
+        if (record.getAfterSaleNo() == null || record.getAfterSaleNo().isBlank()) {
+            record.setAfterSaleNo(old.getAfterSaleNo());
+        }
+        if (record.getServiceType() == null || record.getServiceType().isBlank()) {
+            record.setServiceType(old.getServiceType());
+        }
+        if (record.getStatus() == null || record.getStatus().isBlank()) {
+            record.setStatus(old.getStatus());
+        }
         recordMapper.update(record);
+        syncOrderAfterSaleStatus(old.getOrderId());
+        if (!Objects.equals(old.getOrderId(), record.getOrderId())) {
+            syncOrderAfterSaleStatus(record.getOrderId());
+        }
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+        AfterSaleRecord old = getById(id);
         recordMapper.delete(id);
+        syncOrderAfterSaleStatus(old.getOrderId());
     }
 
     private String toOrderAfterSaleStatus(String serviceType) {
@@ -77,5 +99,24 @@ public class AfterSaleRecordServiceImpl implements AfterSaleRecordService {
             return "REFUNDING";
         }
         return "RETURN_APPLYING";
+    }
+
+    private void syncOrderAfterSaleStatus(Long orderId) {
+        if (orderId == null) {
+            return;
+        }
+        List<AfterSaleRecord> records = recordMapper.listByOrderId(orderId);
+        if (records.isEmpty()) {
+            orderMapper.updateAfterSaleStatus(orderId, "NONE");
+            return;
+        }
+        AfterSaleRecord latest = records.get(0);
+        String status = switch (latest.getStatus()) {
+            case "REJECTED" -> "REJECTED";
+            case "FINISHED" -> "FINISHED";
+            case "REFUNDING" -> "REFUNDING";
+            default -> toOrderAfterSaleStatus(latest.getServiceType());
+        };
+        orderMapper.updateAfterSaleStatus(orderId, status);
     }
 }

@@ -12,6 +12,7 @@ public interface DemoOrderMapper {
             <script>
             select count(*) from demo_order
             where 1=1
+            <if test="s.userId != null">and user_id=#{s.userId}</if>
             <if test="s.orderStatus != null and s.orderStatus != ''">and order_status=#{s.orderStatus}</if>
             <if test="s.logisticsStatus != null and s.logisticsStatus != ''">and logistics_status=#{s.logisticsStatus}</if>
             <if test="s.afterSaleStatus != null and s.afterSaleStatus != ''">and after_sale_status=#{s.afterSaleStatus}</if>
@@ -26,6 +27,7 @@ public interface DemoOrderMapper {
             <script>
             select * from demo_order
             where 1=1
+            <if test="s.userId != null">and user_id=#{s.userId}</if>
             <if test="s.orderStatus != null and s.orderStatus != ''">and order_status=#{s.orderStatus}</if>
             <if test="s.logisticsStatus != null and s.logisticsStatus != ''">and logistics_status=#{s.logisticsStatus}</if>
             <if test="s.afterSaleStatus != null and s.afterSaleStatus != ''">and after_sale_status=#{s.afterSaleStatus}</if>

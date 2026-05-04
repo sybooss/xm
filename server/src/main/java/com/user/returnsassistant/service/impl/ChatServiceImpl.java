@@ -31,6 +31,8 @@ public class ChatServiceImpl implements ChatService {
     @Autowired
     private DemoOrderMapper orderMapper;
     @Autowired
+    private AfterSaleRecordMapper afterSaleRecordMapper;
+    @Autowired
     private KnowledgeDocMapper knowledgeDocMapper;
     @Autowired
     private IntentRecordMapper intentRecordMapper;
@@ -82,6 +84,7 @@ public class ChatServiceImpl implements ChatService {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id", session.getId());
         data.put("sessionNo", session.getSessionNo());
+        data.put("userId", session.getUserId());
         data.put("title", session.getTitle());
         data.put("status", session.getStatus());
         data.put("currentIntent", session.getCurrentIntent());
@@ -386,6 +389,9 @@ public class ChatServiceImpl implements ChatService {
         map.put("logisticsStatus", order.getLogisticsStatus());
         map.put("afterSaleStatus", order.getAfterSaleStatus());
         map.put("signedDays", signedDays(order));
+        List<AfterSaleRecord> afterSales = afterSaleRecordMapper.listByOrderId(order.getId());
+        map.put("afterSales", afterSales);
+        map.put("latestAfterSale", latestAfterSale(afterSales));
         return map;
     }
 
@@ -396,6 +402,12 @@ public class ChatServiceImpl implements ChatService {
         String basis = hits.isEmpty() ? "当前知识库没有精确命中规则，以下回复基于本地售后流程模板。" : "已参考知识库：" + hits.get(0).getTitle() + "。";
         String orderText = order == null ? "你还没有提供订单号，建议补充订单号后我可以结合订单状态判断。" :
                 "当前订单号为 " + order.getOrderNo() + "，订单状态为 " + order.getOrderStatus() + "，售后状态为 " + order.getAfterSaleStatus() + "。";
+        AfterSaleRecord latest = order == null ? null : latestAfterSale(afterSaleRecordMapper.listByOrderId(order.getId()));
+        if (latest != null && isApplyIntent(intent.getIntentCode()) && hasActiveAfterSale(latest)) {
+            return contextText + orderText + "系统已查到这单已有" + afterSaleTypeText(latest.getServiceType())
+                    + "申请，当前状态为" + afterSaleStatusText(latest.getStatus())
+                    + "，无需重复提交。你可以继续等待商家处理，或补充问题照片、物流凭证后联系人工客服跟进。";
+        }
         return contextText + switch (intent.getIntentCode()) {
             case "RETURN_APPLY" -> orderText + basis + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
             case "EXCHANGE_APPLY" -> orderText + basis + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
@@ -416,7 +428,8 @@ public class ChatServiceImpl implements ChatService {
         prompt.append("2. 如果订单信息不足，要引导用户补充订单号或必要信息。\n");
         prompt.append("3. 如果知识库依据为空，只能给出通用建议。\n");
         prompt.append("4. 如果本轮是追问，要自然承接上一轮，不要像重新开场。\n");
-        prompt.append("5. 回复适合展示在客服工作台，语气礼貌清楚，控制在 180 字以内。\n\n");
+        prompt.append("5. 如果订单已有售后申请，不要引导用户重复提交，要说明当前申请状态和下一步。\n");
+        prompt.append("6. 回复适合展示在客服工作台，语气礼貌清楚，控制在 180 字以内。\n\n");
         prompt.append("用户本轮问题：\n").append(nullToEmpty(userMessage)).append("\n\n");
         prompt.append("多轮上下文：\n").append(context.summary()).append("\n");
         for (String line : context.recentPromptLines()) {
@@ -564,6 +577,40 @@ public class ChatServiceImpl implements ChatService {
             return 0;
         }
         return Math.max(0, Duration.between(order.getSignedAt(), LocalDateTime.now()).toDays());
+    }
+
+    private AfterSaleRecord latestAfterSale(List<AfterSaleRecord> records) {
+        return records == null || records.isEmpty() ? null : records.get(0);
+    }
+
+    private boolean isApplyIntent(String intentCode) {
+        return "RETURN_APPLY".equals(intentCode) || "EXCHANGE_APPLY".equals(intentCode);
+    }
+
+    private boolean hasActiveAfterSale(AfterSaleRecord record) {
+        return record != null && !List.of("REJECTED", "FINISHED", "CANCELLED").contains(nullToEmpty(record.getStatus()));
+    }
+
+    private String afterSaleTypeText(String serviceType) {
+        return switch (nullToEmpty(serviceType)) {
+            case "EXCHANGE" -> "换货";
+            case "REFUND" -> "退款";
+            case "RETURN" -> "退货退款";
+            default -> "售后";
+        };
+    }
+
+    private String afterSaleStatusText(String status) {
+        return switch (nullToEmpty(status)) {
+            case "APPLIED" -> "已提交，待审核";
+            case "APPROVED" -> "审核通过";
+            case "WAIT_BUYER_SEND" -> "待买家寄回";
+            case "WAIT_SELLER_CONFIRM" -> "待商家确认";
+            case "REFUNDING" -> "退款中";
+            case "FINISHED" -> "已完成";
+            case "REJECTED" -> "已拒绝";
+            default -> nullToEmpty(status);
+        };
     }
 
     private void trace(Long sessionId, Long messageId, String stepName, String stepStatus, Map<String, Object> detail) {

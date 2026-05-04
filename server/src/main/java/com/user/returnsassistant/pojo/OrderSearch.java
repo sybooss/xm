@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class OrderSearch extends BaseSearch {
+    private Long userId;
     private String orderStatus;
     private String logisticsStatus;
     private String afterSaleStatus;

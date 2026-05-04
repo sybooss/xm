@@ -7,6 +7,7 @@ export const createOrder = data => request.post('/orders', data)
 export const updateOrder = (id, data) => request.put(`/orders/${id}`, data)
 export const deleteOrder = id => request.delete(`/orders/${id}`)
 export const listOrderAfterSales = id => request.get(`/orders/${id}/after-sale-records`)
+export const createOrderAfterSale = (id, data) => request.post(`/orders/${id}/after-sale-records`, data)
 
 export const pageAfterSaleRecords = params => request.get('/after-sale-records', { params })
 export const createAfterSaleRecord = data => request.post('/after-sale-records', data)

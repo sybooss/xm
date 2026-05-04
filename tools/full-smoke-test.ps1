@@ -88,7 +88,9 @@ try {
     Add-Result "sub2api health" ($subHealth.status -eq "ok") $subHealth.status
 
     $status = Api-Get "/system/status"
-    Add-Result "system status" ($status.database.status -eq "UP" -and $status.ai.status -eq "UP") "db=$($status.database.status), ai=$($status.ai.status)"
+    $aiEnabled = $status.ai.enabled -eq $true
+    $aiReady = if ($aiEnabled) { $status.ai.status -eq "UP" } else { $status.ai.status -eq "SKIPPED" }
+    Add-Result "system status" ($status.database.status -eq "UP" -and $aiReady) "db=$($status.database.status), ai=$($status.ai.status), enabled=$aiEnabled"
 
     $enums = Api-Get "/system/enums"
     Add-Result "system enums" ($enums.intentCodes.Count -ge 7) "intentCodes=$($enums.intentCodes.Count)"
@@ -101,7 +103,8 @@ try {
     Add-Result "auth me" ($me.username -eq "admin" -and $me.role -eq "ADMIN") "role=$($me.role)"
 
     $ai = Api-Post "/ai-tests" @{ prompt = "Reply exactly: AI smoke test success." }
-    Add-Result "ai-tests real model" ($ai.status -eq "SUCCESS" -and $ai.used -eq $true) "status=$($ai.status), used=$($ai.used), latency=$($ai.latencyMs)"
+    $aiTestOk = if ($aiEnabled) { $ai.status -eq "SUCCESS" -and $ai.used -eq $true } else { $ai.status -eq "SKIPPED" -and $ai.used -eq $false }
+    Add-Result "ai-tests configured mode" $aiTestOk "status=$($ai.status), used=$($ai.used), enabled=$aiEnabled, latency=$($ai.latencyMs)"
 
     $categoryCode = "AUTO_TEST_$stamp"
     Api-Post "/knowledge-categories" @{
@@ -224,8 +227,10 @@ try {
         orderNo = "DD202604290001"
         useAi = $true
     }
-    $chatOk = $chat.intent.intentCode -eq "RETURN_APPLY" -and $chat.assistantMessage.sourceType -eq "AI_ENHANCED" -and $chat.ai.status -eq "SUCCESS"
-    Add-Result "chat AI enhanced flow" $chatOk "intent=$($chat.intent.intentCode), source=$($chat.assistantMessage.sourceType), ai=$($chat.ai.status)"
+    $expectedSource = if ($aiEnabled) { "AI_ENHANCED" } else { "FALLBACK" }
+    $expectedAiStatus = if ($aiEnabled) { "SUCCESS" } else { "SKIPPED" }
+    $chatOk = $chat.intent.intentCode -eq "RETURN_APPLY" -and $chat.assistantMessage.sourceType -eq $expectedSource -and $chat.ai.status -eq $expectedAiStatus
+    Add-Result "chat configured AI/fallback flow" $chatOk "intent=$($chat.intent.intentCode), source=$($chat.assistantMessage.sourceType), ai=$($chat.ai.status), enabled=$aiEnabled"
 
     $followChat = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
         content = $followQuestion

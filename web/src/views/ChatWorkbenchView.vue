@@ -10,30 +10,49 @@
         <el-button :icon="Search" @click="newSession">绑定</el-button>
       </div>
       <div v-if="chatStore.sessions.length" class="session-list">
-        <button
+        <div
           v-for="session in chatStore.sessions"
           :key="session.id"
           class="session-item"
           :class="{ active: session.id === chatStore.currentSessionId }"
           @click="selectSession(session.id)"
         >
-          <span class="session-title">{{ session.title || session.sessionNo }}</span>
-          <span class="session-meta">{{ session.currentIntent || '未识别意图' }}</span>
-        </button>
+          <button class="session-main" type="button">
+            <span class="session-title">{{ session.title || session.sessionNo }}</span>
+            <span class="session-meta">{{ session.currentIntent || '未识别意图' }}</span>
+          </button>
+          <el-button class="delete-session" :icon="Delete" text circle @click.stop="deleteChatSession(session)" />
+        </div>
       </div>
       <EmptyState v-else text="暂无会话" />
+
+      <div class="user-info-bar">
+        <div class="user-text">
+          <strong>{{ authStore.user?.displayName || authStore.user?.username }}</strong>
+          <StatusTag :value="authStore.user?.role" />
+        </div>
+        <div class="user-actions">
+          <el-button size="small" :icon="ShoppingBag" @click="openMyOrders">我的订单</el-button>
+          <el-button size="small" :icon="SwitchButton" @click="logout">退出</el-button>
+        </div>
+      </div>
     </aside>
 
     <main class="message-panel panel">
       <div class="panel-header">
         <div>
-          <h3 class="panel-title">{{ chatStore.currentSession?.title || '咨询工作台' }}</h3>
-          <p class="panel-note">{{ chatStore.currentSession?.sessionNo || '新建会话后开始咨询' }}</p>
+          <h3 class="panel-title">{{ showOrderPanel ? '我的订单' : (chatStore.currentSession?.title || '咨询工作台') }}</h3>
+          <p class="panel-note">{{ showOrderPanel ? '选择订单可自动绑定到聊天，已申请售后的订单会避免重复提交' : (chatStore.currentSession?.sessionNo || '新建会话后开始咨询') }}</p>
         </div>
-        <StatusTag :value="lastSourceType" />
+        <div class="header-actions">
+          <el-button v-if="showOrderPanel" :icon="ArrowLeft" @click="backToChat">返回聊天</el-button>
+          <StatusTag v-else :value="lastSourceType" />
+        </div>
       </div>
 
-      <div ref="messageScrollRef" class="message-list">
+      <CustomerOrderPanel v-if="showOrderPanel" @select="selectOrderFromPanel" />
+
+      <div v-else ref="messageScrollRef" class="message-list">
         <div
           v-for="message in chatStore.messages"
           :key="message.id || `${message.role}-${message.seqNo}`"
@@ -61,13 +80,13 @@
         <EmptyState v-if="!chatStore.messages.length" text="选择会话或输入问题开始咨询" />
       </div>
 
-      <div class="quick-prompts">
+      <div v-if="!showOrderPanel" class="quick-prompts">
         <el-button v-for="item in demoPrompts" :key="item" size="small" @click="draft = item">
           {{ item }}
         </el-button>
       </div>
 
-      <div class="composer">
+      <div v-if="!showOrderPanel" class="composer">
         <el-input
           v-model="draft"
           type="textarea"
@@ -77,7 +96,27 @@
           @keydown.ctrl.enter="submit"
         />
         <div class="composer-actions">
-          <el-switch v-model="useAi" active-text="AI" inactive-text="兜底" />
+          <div class="composer-options">
+            <el-switch v-model="useAi" active-text="AI" inactive-text="兜底" />
+            <el-select
+              v-model="selectedModel"
+              class="composer-model-select"
+              size="small"
+              filterable
+              allow-create
+              default-first-option
+              :reserve-keyword="false"
+              :loading="systemStore.modelSwitching"
+              @change="changeModel"
+            >
+              <el-option
+                v-for="model in systemStore.modelOptions"
+                :key="model"
+                :label="model"
+                :value="model"
+              />
+            </el-select>
+          </div>
           <el-button type="primary" :icon="Promotion" :loading="chatStore.sending" :disabled="chatStore.sending" @click="submit">
             发送
           </el-button>
@@ -155,23 +194,40 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus, Promotion, Search } from '@element-plus/icons-vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, Delete, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import CustomerOrderPanel from '../components/chat/CustomerOrderPanel.vue'
 import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
 import TicketPanel from '../components/chat/TicketPanel.vue'
 import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'
+import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
+import { useSystemStore } from '../stores/systemStore'
 
+const router = useRouter()
 const chatStore = useChatStore()
+const authStore = useAuthStore()
+const systemStore = useSystemStore()
 const orderNo = ref('DD202604290001')
 const draft = ref('这个订单能不能退货？')
 const useAi = ref(true)
 const messageScrollRef = ref(null)
+const showOrderPanel = ref(false)
+const selectedModel = ref('')
 
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
 const lastSourceType = computed(() => chatStore.insight?.assistantMessage?.sourceType || (chatStore.sending ? 'THINKING' : 'FALLBACK'))
+
+watch(
+  () => systemStore.selectedModelName,
+  value => {
+    selectedModel.value = value || ''
+  },
+  { immediate: true }
+)
 
 async function newSession() {
   await chatStore.startSession({ orderNo: orderNo.value, title: '前端咨询会话' })
@@ -179,8 +235,20 @@ async function newSession() {
 }
 
 async function selectSession(id) {
+  showOrderPanel.value = false
   await chatStore.loadSession(id)
   chatStore.insight = {}
+  await scrollBottom()
+}
+
+async function deleteChatSession(session) {
+  await ElMessageBox.confirm(`确定删除会话“${session.title || session.sessionNo}”吗？`, '删除会话', {
+    type: 'warning',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  })
+  await chatStore.removeSession(session.id)
+  ElMessage.success('会话已删除')
   await scrollBottom()
 }
 
@@ -204,6 +272,36 @@ async function submit() {
   await scrollBottom()
 }
 
+function openMyOrders() {
+  showOrderPanel.value = true
+}
+
+function backToChat() {
+  showOrderPanel.value = false
+}
+
+function selectOrderFromPanel(row) {
+  orderNo.value = row.orderNo
+  showOrderPanel.value = false
+  ElMessage.success(`已绑定订单：${row.orderNo}`)
+  scrollBottom()
+}
+
+async function changeModel(modelName) {
+  if (!modelName) return
+  try {
+    await systemStore.changeModel(modelName)
+    ElMessage.success(`已切换模型：${modelName}`)
+  } catch (error) {
+    selectedModel.value = systemStore.selectedModelName
+  }
+}
+
+async function logout() {
+  await authStore.logout()
+  await router.replace('/login')
+}
+
 async function scrollBottom() {
   await nextTick()
   if (messageScrollRef.value) {
@@ -212,6 +310,7 @@ async function scrollBottom() {
 }
 
 onMounted(async () => {
+  systemStore.loadStatus().catch(() => {})
   await chatStore.loadSessions()
   if (chatStore.sessions.length) {
     await selectSession(chatStore.sessions[0].id)
@@ -235,6 +334,11 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.session-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
 .panel-note {
   margin: 2px 0 0;
   color: var(--text-muted);
@@ -249,13 +353,16 @@ onMounted(async () => {
 }
 
 .session-list {
-  height: calc(100% - 112px);
+  min-height: 0;
   overflow: auto;
   padding: 8px;
 }
 
 .session-item {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 4px;
   width: 100%;
   padding: 10px;
   border: 1px solid transparent;
@@ -266,9 +373,28 @@ onMounted(async () => {
   cursor: pointer;
 }
 
+.session-main {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .session-item.active {
   border-color: #bfdbfe;
   background: var(--brand-soft);
+}
+
+.delete-session {
+  opacity: 0;
+}
+
+.session-item:hover .delete-session,
+.session-item.active .delete-session {
+  opacity: 1;
 }
 
 .session-title,
@@ -285,9 +411,45 @@ onMounted(async () => {
   font-size: 12px;
 }
 
+.user-info-bar {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--line-soft);
+  background: white;
+}
+
+.user-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-text strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .message-panel {
   display: grid;
   grid-template-rows: auto 1fr auto auto;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .message-list {
@@ -403,7 +565,18 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-top: 10px;
+}
+
+.composer-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.composer-model-select {
+  width: 172px;
 }
 
 .insight-body {

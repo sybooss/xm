@@ -14,6 +14,7 @@ public interface ChatSessionMapper {
             from chat_session s
             left join demo_order o on s.order_id=o.id
             where 1=1
+            <if test="s.userId != null">and s.user_id=#{s.userId}</if>
             <if test="s.status != null and s.status != ''">and s.status=#{s.status}</if>
             <if test="s.keyword != null and s.keyword != ''">
                 and (s.title like concat('%',#{s.keyword},'%')
@@ -30,6 +31,7 @@ public interface ChatSessionMapper {
             from chat_session s
             left join demo_order o on s.order_id=o.id
             where 1=1
+            <if test="s.userId != null">and s.user_id=#{s.userId}</if>
             <if test="s.status != null and s.status != ''">and s.status=#{s.status}</if>
             <if test="s.keyword != null and s.keyword != ''">
                 and (s.title like concat('%',#{s.keyword},'%')
