@@ -99,6 +99,7 @@
           <div class="composer-options">
             <el-switch v-model="useAi" active-text="AI" inactive-text="兜底" />
             <el-select
+              v-if="authStore.isAdmin"
               v-model="selectedModel"
               class="composer-model-select"
               size="small"
@@ -310,7 +311,9 @@ async function scrollBottom() {
 }
 
 onMounted(async () => {
-  systemStore.loadStatus().catch(() => {})
+  if (authStore.isAdmin) {
+    systemStore.loadStatus().catch(() => {})
+  }
   await chatStore.loadSessions()
   if (chatStore.sessions.length) {
     await selectSession(chatStore.sessions[0].id)

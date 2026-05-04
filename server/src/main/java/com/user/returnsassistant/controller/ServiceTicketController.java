@@ -1,19 +1,31 @@
 package com.user.returnsassistant.controller;
 
 import com.user.returnsassistant.anno.OperatorAnno;
+import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.ServiceTicketSearch;
+import com.user.returnsassistant.pojo.UserAccount;
+import com.user.returnsassistant.service.AuthService;
+import com.user.returnsassistant.service.ChatService;
 import com.user.returnsassistant.service.ServiceTicketService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 public class ServiceTicketController {
     @Autowired
     private ServiceTicketService ticketService;
+    @Autowired
+    private AuthService authService;
+    @Autowired
+    private ChatService chatService;
 
     @GetMapping("/service-tickets")
+    @OperatorAnno
     public Result page(ServiceTicketSearch search) {
         return Result.success(ticketService.page(search));
     }
@@ -25,6 +37,7 @@ public class ServiceTicketController {
     }
 
     @GetMapping("/service-tickets/{id}")
+    @OperatorAnno
     public Result getById(@PathVariable Long id) {
         return Result.success(ticketService.getById(id));
     }
@@ -44,14 +57,27 @@ public class ServiceTicketController {
     }
 
     @GetMapping("/chat-sessions/{sessionId}/service-tickets")
-    public Result listBySessionId(@PathVariable Long sessionId) {
+    public Result listBySessionId(@PathVariable Long sessionId, HttpServletRequest request) {
+        ensureSessionAccess(sessionId, request);
         return Result.success(ticketService.listBySessionId(sessionId));
     }
 
     @PostMapping("/chat-sessions/{sessionId}/service-tickets")
-    @OperatorAnno
-    public Result createBySession(@PathVariable Long sessionId, @RequestBody ServiceTicket ticket) {
+    public Result createBySession(@PathVariable Long sessionId, @RequestBody ServiceTicket ticket, HttpServletRequest request) {
+        ensureSessionAccess(sessionId, request);
         ticket.setSessionId(sessionId);
         return Result.success(ticketService.save(ticket));
+    }
+
+    private void ensureSessionAccess(Long sessionId, HttpServletRequest request) {
+        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
+        if ("ADMIN".equals(user.getRole())) {
+            return;
+        }
+        Map<String, Object> detail = chatService.getDetail(sessionId);
+        Object owner = detail.get("userId");
+        if (!(owner instanceof Number number) || number.longValue() != user.getId()) {
+            throw new BusinessException("只能操作自己的会话工单");
+        }
     }
 }

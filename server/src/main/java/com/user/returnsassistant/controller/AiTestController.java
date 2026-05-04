@@ -1,5 +1,6 @@
 package com.user.returnsassistant.controller;
 
+import com.user.returnsassistant.anno.OperatorAnno;
 import com.user.returnsassistant.pojo.AiTestRequest;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.service.AiService;
@@ -16,6 +17,7 @@ public class AiTestController {
     private AiService aiService;
 
     @PostMapping
+    @OperatorAnno
     public Result test(@RequestBody AiTestRequest request) {
         return Result.success(aiService.test(request.getPrompt()));
     }

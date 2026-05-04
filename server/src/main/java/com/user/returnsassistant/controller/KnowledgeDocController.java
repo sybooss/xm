@@ -15,6 +15,7 @@ public class KnowledgeDocController {
     private KnowledgeDocService docService;
 
     @GetMapping
+    @OperatorAnno
     public Result page(KnowledgeDocSearch search) {
         return Result.success(docService.page(search));
     }
@@ -27,6 +28,7 @@ public class KnowledgeDocController {
     }
 
     @GetMapping("/{id}")
+    @OperatorAnno
     public Result getById(@PathVariable Long id) {
         return Result.success(docService.getById(id));
     }

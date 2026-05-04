@@ -8,9 +8,13 @@
       </div>
 
       <el-form class="login-form" label-position="top" @submit.prevent="submit">
-        <h2>管理员登录</h2>
+        <h2>{{ form.username === 'admin' ? '管理员登录' : '客户登录' }}</h2>
+        <div class="role-switch">
+          <el-button :type="form.username === 'admin' ? 'primary' : 'default'" @click="useAdmin">管理员</el-button>
+          <el-button :type="form.username === 'demo_customer' ? 'primary' : 'default'" @click="useCustomer">客户</el-button>
+        </div>
         <el-form-item label="账号">
-          <el-input v-model="form.username" placeholder="admin" size="large" />
+          <el-input v-model="form.username" placeholder="admin 或 demo_customer" size="large" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="form.password" placeholder="123456" size="large" type="password" show-password @keydown.enter="submit" />
@@ -18,7 +22,7 @@
         <el-button class="login-button" type="primary" size="large" :loading="authStore.loading" @click="submit">
           登录
         </el-button>
-        <p class="login-tip">演示账号：admin / 123456</p>
+        <p class="login-tip">管理员：admin / 123456；客户：demo_customer / 123456</p>
       </el-form>
     </div>
   </section>
@@ -33,6 +37,16 @@ import { useAuthStore } from '../stores/authStore'
 const router = useRouter()
 const authStore = useAuthStore()
 const form = reactive({ username: 'admin', password: '123456' })
+
+function useAdmin() {
+  form.username = 'admin'
+  form.password = '123456'
+}
+
+function useCustomer() {
+  form.username = 'demo_customer'
+  form.password = '123456'
+}
 
 async function submit() {
   if (!form.username || !form.password) {
@@ -109,6 +123,18 @@ h2 {
 
 .login-button {
   width: 100%;
+}
+
+.role-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.role-switch .el-button {
+  width: 100%;
+  margin: 0;
 }
 
 .login-tip {

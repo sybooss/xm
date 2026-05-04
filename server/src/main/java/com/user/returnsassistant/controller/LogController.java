@@ -1,5 +1,6 @@
 package com.user.returnsassistant.controller;
 
+import com.user.returnsassistant.anno.OperatorAnno;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.service.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +13,13 @@ public class LogController {
     private LogService logService;
 
     @GetMapping("/ai-call-logs")
+    @OperatorAnno
     public Result aiLogs(Integer page, Integer pageSize, String status) {
         return Result.success(logService.pageAiLogs(page, pageSize, status));
     }
 
     @GetMapping("/retrieval-logs")
+    @OperatorAnno
     public Result retrievalLogs(Integer page, Integer pageSize, String keyword) {
         return Result.success(logService.pageRetrievalLogs(page, pageSize, keyword));
     }

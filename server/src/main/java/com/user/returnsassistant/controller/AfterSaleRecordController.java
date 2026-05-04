@@ -15,6 +15,7 @@ public class AfterSaleRecordController {
     private AfterSaleRecordService recordService;
 
     @GetMapping
+    @OperatorAnno
     public Result page(AfterSaleRecordSearch search) {
         return Result.success(recordService.page(search));
     }
@@ -27,6 +28,7 @@ public class AfterSaleRecordController {
     }
 
     @GetMapping("/{id}")
+    @OperatorAnno
     public Result getById(@PathVariable Long id) {
         return Result.success(recordService.getById(id));
     }

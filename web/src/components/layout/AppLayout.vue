@@ -12,13 +12,17 @@
 import { onMounted } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
+import { useAuthStore } from '../../stores/authStore'
 import { useSystemStore } from '../../stores/systemStore'
 
+const authStore = useAuthStore()
 const systemStore = useSystemStore()
 
 onMounted(() => {
-  systemStore.loadStatus().catch(() => {})
-  systemStore.loadEnums().catch(() => {})
+  if (authStore.isAdmin) {
+    systemStore.loadStatus().catch(() => {})
+    systemStore.loadEnums().catch(() => {})
+  }
 })
 </script>
 

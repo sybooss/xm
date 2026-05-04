@@ -87,6 +87,10 @@ try {
     $subHealth = Invoke-RestMethod -Uri "$sub2api/health" -Method Get -TimeoutSec 20
     Add-Result "sub2api health" ($subHealth.status -eq "ok") $subHealth.status
 
+    $auth = Api-Post "/auth/login" @{ username = "admin"; password = "123456" }
+    $script:authToken = $auth.token
+    Add-Result "auth login" ($auth.role -eq "ADMIN" -and $null -ne $auth.token) "user=$($auth.username), role=$($auth.role)"
+
     $status = Api-Get "/system/status"
     $aiEnabled = $status.ai.enabled -eq $true
     $aiReady = if ($aiEnabled) { $status.ai.status -eq "UP" } else { $status.ai.status -eq "SKIPPED" }
@@ -94,10 +98,6 @@ try {
 
     $enums = Api-Get "/system/enums"
     Add-Result "system enums" ($enums.intentCodes.Count -ge 7) "intentCodes=$($enums.intentCodes.Count)"
-
-    $auth = Api-Post "/auth/login" @{ username = "admin"; password = "123456" }
-    $script:authToken = $auth.token
-    Add-Result "auth login" ($auth.role -eq "ADMIN" -and $null -ne $auth.token) "user=$($auth.username), role=$($auth.role)"
 
     $me = Api-Get "/auth/me"
     Add-Result "auth me" ($me.username -eq "admin" -and $me.role -eq "ADMIN") "role=$($me.role)"

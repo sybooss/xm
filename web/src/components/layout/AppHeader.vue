@@ -5,20 +5,21 @@
       <p>Spring Boot + Vue 3 + MySQL + LangChain4j</p>
     </div>
     <div class="status-line">
-      <el-button :icon="Refresh" circle @click="refresh" />
+      <el-button v-if="authStore.isAdmin" :icon="Refresh" circle @click="refresh" />
       <span class="status-item user-chip">
         {{ authStore.user?.displayName || authStore.user?.username }}
         <StatusTag :value="authStore.user?.role" />
       </span>
-      <span class="status-item">
+      <span v-if="authStore.isAdmin" class="status-item">
         数据库
         <StatusTag :value="systemStore.database.status" />
       </span>
-      <span class="status-item">
+      <span v-if="authStore.isAdmin" class="status-item">
         AI
         <StatusTag :value="systemStore.ai.status" />
       </span>
       <el-select
+        v-if="authStore.isAdmin"
         v-model="selectedModel"
         class="model-select"
         size="small"

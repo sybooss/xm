@@ -14,6 +14,7 @@ public class KnowledgeCategoryController {
     private KnowledgeCategoryService categoryService;
 
     @GetMapping
+    @OperatorAnno
     public Result list(Integer enabled) {
         return Result.success(categoryService.list(enabled));
     }
@@ -26,6 +27,7 @@ public class KnowledgeCategoryController {
     }
 
     @GetMapping("/{id}")
+    @OperatorAnno
     public Result getById(@PathVariable Long id) {
         return Result.success(categoryService.getById(id));
     }

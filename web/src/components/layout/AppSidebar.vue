@@ -9,43 +9,36 @@
     </div>
 
     <el-menu :default-active="route.path" router class="menu">
-      <el-menu-item index="/dashboard">
-        <el-icon><DataAnalysis /></el-icon>
-        <span>系统总览</span>
-      </el-menu-item>
-      <el-menu-item index="/chat">
-        <el-icon><ChatDotRound /></el-icon>
-        <span>咨询工作台</span>
-      </el-menu-item>
-      <el-menu-item index="/knowledge">
-        <el-icon><Collection /></el-icon>
-        <span>知识库</span>
-      </el-menu-item>
-      <el-menu-item index="/orders">
-        <el-icon><Tickets /></el-icon>
-        <span>订单管理</span>
-      </el-menu-item>
-      <el-menu-item index="/service-tickets">
-        <el-icon><Service /></el-icon>
-        <span>人工工单</span>
-      </el-menu-item>
-      <el-menu-item index="/logs">
-        <el-icon><Document /></el-icon>
-        <span>日志中心</span>
-      </el-menu-item>
-      <el-menu-item index="/ai-test">
-        <el-icon><Cpu /></el-icon>
-        <span>AI 测试</span>
+      <el-menu-item
+        v-for="item in visibleMenus"
+        :key="item.path"
+        :index="item.path"
+      >
+        <el-icon><component :is="item.icon" /></el-icon>
+        <span>{{ item.label }}</span>
       </el-menu-item>
     </el-menu>
   </aside>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Service, Tickets } from '@element-plus/icons-vue'
+import { useAuthStore } from '../../stores/authStore'
 
 const route = useRoute()
+const authStore = useAuthStore()
+const menus = [
+  { path: '/dashboard', label: '系统总览', icon: DataAnalysis, adminOnly: true },
+  { path: '/chat', label: '咨询工作台', icon: ChatDotRound },
+  { path: '/knowledge', label: '知识库', icon: Collection, adminOnly: true },
+  { path: '/orders', label: '订单管理', icon: Tickets, adminOnly: true },
+  { path: '/service-tickets', label: '人工工单', icon: Service, adminOnly: true },
+  { path: '/logs', label: '日志中心', icon: Document, adminOnly: true },
+  { path: '/ai-test', label: 'AI 测试', icon: Cpu, adminOnly: true }
+]
+const visibleMenus = computed(() => menus.filter(item => !item.adminOnly || authStore.isAdmin))
 </script>
 
 <style scoped>

@@ -35,6 +35,7 @@ public class SystemController {
     private String baseUrl;
 
     @GetMapping("/status")
+    @OperatorAnno
     public Result status() {
         jdbcTemplate.queryForObject("select 1", Integer.class);
         Map<String, Object> ai = aiPayload();
@@ -47,6 +48,7 @@ public class SystemController {
     }
 
     @GetMapping("/ai-models")
+    @OperatorAnno
     public Result aiModels() {
         return Result.success(aiPayload());
     }
@@ -79,6 +81,7 @@ public class SystemController {
     }
 
     @GetMapping("/enums")
+    @OperatorAnno
     public Result enums() {
         return Result.success(Map.of(
                 "intentCodes", List.of(
