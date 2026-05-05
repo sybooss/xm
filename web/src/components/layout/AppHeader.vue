@@ -2,7 +2,6 @@
   <header class="header">
     <div>
       <h1>{{ title }}</h1>
-      <p>Spring Boot + Vue 3 + MySQL + LangChain4j</p>
     </div>
     <div class="status-line">
       <el-button v-if="authStore.isAdmin" :icon="Refresh" circle @click="refresh" />
@@ -104,12 +103,6 @@ h1 {
   margin: 0;
   font-size: 18px;
   line-height: 1.25;
-}
-
-p {
-  margin: 2px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
 }
 
 .status-line {
