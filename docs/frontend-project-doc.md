@@ -169,6 +169,7 @@ export default request
 
 | 路由 | 页面 | 功能 |
 | --- | --- | --- |
+| `/login` | `LoginView` | 管理员/客户登录，客户自助注册 |
 | `/` | `DashboardView` | 系统总览、数据库状态、AI 状态、快速入口 |
 | `/chat` | `ChatWorkbenchView` | 咨询工作台，核心演示页面 |
 | `/knowledge/categories` | `KnowledgeCategoryView` | 知识分类管理 |
@@ -581,7 +582,7 @@ export const testAi = data => request.post('/ai-tests', data)
 
 补充增强：
 
-- 新增 `/login` 演示登录页，默认账号 `admin / 123456`。
+- `/login` 提供登录/注册切换：登录页保留 `admin / 123456` 和 `demo_customer / 123456` 快捷入口；注册页创建客户账号，注册成功后自动进入咨询工作台。
 - 前端请求统一注入 `Authorization` token，后台新增、修改、删除操作需要管理员权限。
 - 聊天发送优先使用 `POST /chat-sessions/{id}/message-stream`，先展示处理进度，再展示最终回复。
 - 咨询工作台继续保留本地临时气泡，用户点击发送后消息立即出现在页面中，不再等模型完整响应后才显示。

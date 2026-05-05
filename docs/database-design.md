@@ -62,6 +62,7 @@ erDiagram
 | display_name | VARCHAR(80) | 非空 | 展示名称 |
 | role | VARCHAR(20) | 非空 | `CUSTOMER`、`ADMIN` |
 | phone | VARCHAR(20) | 可空 | 演示手机号 |
+| password_hash | VARCHAR(128) | 可空 | 注册客户密码哈希；历史演示账号可为空 |
 | status | TINYINT | 默认 1 | 1 启用，0 停用 |
 | created_at | DATETIME | 非空 | 创建时间 |
 | updated_at | DATETIME | 非空 | 更新时间 |
@@ -70,6 +71,8 @@ erDiagram
 
 - `uk_user_username(username)`
 - `idx_user_role(role)`
+
+说明：客户可通过登录页自助注册，注册后固定写入 `CUSTOMER` 角色。管理员账号仍通过种子数据或数据库维护，不开放前台注册。已有数据库升级时执行 `sql/migration-20260505-add-user-password.sql` 为 `user_account` 补充 `password_hash` 字段。
 
 ### 4.2 演示订单表 `demo_order`
 

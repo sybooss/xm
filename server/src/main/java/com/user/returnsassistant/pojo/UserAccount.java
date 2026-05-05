@@ -11,6 +11,7 @@ public class UserAccount {
     private String displayName;
     private String role;
     private String phone;
+    private String passwordHash;
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

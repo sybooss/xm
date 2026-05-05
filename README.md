@@ -14,7 +14,7 @@
 - 多轮追问：结合会话摘要和最近消息承接上一轮语境，支持退货后追问退款、物流异常后追问投诉等连续咨询。
 - 流式反馈：聊天发送后立即显示处理进度，最终回复采用逐字呈现效果。
 - 人工工单：投诉、人工客服和异常升级场景可自动生成工单，也支持客服手动转人工。
-- 登录权限：提供演示管理员登录，并对新增、修改、删除类操作进行角色拦截。
+- 登录注册与权限：支持客户自助注册、演示账号登录，并对新增、修改、删除类后台操作进行角色拦截。
 - 日志追踪：记录 AI 调用日志、知识检索日志和可视化处理轨迹，便于调试和答辩展示。
 
 ## 技术栈
@@ -131,6 +131,7 @@ OPENAI_BASE_URL=http://127.0.0.1:8080/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_MODEL_OPTIONS=gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini
 APP_AUTH_ADMIN_PASSWORD=123456
+APP_AUTH_CUSTOMER_PASSWORD=123456
 APP_AUTH_TOKEN_HOURS=8
 ```
 
@@ -140,7 +141,15 @@ APP_AUTH_TOKEN_HOURS=8
 - 使用官方 OpenAI 时，`OPENAI_BASE_URL` 可改为 `https://api.openai.com/v1`。
 - `OPENAI_API_KEY` 不要提交到 Git；仓库已通过 `.gitignore` 忽略 `.env`。
 - 如果没有配置 AI，系统仍可使用本地规则兜底，但 AI 测试和 AI 增强回复会显示跳过或失败。
-- 默认演示管理员为 `admin / 123456`，可通过 `APP_AUTH_ADMIN_PASSWORD` 修改密码。
+- 默认演示管理员为 `admin / 123456`，默认演示客户为 `demo_customer / 123456`。
+- 新客户可在登录页切换到“注册”，注册后默认角色为 `CUSTOMER`，只能进入咨询工作台和自己的订单售后入口。
+- 注册用户使用个人密码登录；历史演示账号没有单独密码哈希时，继续兼容 `APP_AUTH_ADMIN_PASSWORD` / `APP_AUTH_CUSTOMER_PASSWORD`。
+
+已有数据库升级到注册版本时，执行一次迁移脚本：
+
+```powershell
+mysql -uroot -p1234 test3 < .\sql\migration-20260505-add-user-password.sql
+```
 
 ## 4. 启动后端
 
@@ -193,7 +202,7 @@ http://localhost:5173
 
 | 页面 | 路径 | 说明 |
 | --- | --- | --- |
-| 登录 | `/login` | 管理员登录，进入后台工作台 |
+| 登录/注册 | `/login` | 管理员/客户登录，客户自助注册 |
 | 咨询工作台 | `/chat` | 发送售后问题，查看 AI 回复、意图、依据和轨迹 |
 | 系统总览 | `/dashboard` | 查看数据库、AI、模型和快速入口 |
 | 知识库 | `/knowledge` | 管理知识文档，调试检索 |
@@ -213,6 +222,7 @@ GET    /system/ai-models
 PUT    /system/ai-models/current
 
 POST   /auth/login
+POST   /auth/register
 GET    /auth/me
 POST   /auth/logout
 

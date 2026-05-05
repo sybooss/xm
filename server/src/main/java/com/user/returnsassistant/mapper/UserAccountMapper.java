@@ -15,8 +15,8 @@ public interface UserAccountMapper {
     UserAccount getByUsername(String username);
 
     @Insert("""
-            insert into user_account(username, display_name, role, phone, status)
-            values(#{username}, #{displayName}, #{role}, #{phone}, #{status})
+            insert into user_account(username, display_name, role, phone, password_hash, status)
+            values(#{username}, #{displayName}, #{role}, #{phone}, #{passwordHash}, #{status})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(UserAccount userAccount);

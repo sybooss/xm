@@ -17,16 +17,18 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const data = await authApi.login({ username, password })
-      token.value = data.token
-      user.value = {
-        userId: data.userId,
-        username: data.username,
-        displayName: data.displayName,
-        role: data.role,
-        expiresAt: data.expiresAt
-      }
-      localStorage.setItem(TOKEN_KEY, token.value)
-      localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+      saveAuth(data)
+      return data
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function register(payload) {
+    loading.value = true
+    try {
+      const data = await authApi.register(payload)
+      saveAuth(data)
       return data
     } finally {
       loading.value = false
@@ -66,6 +68,19 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(USER_KEY)
   }
 
+  function saveAuth(data) {
+    token.value = data.token
+    user.value = {
+      userId: data.userId,
+      username: data.username,
+      displayName: data.displayName,
+      role: data.role,
+      expiresAt: data.expiresAt
+    }
+    localStorage.setItem(TOKEN_KEY, token.value)
+    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+  }
+
   return {
     token,
     user,
@@ -73,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     isAdmin,
     login,
+    register,
     loadMe,
     logout,
     clear

@@ -28,6 +28,23 @@ langchain4j:
 
 建议复制根目录 `.env.example` 为 `.env`，再填写本机 MySQL 密码和 OpenAI-compatible API Key。
 
+如果是在旧数据库上启用注册功能，先执行一次迁移：
+
+```powershell
+mysql -uroot -p1234 test3 < ..\sql\migration-20260505-add-user-password.sql
+```
+
+认证接口包括：
+
+```http
+POST /auth/login
+POST /auth/register
+GET /auth/me
+POST /auth/logout
+```
+
+`/auth/register` 只创建客户账号，注册后直接返回 token；管理员账号仍通过初始化数据维护。
+
 ## 启动
 
 开发模式：
@@ -59,4 +76,3 @@ Invoke-RestMethod http://localhost:8081/system/ai-models
 ```
 
 详细接口见 `docs/backend-api-design.md`。
-

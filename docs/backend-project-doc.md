@@ -72,13 +72,14 @@ spring:
 ```text
 D:\复制软件系统\sql\schema.sql
 D:\复制软件系统\sql\seed.sql
+D:\复制软件系统\sql\migration-20260505-add-user-password.sql
 ```
 
 主要数据表：
 
 | 表名 | 用途 |
 | --- | --- |
-| `user_account` | 演示用户 |
+| `user_account` | 用户、管理员和注册客户 |
 | `chat_session` | 客服会话 |
 | `chat_message` | 用户和助手消息 |
 | `knowledge_category` | 知识分类 |
@@ -102,6 +103,19 @@ GET /system/enums
 ```
 
 状态接口用于展示后端、数据库和 AI 层是否可用。接入真实模型后，`data.ai` 会显示模型提供方、模型名、base URL 是否配置和兜底开关。
+
+### 5.1.1 认证模块
+
+提供登录、客户注册、当前用户和注销接口：
+
+```http
+POST /auth/login
+POST /auth/register
+GET /auth/me
+POST /auth/logout
+```
+
+客户注册只创建 `CUSTOMER` 账号，注册成功后直接返回 token 并进入咨询工作台；管理员账号仍由初始化数据或数据库维护，不开放前台注册。新注册用户使用 `user_account.password_hash` 校验个人密码，历史演示账号没有密码哈希时继续兼容 `APP_AUTH_ADMIN_PASSWORD` 和 `APP_AUTH_CUSTOMER_PASSWORD`。
 
 ### 5.2 会话模块
 

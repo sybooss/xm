@@ -22,6 +22,7 @@ function U($codes) {
 $chatQuestion = U @(0x8fd9,0x4e2a,0x8ba2,0x5355,0x80fd,0x4e0d,0x80fd,0x9000,0x8d27,0xff1f)
 $followQuestion = U @(0x90a3,0x9000,0x6b3e,0x591a,0x4e45,0x5230,0x8d26,0xff1f)
 $ticketQuestion = U @(0x5546,0x5bb6,0x4e00,0x76f4,0x4e0d,0x5904,0x7406,0x53ef,0x4ee5,0x8f6c,0x4eba,0x5de5,0x6295,0x8bc9,0x5417,0xff1f)
+$accountExistsMessage = U @(0x8d26,0x53f7,0x5df2,0x5b58,0x5728)
 
 function Add-Result($name, $ok, $detail = "") {
     $passed = $false
@@ -52,6 +53,18 @@ function Api-Post($path, $body) {
         throw "$path failed: $($response.msg)"
     }
     return $response.data
+}
+
+function Api-Post-Raw($path, $body) {
+    $json = $body | ConvertTo-Json -Depth 12
+    $headers = Auth-Headers
+    $response = Invoke-WebRequest -Uri "$base$path" -Method Post -Headers $headers -ContentType "application/json; charset=utf-8" -Body $json -TimeoutSec 120 -UseBasicParsing
+    $stream = $response.RawContentStream
+    $stream.Position = 0
+    $bytes = New-Object byte[] $stream.Length
+    [void]$stream.Read($bytes, 0, $bytes.Length)
+    $content = [System.Text.Encoding]::UTF8.GetString($bytes)
+    return $content | ConvertFrom-Json
 }
 
 function Api-Put($path, $body) {
@@ -101,6 +114,29 @@ try {
 
     $me = Api-Get "/auth/me"
     Add-Result "auth me" ($me.username -eq "admin" -and $me.role -eq "ADMIN") "role=$($me.role)"
+
+    $registerUsername = "auto_user_$stamp"
+    $registerPassword = "auto123456"
+    $registered = Api-Post "/auth/register" @{
+        username = $registerUsername
+        password = $registerPassword
+        confirmPassword = $registerPassword
+        displayName = "Auto User $stamp"
+        phone = ""
+    }
+    Add-Result "auth register customer" ($registered.username -eq $registerUsername -and $registered.role -eq "CUSTOMER" -and $null -ne $registered.token) "user=$($registered.username), role=$($registered.role)"
+
+    $duplicate = Api-Post-Raw "/auth/register" @{
+        username = $registerUsername
+        password = $registerPassword
+        confirmPassword = $registerPassword
+        displayName = "Duplicate User"
+        phone = ""
+    }
+    Add-Result "auth register duplicate rejected" ($duplicate.code -eq 0 -and $duplicate.msg -eq $accountExistsMessage) $duplicate.msg
+
+    $registeredLogin = Api-Post "/auth/login" @{ username = $registerUsername; password = $registerPassword }
+    Add-Result "auth registered customer login" ($registeredLogin.username -eq $registerUsername -and $registeredLogin.role -eq "CUSTOMER") "role=$($registeredLogin.role)"
 
     $ai = Api-Post "/ai-tests" @{ prompt = "Reply exactly: AI smoke test success." }
     $aiTestOk = if ($aiEnabled) { $ai.status -eq "SUCCESS" -and $ai.used -eq $true } else { $ai.status -eq "SKIPPED" -and $ai.used -eq $false }

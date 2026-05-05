@@ -1238,10 +1238,25 @@ public class ChatSessionController {
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `POST` | `/auth/login` | 登录，默认演示账号 `admin / 123456` |
+| `POST` | `/auth/register` | 客户自助注册，注册后默认角色为 `CUSTOMER` 并直接返回 token |
 | `GET` | `/auth/me` | 查询当前登录用户 |
 | `POST` | `/auth/logout` | 注销 token |
 
 前端请求通过 `Authorization: Bearer <token>` 传递 token。非管理员访问 `@OperatorAnno` 接口时返回 `权限不足，仅管理员可执行该操作`。
+
+注册请求示例：
+
+```json
+{
+  "username": "new_customer",
+  "password": "123456",
+  "confirmPassword": "123456",
+  "displayName": "新客户",
+  "phone": "13800000001"
+}
+```
+
+注册约束：`username` 为 4-30 位字母、数字或下划线且不能重复；`password` 为 6-32 位且两次输入一致；注册接口只创建客户账号，不开放管理员注册。新注册用户写入 `user_account.password_hash`，历史演示账号没有密码哈希时继续使用演示密码配置。
 
 ### 15.4 消息流式反馈
 

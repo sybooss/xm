@@ -18,9 +18,9 @@ const page = await browser.newPage({ viewport: { width: 1366, height: 860 } })
 try {
   await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle', timeout: 60000 })
   await page.getByRole('button', { name: '客户' }).click()
-  await page.getByRole('button', { name: /^登录$/ }).click()
+  await page.locator('.login-form .login-button').click()
   await expectText(page, '咨询工作台', 'customer lands on chat')
-  await expectText(page, 'CUSTOMER', 'customer role tag visible')
+  await expectText(page, '客户', 'customer role tag visible')
 
   const adminMenuTexts = ['系统总览', '知识库', '订单管理', '人工工单', '日志中心', 'AI 测试']
   for (const text of adminMenuTexts) {

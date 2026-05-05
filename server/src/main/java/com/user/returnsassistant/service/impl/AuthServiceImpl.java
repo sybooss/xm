@@ -9,13 +9,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{4,30}$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^1\\d{10}$");
+
     @Autowired
     private UserAccountMapper userAccountMapper;
 
@@ -40,6 +48,29 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordMatches(user, password)) {
             throw new BusinessException("账号或密码错误");
         }
+        long expiresAt = System.currentTimeMillis() + Duration.ofHours(tokenHours == null ? 8 : tokenHours).toMillis();
+        String token = UUID.randomUUID().toString().replace("-", "");
+        sessions.put(token, new AuthSession(user, expiresAt));
+        return toResponse(token, user, expiresAt);
+    }
+
+    @Override
+    public LoginResponse register(String username, String password, String confirmPassword, String displayName, String phone) {
+        String cleanUsername = normalizeText(username);
+        String cleanDisplayName = normalizeText(displayName);
+        String cleanPhone = normalizeText(phone);
+        validateRegisterInput(cleanUsername, password, confirmPassword, cleanDisplayName, cleanPhone);
+        if (userAccountMapper.getByUsername(cleanUsername) != null) {
+            throw new BusinessException("账号已存在");
+        }
+        UserAccount user = new UserAccount();
+        user.setUsername(cleanUsername);
+        user.setDisplayName(hasText(cleanDisplayName) ? cleanDisplayName : cleanUsername);
+        user.setRole("CUSTOMER");
+        user.setPhone(hasText(cleanPhone) ? cleanPhone : null);
+        user.setPasswordHash(hashPassword(password));
+        user.setStatus(1);
+        userAccountMapper.insert(user);
         long expiresAt = System.currentTimeMillis() + Duration.ofHours(tokenHours == null ? 8 : tokenHours).toMillis();
         String token = UUID.randomUUID().toString().replace("-", "");
         sessions.put(token, new AuthSession(user, expiresAt));
@@ -76,8 +107,46 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private boolean passwordMatches(UserAccount user, String password) {
+        if (hasText(user.getPasswordHash())) {
+            return hashPassword(password).equals(user.getPasswordHash());
+        }
         String expected = "ADMIN".equals(user.getRole()) ? adminPassword : customerPassword;
         return password.equals(expected);
+    }
+
+    private void validateRegisterInput(String username, String password, String confirmPassword, String displayName, String phone) {
+        if (!hasText(username) || !hasText(password) || !hasText(confirmPassword)) {
+            throw new BusinessException("账号和密码不能为空");
+        }
+        if (!USERNAME_PATTERN.matcher(username).matches()) {
+            throw new BusinessException("账号需为4-30位字母、数字或下划线");
+        }
+        if (password.length() < 6 || password.length() > 32) {
+            throw new BusinessException("密码需为6-32位");
+        }
+        if (!password.equals(confirmPassword)) {
+            throw new BusinessException("两次输入的密码不一致");
+        }
+        if (hasText(displayName) && displayName.length() > 80) {
+            throw new BusinessException("昵称不能超过80个字符");
+        }
+        if (hasText(phone) && !PHONE_PATTERN.matcher(phone).matches()) {
+            throw new BusinessException("手机号格式不正确");
+        }
+    }
+
+    private String hashPassword(String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(("returns-assistant:" + password).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(bytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private String normalizeText(String text) {
+        return text == null ? "" : text.trim();
     }
 
     private LoginResponse toResponse(String token, UserAccount user, long expiresAt) {
