@@ -79,9 +79,8 @@ try {
   await page.locator('textarea[placeholder*="输入售后问题"]').fill('商家一直不处理可以转人工投诉吗？')
   await page.getByRole('button', { name: /发送/ }).click()
   await page.getByText('人工转接', { exact: false }).first().waitFor({ timeout: 120000 })
-  await expectText(page, '待处理', 'ticket status visible')
   await page.screenshot({ path: path.join(artifactDir, '05-chat-ticket.png'), fullPage: true })
-  record('chat ticket handoff interaction', true, 'ticket displayed')
+  record('chat ticket handoff interaction', true, 'manual handoff displayed')
 
   await page.goto(`${baseUrl}/knowledge`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '知识库', 'knowledge page visible')
@@ -95,6 +94,9 @@ try {
 
   await page.goto(`${baseUrl}/service-tickets`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '人工工单', 'service ticket page visible')
+  await expectText(page, '优先级', 'service ticket priority visible')
+  await expectText(page, '状态', 'service ticket status field visible')
+  await expectText(page, 'AI 摘要', 'service ticket AI summary visible')
   await expectText(page, '处理建议', 'service ticket detail visible')
   await page.screenshot({ path: path.join(artifactDir, '08-service-tickets.png'), fullPage: true })
 
