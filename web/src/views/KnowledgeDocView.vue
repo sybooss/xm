@@ -2,7 +2,6 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">文档维护</h2>
         <p class="page-subtitle">维护退换货规则、FAQ 和客服话术，并测试知识检索命中。</p>
       </div>
       <el-button type="primary" :icon="Plus" @click="openCreate">新增文档</el-button>

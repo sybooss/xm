@@ -2,7 +2,6 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">AI 测试</h2>
         <p class="page-subtitle">验证 LangChain4j 是否已通过本机 sub2api 调用真实模型。</p>
       </div>
       <el-button :icon="Refresh" @click="systemStore.loadStatus()">刷新状态</el-button>

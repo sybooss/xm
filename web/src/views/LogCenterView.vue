@@ -2,7 +2,6 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">日志中心</h2>
         <p class="page-subtitle">查看 AI 调用、知识检索和单次会话处理轨迹。</p>
       </div>
       <el-button :icon="Refresh" @click="refresh">刷新</el-button>

@@ -2,7 +2,6 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">系统总览</h2>
         <p class="page-subtitle">查看后端、数据库和真实模型接入状态。</p>
       </div>
       <el-button type="primary" :icon="Refresh" :loading="systemStore.loading" @click="load">

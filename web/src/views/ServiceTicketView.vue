@@ -2,7 +2,6 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">人工工单</h2>
         <p class="page-subtitle">承接投诉、物流异常和手动转人工诉求，展示优先级、处理状态和接续建议。</p>
       </div>
       <el-button :icon="Refresh" @click="loadTickets">刷新</el-button>

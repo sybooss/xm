@@ -2,7 +2,6 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">订单管理</h2>
         <p class="page-subtitle">维护演示订单和售后记录，为客服工作台提供可靠订单上下文。</p>
       </div>
       <div class="header-buttons">
