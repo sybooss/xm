@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -9,6 +8,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "personal-defense-slides.pptx"
+DOC_TIMESTAMP = "2026-05-05T00:00:00Z"
 
 SLIDE_W = 12192000
 SLIDE_H = 6858000
@@ -294,11 +294,10 @@ def app_xml(slide_count: int) -> str:
 
 
 def core_xml() -> str:
-    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <dc:title>电商退换货智能客服系统个人答辩</dc:title><dc:creator>Codex</dc:creator><cp:lastModifiedBy>Codex</cp:lastModifiedBy>
-  <dcterms:created xsi:type="dcterms:W3CDTF">{now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">{now}</dcterms:modified>
+  <dcterms:created xsi:type="dcterms:W3CDTF">{DOC_TIMESTAMP}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">{DOC_TIMESTAMP}</dcterms:modified>
 </cp:coreProperties>"""
 
 
