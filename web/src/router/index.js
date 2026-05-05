@@ -1,14 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DashboardView from '../views/DashboardView.vue'
-import ShowcaseView from '../views/ShowcaseView.vue'
-import ChatWorkbenchView from '../views/ChatWorkbenchView.vue'
-import KnowledgeDocView from '../views/KnowledgeDocView.vue'
-import OrderView from '../views/OrderView.vue'
-import ServiceTicketView from '../views/ServiceTicketView.vue'
-import LogCenterView from '../views/LogCenterView.vue'
-import AiTestView from '../views/AiTestView.vue'
-import LoginView from '../views/LoginView.vue'
 import { useAuthStore } from '../stores/authStore'
+
+const LoginView = () => import('../views/LoginView.vue')
+const ShowcaseView = () => import('../views/ShowcaseView.vue')
+const DashboardView = () => import('../views/DashboardView.vue')
+const ChatWorkbenchView = () => import('../views/ChatWorkbenchView.vue')
+const KnowledgeDocView = () => import('../views/KnowledgeDocView.vue')
+const OrderView = () => import('../views/OrderView.vue')
+const ServiceTicketView = () => import('../views/ServiceTicketView.vue')
+const LogCenterView = () => import('../views/LogCenterView.vue')
+const AiTestView = () => import('../views/AiTestView.vue')
 
 const routes = [
   { path: '/', redirect: '/showcase' },

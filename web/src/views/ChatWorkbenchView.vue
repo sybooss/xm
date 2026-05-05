@@ -246,7 +246,8 @@
 
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ArrowLeft, Delete, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import CustomerOrderPanel from '../components/chat/CustomerOrderPanel.vue'

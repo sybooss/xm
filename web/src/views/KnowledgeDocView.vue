@@ -175,7 +175,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'

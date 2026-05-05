@@ -43,7 +43,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'

@@ -43,7 +43,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 

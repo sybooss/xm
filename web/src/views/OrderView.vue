@@ -202,7 +202,8 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {

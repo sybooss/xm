@@ -23,7 +23,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Service } from '@element-plus/icons-vue'
 import StatusTag from '../common/StatusTag.vue'
 import { createSessionTicket } from '../../api/serviceTicketApi'

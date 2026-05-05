@@ -126,7 +126,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Refresh, Search } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { pageTickets, updateTicket } from '../api/serviceTicketApi'

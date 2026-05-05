@@ -284,6 +284,8 @@ cd web
 npm run build
 ```
 
+当前前端已启用路由懒加载和 Vite 手动拆包，构建产物会拆分为 Vue、Element Plus、图标、业务视图等多个 chunk，避免单个业务包过大。
+
 全功能接口烟测：
 
 ```powershell
