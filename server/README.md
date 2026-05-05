@@ -1,6 +1,7 @@
 # 后端服务说明
 
 后端使用 Spring Boot 3.3.13、MyBatis、MySQL 和 LangChain4j，提供会话、知识库、订单、售后记录、AI 测试、模型切换和日志查询接口。
+数据访问层采用 MyBatis Mapper 接口 + XML 映射文件，SQL 位于 `src/main/resources/mapper`。
 
 ## 配置
 

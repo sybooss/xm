@@ -18,7 +18,7 @@ D:\复制软件系统\server
 | --- | --- | --- |
 | Web 框架 | Spring Boot | 当前工程为 `3.3.13` |
 | 运行环境 | Java 17 | 满足 Spring Boot 3 和 LangChain4j 当前集成要求 |
-| 数据访问 | MyBatis | Mapper 注解方式，符合参考项目 `tilians` 的简洁写法 |
+| 数据访问 | MyBatis | Mapper 接口 + XML 映射文件，SQL 集中维护在 `resources/mapper` |
 | 数据库 | MySQL 8 | 数据库名 `test3` |
 | 分页 | PageHelper | 统一返回 `PageResult<T>` |
 | AI 增强 | LangChain4j OpenAI 模块 | 作为 AI 调用和提示词编排层，不替代业务规则 |
@@ -29,7 +29,9 @@ D:\复制软件系统\server
 ```text
 server/
   pom.xml
-  src/main/resources/application.yml
+  src/main/resources/
+    application.yml
+    mapper/
   src/main/java/com/user/returnsassistant/
     ReturnsAssistantApplication.java
     anno/
@@ -49,7 +51,7 @@ server/
 | `controller` | 暴露 RESTful 接口，负责参数接收和统一返回 |
 | `service` | 定义业务接口 |
 | `service.impl` | 处理业务流程、知识检索、会话编排、AI 兜底 |
-| `mapper` | MyBatis 数据访问层 |
+| `mapper` | MyBatis 数据访问接口，方法签名与 XML 映射一一对应 |
 | `pojo` | 实体、请求对象、分页对象、返回对象 |
 | `exception` | 全局异常和业务异常处理 |
 | `anno` | 操作日志注解 |
@@ -376,7 +378,8 @@ GET http://localhost:8081/ai-call-logs?page=1&pageSize=10
 
 - Controller 只做参数接收、调用 Service、返回 `Result`，不写复杂业务逻辑。
 - Service 负责业务编排和事务边界。
-- Mapper 保持 SQL 简洁，复杂查询优先拆成可读的小接口。
+- Mapper 接口只保留方法签名和必要的 `@Param`，SQL 统一写在 `src/main/resources/mapper/*.xml`。
+- XML 中的动态 SQL 保持条件清晰，复杂查询优先拆成可读的小接口。
 - AI 调用必须经过 `AiService` 封装，不能在 Controller 中直接调用模型。
 - API Key、Authorization Header、完整请求头不能写入日志表。
 - 任何 AI 失败都不能阻断聊天主链路，必须保留本地规则兜底。

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.ChatSessionMapper">
+    <select id="count" resultType="long">
+        select count(*)
+        from chat_session s
+        left join demo_order o on s.order_id=o.id
+        where 1=1
+        <if test="s.userId != null">and s.user_id=#{s.userId}</if>
+        <if test="s.status != null and s.status != ''">and s.status=#{s.status}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (s.title like concat('%',#{s.keyword},'%')
+             or s.current_intent like concat('%',#{s.keyword},'%')
+             or o.order_no like concat('%',#{s.keyword},'%'))
+        </if>
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.ChatSession">
+        select s.*, o.order_no
+        from chat_session s
+        left join demo_order o on s.order_id=o.id
+        where 1=1
+        <if test="s.userId != null">and s.user_id=#{s.userId}</if>
+        <if test="s.status != null and s.status != ''">and s.status=#{s.status}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (s.title like concat('%',#{s.keyword},'%')
+             or s.current_intent like concat('%',#{s.keyword},'%')
+             or o.order_no like concat('%',#{s.keyword},'%'))
+        </if>
+        order by s.updated_at desc, s.id desc
+        limit #{s.offset}, #{s.limit}
+    </select>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.ChatSession">
+        select s.*, o.order_no from chat_session s left join demo_order o on s.order_id=o.id where s.id=#{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into chat_session(session_no, user_id, order_id, title, channel, status, current_intent, summary)
+        values(#{sessionNo}, #{userId}, #{orderId}, #{title}, coalesce(#{channel}, 'WEB'), coalesce(#{status}, 'ACTIVE'), #{currentIntent}, #{summary})
+    </insert>
+
+    <update id="update">
+        update chat_session
+        set user_id=#{userId}, order_id=#{orderId}, title=#{title}, channel=coalesce(#{channel}, 'WEB'),
+            status=coalesce(#{status}, 'ACTIVE'), current_intent=#{currentIntent}, summary=#{summary}
+        where id=#{id}
+    </update>
+
+    <update id="close">
+        update chat_session set status='CLOSED', closed_at=now() where id=#{id}
+    </update>
+
+    <update id="bindOrder">
+        update chat_session set order_id=#{orderId} where id=#{id}
+    </update>
+
+    <update id="updateSummary">
+        update chat_session set current_intent=#{intentCode}, summary=#{summary}, updated_at=now() where id=#{id}
+    </update>
+
+    <delete id="delete">
+        delete from chat_session where id=#{id}
+    </delete>
+</mapper>

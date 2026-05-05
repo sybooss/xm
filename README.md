@@ -21,7 +21,7 @@
 
 | 层级 | 技术 |
 | --- | --- |
-| 后端 | Java 17, Spring Boot 3.3.13, MyBatis, PageHelper |
+| 后端 | Java 17, Spring Boot 3.3.13, MyBatis XML Mapper, PageHelper |
 | 数据库 | MySQL 8.x |
 | AI | LangChain4j `langchain4j-open-ai`, OpenAI-compatible API |
 | 前端 | Vue 3, Vite, Pinia, Vue Router, Axios, Element Plus |

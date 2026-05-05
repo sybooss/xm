@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.KnowledgeCategoryMapper">
+    <select id="list" resultType="com.user.returnsassistant.pojo.KnowledgeCategory">
+        select * from knowledge_category
+        where 1=1
+        <if test="enabled != null">and enabled=#{enabled}</if>
+        order by sort_order asc, id asc
+    </select>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.KnowledgeCategory">
+        select * from knowledge_category where id=#{id}
+    </select>
+
+    <select id="countDocs" resultType="long">
+        select count(*) from knowledge_doc where category_id=#{id} and deleted=0
+    </select>
+
+    <delete id="deleteSoftDeletedDocs">
+        delete from knowledge_doc where category_id=#{id} and deleted=1
+    </delete>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into knowledge_category(parent_id, category_code, category_name, sort_order, enabled)
+        values(coalesce(#{parentId}, 0), #{categoryCode}, #{categoryName}, coalesce(#{sortOrder}, 0), coalesce(#{enabled}, 1))
+    </insert>
+
+    <update id="update">
+        update knowledge_category
+        set parent_id=coalesce(#{parentId}, 0),
+            category_code=#{categoryCode},
+            category_name=#{categoryName},
+            sort_order=coalesce(#{sortOrder}, 0),
+            enabled=coalesce(#{enabled}, 1)
+        where id=#{id}
+    </update>
+
+    <delete id="delete">
+        delete from knowledge_category where id=#{id}
+    </delete>
+</mapper>

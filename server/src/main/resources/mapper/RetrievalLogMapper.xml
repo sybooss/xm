@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.RetrievalLogMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into retrieval_log(session_id, message_id, query_text, doc_id, rank_no, score, hit_reason, doc_title_snapshot, doc_content_snapshot)
+        values(#{sessionId}, #{messageId}, #{queryText}, #{docId}, #{rankNo}, #{score}, #{hitReason}, #{docTitleSnapshot}, #{docContentSnapshot})
+    </insert>
+
+    <select id="listBySessionId" resultType="com.user.returnsassistant.pojo.RetrievalLog">
+        select * from retrieval_log where session_id=#{sessionId} order by created_at desc, rank_no asc
+    </select>
+
+    <select id="count" resultType="long">
+        select count(*) from retrieval_log
+        where 1=1
+        <if test="keyword != null and keyword != ''">
+          and (query_text like concat('%',#{keyword},'%') or doc_title_snapshot like concat('%',#{keyword},'%'))
+        </if>
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.RetrievalLog">
+        select * from retrieval_log
+        where 1=1
+        <if test="keyword != null and keyword != ''">
+          and (query_text like concat('%',#{keyword},'%') or doc_title_snapshot like concat('%',#{keyword},'%'))
+        </if>
+        order by created_at desc, id desc
+        limit #{offset}, #{limit}
+    </select>
+</mapper>

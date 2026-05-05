@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.AfterSaleRecordMapper">
+    <select id="count" resultType="long">
+        select count(*) from after_sale_record r
+        where 1=1
+        <if test="s.orderId != null">and r.order_id=#{s.orderId}</if>
+        <if test="s.status != null and s.status != ''">and r.status=#{s.status}</if>
+        <if test="s.serviceType != null and s.serviceType != ''">and r.service_type=#{s.serviceType}</if>
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.AfterSaleRecord">
+        select r.*, o.order_no
+        from after_sale_record r
+        left join demo_order o on r.order_id=o.id
+        where 1=1
+        <if test="s.orderId != null">and r.order_id=#{s.orderId}</if>
+        <if test="s.status != null and s.status != ''">and r.status=#{s.status}</if>
+        <if test="s.serviceType != null and s.serviceType != ''">and r.service_type=#{s.serviceType}</if>
+        order by r.created_at desc, r.id desc
+        limit #{s.offset}, #{s.limit}
+    </select>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.AfterSaleRecord">
+        select r.*, o.order_no from after_sale_record r left join demo_order o on r.order_id=o.id where r.id=#{id}
+    </select>
+
+    <select id="listByOrderId" resultType="com.user.returnsassistant.pojo.AfterSaleRecord">
+        select r.*, o.order_no from after_sale_record r left join demo_order o on r.order_id=o.id where r.order_id=#{orderId} order by r.created_at desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into after_sale_record(after_sale_no, order_id, service_type, reason, status, refund_amount, apply_at, handle_at, remark)
+        values(#{afterSaleNo}, #{orderId}, #{serviceType}, #{reason}, coalesce(#{status}, 'APPLIED'), #{refundAmount}, coalesce(#{applyAt}, now()), #{handleAt}, #{remark})
+    </insert>
+
+    <update id="update">
+        update after_sale_record
+        set service_type=#{serviceType}, reason=#{reason}, status=#{status}, refund_amount=#{refundAmount},
+            apply_at=#{applyAt}, handle_at=#{handleAt}, remark=#{remark}
+        where id=#{id}
+    </update>
+
+    <delete id="delete">
+        delete from after_sale_record where id=#{id}
+    </delete>
+</mapper>
