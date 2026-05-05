@@ -21,7 +21,7 @@
 | Function | Status | Entry/UI | API/Code | Data | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | 登录注册与权限 | Done | `/login` | `/auth/login`, `/auth/register`, `AuthInterceptor` | `user_account` | 浏览器角色烟测 |
-| 客服会话与多轮追问 | Done | `/chat` | `/chat-sessions`, `/message-stream` | `chat_session`, `chat_message` | 全链路烟测 |
+| 客服会话与多轮追问 | Done | `/chat` | `/chat-sessions`, `/message-stream` | `chat_session`, `chat_message` | 浏览器烟测已覆盖 AI 决策摘要、业务工具、建议追问和上下文承接 |
 | 退货/换货/退款/物流/投诉 | Done | `/chat`, `/orders` | `ChatServiceImpl`, `OrderController` | seed 订单与知识库 | 接口和浏览器烟测 |
 | 订单与售后记录 | Done | `/orders` | `/orders`, `/after-sale-records` | `demo_order`, `after_sale_record` | 全链路烟测 |
 | 知识库管理与检索 | Done | `/knowledge` | `/knowledge-docs/search` | `knowledge_doc`, `retrieval_log` | 浏览器烟测已覆盖命中数量、意图覆盖、排序依据和命中解释 |
@@ -48,7 +48,7 @@
 | Page | Current Quality | Program Gap | Next Action | Evidence |
 | --- | --- | --- | --- | --- |
 | `/showcase` | High | 暂无高收益程序缺口 | 保持稳定 | 浏览器烟测截图 |
-| `/chat` | Medium+ | 信息密度高，后续可细化聊天洞察面板 | 下一轮候选 | `ChatWorkbenchView.vue` |
+| `/chat` | High | 已补齐 AI 决策摘要、业务工具和建议追问 | 保持稳定 | `ChatWorkbenchView.vue`, `output/playwright/04-chat-ai-enhanced.png` |
 | `/knowledge` | High | 已补齐检索解释和 RAG 调试证据 | 保持稳定 | `KnowledgeDocView.vue`, `output/playwright/06-knowledge.png` |
 | `/service-tickets` | High | 已补齐工单闭环演示感 | 后续只需保持稳定 | `ServiceTicketView.vue`, `output/playwright/08-service-tickets.png` |
 | `/logs` | High | 趋势图可扩展，但当前收益低于工单闭环 | 暂缓 | 浏览器烟测截图 |
@@ -69,6 +69,7 @@
 | --- | --- | --- | --- | --- |
 | 2026-05-06-program-1 | 工单页新增 SLA 风险、下一步动作和售后处理时间线；浏览器烟测补新区域断言；README 同步程序运行说明 | `cd server; mvn -q -DskipTests package` 通过；`cd web; npm run build` 通过，仅有既有 Vite chunk size 警告；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 知识库检索解释和聊天洞察面板仍是下一批候选，但收益低于本轮工单闭环 |
 | 2026-05-06-program-2 | 知识库页新增检索诊断卡、意图覆盖、排序依据、命中解释和关键词标签；`/knowledge-docs/search` 增加整句未命中时的售后意图推断召回，并补 rank/score/hitReason | `cd server; mvn -q -DskipTests package` 通过；`cd web; npm run build` 通过，仅有既有 Vite chunk size 警告；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 聊天工作台洞察区仍可进一步产品化，但本轮 RAG 可解释性已补齐 |
+| 2026-05-06-program-3 | 聊天工作台右侧新增 AI 决策摘要、实时进度、业务工具、建议追问、知识命中分数和命中解释；浏览器烟测补关键断言；README 同步运行说明 | `cd server; mvn -q -DskipTests package` 通过；`cd web; npm run build` 通过，仅有既有 Vite chunk size 警告；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 核心高收益页面已完成；剩余候选多为低收益细节 polish |
 
 ## Validation Commands
 
@@ -82,4 +83,4 @@
 ## Program-Only Stop Gate
 
 - 只有当核心链路、特色功能、接口烟测、浏览器烟测、构建验证、工作区检查、提交和推送都满足，并且实际审计没有明显高收益程序优化点时，才允许输出完成承诺。
-- 当前状态: 第二轮程序优化验证通过，尚未提交和推送；推送后继续审计聊天工作台洞察区是否还有明显高收益优化点。
+- 当前状态: 第三轮程序优化验证通过，尚未提交和推送；推送后进入完成审计，确认是否仍有明显高收益程序优化点。

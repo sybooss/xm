@@ -131,6 +131,52 @@
         <StatusTag :value="chatStore.insight?.ai?.status" />
       </div>
       <div class="panel-body insight-body">
+        <section class="decision-summary">
+          <div class="decision-title">
+            <div>
+              <span class="eyebrow">AI 决策摘要</span>
+              <h4>{{ decisionSummary.title }}</h4>
+            </div>
+            <StatusTag :value="decisionSummary.status" />
+          </div>
+          <p>{{ decisionSummary.detail }}</p>
+          <div class="decision-metrics">
+            <div>
+              <span>知识依据</span>
+              <strong>{{ decisionSummary.knowledgeCount }}</strong>
+            </div>
+            <div>
+              <span>流程步骤</span>
+              <strong>{{ decisionSummary.traceCount }}</strong>
+            </div>
+            <div>
+              <span>转人工</span>
+              <strong>{{ decisionSummary.ticketText }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="chatStore.insight?.stream" class="stream-card">
+          <h4>实时进度</h4>
+          <p>{{ chatStore.insight.stream.message || '正在处理当前咨询' }}</p>
+        </section>
+
+        <section v-if="businessTools.length">
+          <h4>业务工具</h4>
+          <div class="tool-list">
+            <div v-for="tool in businessTools" :key="tool" class="tool-item">{{ tool }}</div>
+          </div>
+        </section>
+
+        <section v-if="suggestedQuestions.length">
+          <h4>建议追问</h4>
+          <div class="suggestion-list">
+            <button v-for="question in suggestedQuestions" :key="question" type="button" @click="draft = question">
+              {{ question }}
+            </button>
+          </div>
+        </section>
+
         <section>
           <h4>意图</h4>
           <el-tag v-if="chatStore.insight?.intent" type="primary">
@@ -166,8 +212,12 @@
           <h4>知识命中</h4>
           <div v-if="chatStore.insight?.knowledgeHits?.length" class="hit-list">
             <div v-for="doc in chatStore.insight.knowledgeHits" :key="doc.id" class="hit-item">
-              <strong>{{ doc.title }}</strong>
+              <div class="hit-title">
+                <strong>{{ doc.title }}</strong>
+                <span>{{ doc.score ? Number(doc.score).toFixed(2) : '0.80' }}</span>
+              </div>
               <p>{{ doc.contentPreview || doc.answer || doc.content }}</p>
+              <small>{{ doc.hitReason || '按标题、问题、正文或关键词召回' }}</small>
             </div>
           </div>
           <p v-else class="muted">暂无命中</p>
@@ -221,6 +271,54 @@ const selectedModel = ref('')
 
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
 const lastSourceType = computed(() => chatStore.insight?.assistantMessage?.sourceType || (chatStore.sending ? 'THINKING' : 'FALLBACK'))
+const businessTools = computed(() => {
+  const tools = chatStore.insight?.businessTools?.tools
+  if (Array.isArray(tools) && tools.length) {
+    return tools
+  }
+  return chatStore.insight?.intent ? ['queryOrderStatus', 'searchAfterSaleKnowledge', 'createServiceTicket'] : []
+})
+const suggestedQuestions = computed(() => {
+  const questions = chatStore.insight?.suggestedQuestions
+  if (Array.isArray(questions) && questions.length) {
+    return questions
+  }
+  return fallbackQuestions(chatStore.insight?.intent?.intentCode)
+})
+const decisionSummary = computed(() => {
+  const insight = chatStore.insight || {}
+  if (chatStore.sending) {
+    return {
+      title: '正在生成处理方案',
+      detail: insight.stream?.message || '系统正在解析上下文、检索知识库并生成回复。',
+      status: 'THINKING',
+      knowledgeCount: insight.knowledgeHits?.length || 0,
+      traceCount: insight.trace?.length || 0,
+      ticketText: '判定中'
+    }
+  }
+  if (!insight.intent) {
+    return {
+      title: '等待用户问题',
+      detail: '发送售后问题后，这里会汇总意图、知识依据、AI 状态和人工转接判断。',
+      status: 'SKIPPED',
+      knowledgeCount: 0,
+      traceCount: 0,
+      ticketText: '-'
+    }
+  }
+  const source = insight.assistantMessage?.sourceType === 'AI_ENHANCED' ? 'AI 增强' : '本地兜底'
+  const ticketNeeded = Boolean(insight.ticket?.needed || insight.ticket?.id)
+  const orderText = insight.orderContext?.hasOrder ? `已绑定订单 ${insight.orderContext.orderNo}` : '未绑定订单'
+  return {
+    title: `${source} · ${insight.intent.intentName || insight.intent.intentCode}`,
+    detail: `${orderText}，命中 ${insight.knowledgeHits?.length || 0} 条知识依据，${ticketNeeded ? '已进入人工转接链路' : '可由智能客服直接处理'}。`,
+    status: insight.ai?.status || insight.assistantMessage?.sourceType || 'SUCCESS',
+    knowledgeCount: insight.knowledgeHits?.length || 0,
+    traceCount: insight.trace?.length || 0,
+    ticketText: ticketNeeded ? '需要' : '无需'
+  }
+})
 
 watch(
   () => systemStore.selectedModelName,
@@ -301,6 +399,20 @@ async function changeModel(modelName) {
 async function logout() {
   await authStore.logout()
   await router.replace('/login')
+}
+
+function fallbackQuestions(intentCode) {
+  if (!intentCode) {
+    return []
+  }
+  const presets = {
+    RETURN_APPLY: ['退货后多久能退款？', '退货需要自己承担运费吗？', '退货需要哪些照片？'],
+    EXCHANGE_APPLY: ['换货需要多久？', '换货可以改成退货吗？', '需要上传什么凭证？'],
+    REFUND_PROGRESS: ['退款会退到哪里？', '退款失败怎么办？', '能不能催一下退款？'],
+    LOGISTICS_QUERY: ['物流不更新可以投诉吗？', '包裹丢失怎么办？', '需要转人工核实吗？'],
+    COMPLAINT_TRANSFER: ['人工客服多久处理？', '还需要补充哪些材料？']
+  }
+  return presets[intentCode] || ['能不能帮我查订单？', '我想转人工客服']
 }
 
 async function scrollBottom() {
@@ -596,6 +708,76 @@ onMounted(async () => {
   font-size: 14px;
 }
 
+.decision-summary {
+  padding: 14px;
+  border: 1px solid rgb(37 99 235 / 18%);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #f8fbff, #fff);
+}
+
+.decision-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.decision-summary p,
+.stream-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.decision-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.decision-metrics div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.decision-metrics span,
+.decision-metrics strong {
+  display: block;
+}
+
+.decision-metrics span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.decision-metrics strong {
+  overflow: hidden;
+  margin-top: 5px;
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-card {
+  padding: 12px;
+  border: 1px dashed rgb(37 99 235 / 26%);
+  border-radius: var(--radius);
+  background: var(--brand-soft);
+}
+
 .hit-list {
   display: grid;
   gap: 8px;
@@ -613,6 +795,69 @@ onMounted(async () => {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.hit-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hit-title strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hit-title span {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hit-item small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tool-list,
+.suggestion-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tool-item,
+.suggestion-list button {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.tool-item {
+  padding: 6px 10px;
+}
+
+.suggestion-list button {
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.suggestion-list button:hover {
+  border-color: #bfdbfe;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 @media (max-width: 1180px) {
