@@ -1,5 +1,5 @@
 <template>
-  <el-tag :type="tagType" effect="light" round>
+  <el-tag class="status-tag" :type="tagType" effect="light" round>
     {{ label }}
   </el-tag>
 </template>
@@ -64,7 +64,8 @@ const label = computed(() => {
     RETURN: '退货退款',
     EXCHANGE: '换货',
     REFUND: '仅退款',
-    COMPLAINT: '投诉'
+    COMPLAINT: '投诉',
+    '已验证': '已验证'
   }
   if (typeof props.value === 'boolean') {
     return props.value ? '是' : '否'
@@ -73,7 +74,7 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED'].includes(normalized.value)) return 'success'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', '已验证'].includes(normalized.value)) return 'success'
   if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED'].includes(normalized.value)) return 'danger'
   if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID'].includes(normalized.value)) return 'info'
   if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'WAIT_BUYER_SEND', 'WAIT_SELLER_CONFIRM', 'PENDING_PAY'].includes(normalized.value)) return 'warning'

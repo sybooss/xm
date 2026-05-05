@@ -44,9 +44,11 @@ try {
   await page.locator('header').getByRole('button', { name: /退出/ }).click()
   await expectText(page, '管理员登录', 'registered customer logout returns login')
   await page.locator('.login-form .login-button').click()
-  await expectText(page, '咨询工作台', 'login redirects to chat')
+  await expectText(page, '答辩展示中心', 'login redirects to showcase')
   await expectText(page, '退换货客服', 'layout brand visible')
-  await page.screenshot({ path: path.join(artifactDir, '01-chat-initial.png'), fullPage: true })
+  await expectText(page, '系统核心亮点', 'showcase highlights visible')
+  await expectText(page, '演示流程', 'showcase demo flow visible')
+  await page.screenshot({ path: path.join(artifactDir, '01-showcase.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '系统总览', 'dashboard page visible')

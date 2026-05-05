@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
+import ShowcaseView from '../views/ShowcaseView.vue'
 import ChatWorkbenchView from '../views/ChatWorkbenchView.vue'
 import KnowledgeDocView from '../views/KnowledgeDocView.vue'
 import OrderView from '../views/OrderView.vue'
@@ -10,8 +11,9 @@ import LoginView from '../views/LoginView.vue'
 import { useAuthStore } from '../stores/authStore'
 
 const routes = [
-  { path: '/', redirect: '/chat' },
+  { path: '/', redirect: '/showcase' },
   { path: '/login', name: 'login', component: LoginView, meta: { title: '登录', public: true } },
+  { path: '/showcase', name: 'showcase', component: ShowcaseView, meta: { title: '答辩展示中心', adminOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { title: '系统总览', adminOnly: true } },
   { path: '/chat', name: 'chat', component: ChatWorkbenchView, meta: { title: '咨询工作台' } },
   { path: '/knowledge', name: 'knowledge', component: KnowledgeDocView, meta: { title: '知识库', adminOnly: true } },
