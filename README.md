@@ -25,7 +25,7 @@
 | 数据库 | MySQL 8.x |
 | AI | LangChain4j `langchain4j-open-ai`, OpenAI-compatible API |
 | 前端 | Vue 3, Vite, Pinia, Vue Router, Axios, Element Plus |
-| 测试 | PowerShell API smoke test, Playwright browser smoke test |
+| 测试 | PowerShell API smoke test, Playwright browser smoke test, GitHub Actions CI |
 
 ## 目录结构
 
@@ -35,7 +35,8 @@
 ├─ web/                    Vue 3 前端
 ├─ sql/                    MySQL 建表和初始化数据
 ├─ docs/                   数据库、接口、前后端设计文档
-├─ tools/                  本地启动脚本
+├─ tools/                  本地启动、烟测和一键验证脚本
+├─ .github/workflows/      GitHub Actions 构建门禁
 ├─ tmp/                    本地临时测试脚本，默认不提交
 ├─ output/                 本地日志、截图、报告输出，默认不提交
 ├─ .env.example            环境变量模板
@@ -270,6 +271,14 @@ POST   /ai-tests
 
 ## 8. 测试
 
+本地一键构建验证：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1
+```
+
+该脚本会按顺序执行后端打包和前端构建，适合作为提交前的基础门禁。仓库也提供 `.github/workflows/ci.yml`，在推送 `main`、`codex/**` 分支或向 `main` 提交 PR 时自动执行同一套基础构建验证。
+
 后端打包：
 
 ```powershell
@@ -300,6 +309,12 @@ npm run test:browser
 ```
 
 浏览器测试会访问 `http://localhost:5173`，所以需要先启动后端和前端。
+
+如果后端和前端已经启动，也可以用一键脚本附加完整烟测：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithSmoke -WithBrowser -WithRoleBrowser
+```
 
 ## 9. 常见问题
 
