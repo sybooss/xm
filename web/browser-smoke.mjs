@@ -99,7 +99,9 @@ try {
   await page.screenshot({ path: path.join(artifactDir, '08-service-tickets.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/logs`, { waitUntil: 'networkidle', timeout: 60000 })
-  await expectText(page, '日志中心', 'logs page visible')
+  await expectText(page, '日志诊断中心', 'logs page visible')
+  await expectText(page, 'AI 稳定性', 'logs diagnostic hero visible')
+  await expectText(page, '诊断总览', 'logs diagnostic summary visible')
   await expectText(page, 'AI 调用日志', 'ai logs tab visible')
   await page.screenshot({ path: path.join(artifactDir, '09-logs.png'), fullPage: true })
 } catch (error) {

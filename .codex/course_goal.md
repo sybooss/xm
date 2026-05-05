@@ -21,7 +21,7 @@
 - Database: `sql/schema.sql` 覆盖核心业务表；`sql/seed.sql` 提供演示数据。
 - AI: LangChain4j 接入 OpenAI-compatible 服务；保留本地规则兜底；已有 SSE 流式消息接口和 AI/检索/轨迹日志。
 - Docs/report: README、后端/前端/数据库/测试/演示文档已存在；已补结项报告草稿、个人答辩讲解稿和个人答辩 Q&A。
-- Current blockers: 本轮功能验证已通过；后续还可把结项报告从 Markdown 转为模板 DOC，继续 polish 日志/看板数据可视化。
+- Current blockers: 本轮功能验证已通过；正式结项报告和日志诊断中心已完成；后续高收益点主要是个人答辩 PPT/演示卡片，以及工单/知识库页面继续产品化 polish。
 
 ## Score-Gap Table
 
@@ -29,7 +29,7 @@
 | --- | ---: | ---: | ---: | --- | --- | --- |
 | 开题报告可行性与创新 | 20 | 17 | 18+ | 需要与最终系统同步 | 后续补最终功能变化说明 | `docs/opening-report.md` |
 | 结项答辩运行顺畅与需求满足 | 30 | 25 | 28+ | 演示入口与稳定证据需更清晰 | 新增答辩展示中心并验证 | `/showcase` |
-| 程序设计规范与 UI 友好 | 10 | 8 | 9+ | 页面质感仍需持续 polish | 本轮先做高级展示页 | Vue 页面与浏览器截图 |
+| 程序设计规范与 UI 友好 | 10 | 9 | 9+ | 展示中心和日志诊断中心已有高级产品感，工单/知识库仍可继续 polish | 后续按答辩收益选择局部页面 | Vue 页面与浏览器截图 |
 | 个人自述与问答 | 20 | 17 | 18+ | 已有讲解稿和 Q&A，后续可继续压缩成 PPT 讲稿 | 生成答辩幻灯片或个人贡献页 | `docs/personal-defense-script.md`, `docs/personal-defense-qa.md` |
 | 结项报告详实度与拓展建议 | 20 | 17 | 18+ | 已有 Markdown 草稿，后续可转为课程模板 DOC | 转为正式报告格式并补截图索引 | `docs/final-report-draft.md` |
 
@@ -58,7 +58,7 @@
 | 6 | 多轮上下文 | 高 | Done | 全链路烟测 | 退款追问 |
 | 7 | 智能工单升级 | 高 | Done | 全链路与浏览器 | 投诉转人工 |
 | 8 | 权限与角色隔离 | 中高 | Done | `npm run test:browser:roles` | 客户访问限制 |
-| 9 | 日志可追溯 | 中高 | Done | 日志中心 | AI/检索/轨迹 |
+| 9 | 日志诊断中心 | 高 | Done | `npm run test:browser` 覆盖 | AI 成功率/平均耗时/知识命中/轨迹步骤 |
 
 ## Frontend Premium Review
 
@@ -68,7 +68,7 @@
 | 咨询工作台 | Medium | 信息密度高，仍有普通后台感 | 后续 polish 聊天气泡和洞察面板 | `ChatWorkbenchView.vue` |
 | 知识库 | Medium | 表格页需要更强检索解释感 | 后续增加命中分析概览 | `KnowledgeDocView.vue` |
 | 工单/售后 | Medium | 处理状态可视化还可更强 | 后续增加流程时间线 | `ServiceTicketView.vue` |
-| 日志/看板 | Medium | 可视分析偏弱 | 后续增加统计摘要 | `LogCenterView.vue` |
+| 日志/看板 | High | 已新增诊断总览、状态分布、高频命中文档和轨迹摘要 | 后续可扩展趋势图，但短期收益低于 PPT | `output/playwright/09-logs.png` |
 
 ## Iteration Log
 
@@ -77,6 +77,7 @@
 | 2026-05-05-1 | 新增 `/showcase` 答辩展示中心、管理员默认入口、侧栏菜单、浏览器烟测覆盖、README/docs 同步 | `mvn -q -DskipTests package` 通过；`npm.cmd run build` 通过；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`npm.cmd run test:browser` FAILED_COUNT=0；`npm.cmd run test:browser:roles` FAILED_COUNT=0 | Passed | 结项报告和个人答辩材料仍需补齐；后续可继续 polish 看板/日志数据分析 |
 | 2026-05-05-2 | 新增结项报告草稿、个人答辩讲解稿、个人答辩 Q&A，并在 README/演示脚本中加入入口 | `mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过；文档材料存在且包含核心代码与验证命令引用 | Passed | 需要正式 DOC 模板化和 PPT 化 |
 | 2026-05-05-3 | 新增 `tools/generate-final-report-docx.py`，生成正式结项报告 `docs/final-report.docx`，并完成 DOCX->PDF->PNG 渲染检查 | `python tools\generate-final-report-docx.py` 通过；`soffice.com --headless --convert-to pdf --outdir output\doc docs\final-report.docx` 通过；`pdftoppm.exe -png output\doc\final-report.pdf output\doc\final-report-pages\page` 通过；DOCX 结构检查为 65 段、4 表；7 页渲染图人工检查无乱码/重叠/截断；`mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过，只有 Vite chunk size 警告 | Passed | 个人答辩材料仍可继续压缩为 PPT/演示卡片；日志/看板数据可视化仍有高收益 |
+| 2026-05-05-4 | 将 `/logs` 升级为日志诊断中心，新增 AI 成功率、平均耗时、知识命中、平均检索分数、轨迹步骤、高频命中文档和状态分布；同步 README、前端文档、测试用例、演示脚本、个人答辩材料和正式报告 | `mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`npm.cmd run test:browser` FAILED_COUNT=0；`npm.cmd run test:browser:roles` FAILED_COUNT=0；`python tools\generate-final-report-docx.py` 通过；`soffice.com --headless --convert-to pdf --outdir output\doc docs\final-report.docx` 通过；`pdftoppm.exe -png output\doc\final-report.pdf output\doc\final-report-pages\page` 通过；`docs/final-report.docx` 包含“日志诊断中心/AI 成功率/平均耗时/知识命中”；`output/playwright/09-logs.png` 人工检查无明显溢出/遮挡 | Passed | PPT/演示卡片仍是最高收益；工单/知识库可继续细化但收益次之 |
 
 ## Validation Commands
 
@@ -92,8 +93,8 @@
 - Backend docs: 本轮未改后端接口。
 - Frontend docs: 已新增 `/showcase` 设计说明。
 - Database docs: 本轮未改数据库。
-- Test cases: 已新增展示中心与客户权限核验项。
-- Demo script: 已改为六步演示，第一步从展示中心开始，并链接配套答辩材料。
+- Test cases: 已新增展示中心、客户权限核验项和日志诊断中心核验项。
+- Demo script: 已改为七步演示，从展示中心开始，以日志诊断中心收尾，并链接配套答辩材料。
 - Report: `docs/final-report-draft.md`, `docs/final-report.docx`
 - Personal defense notes: `docs/personal-defense-script.md`
 - Q&A: `docs/personal-defense-qa.md`
@@ -103,9 +104,9 @@
 - Full demo: Passed for current iteration via full smoke + browser smoke
 - Required functions: Current iteration verified
 - Highlight features: 8+ real highlights, current iteration verified
-- Frontend premium quality: Showcase page first pass verified by screenshot
+- Frontend premium quality: Showcase page and log diagnostic center verified by screenshots
 - Report consistency: Markdown draft and formal DOCX report ready; PDF/PNG render checked
 - Personal defense readiness: Script and Q&A ready, PPT compression pending
-- Self-iteration completed: Current iteration reviewed; continue because report/personal defense remain high-value
+- Self-iteration completed: Current iteration reviewed; continue because personal defense PPT remains high-value
 - Git status: Pending
 - Commit/push: Pending

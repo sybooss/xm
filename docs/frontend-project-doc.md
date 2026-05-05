@@ -178,7 +178,7 @@ export default request
 | `/knowledge/docs` | `KnowledgeDocView` | 知识文档管理和检索 |
 | `/orders` | `OrderView` | 演示订单查询和维护 |
 | `/after-sales` | `AfterSaleRecordView` | 售后记录管理 |
-| `/logs` | `LogCenterView` | AI 调用日志、知识检索日志、处理轨迹 |
+| `/logs` | `LogCenterView` | 日志诊断中心，聚合展示 AI 稳定性、知识命中和处理轨迹证据 |
 | `/ai-test` | `AiTestView` | 真实模型连通性测试 |
 
 默认首页进入 `/showcase`。课程展示时建议先用“答辩展示中心”说明系统完整链路和亮点索引，再进入 `/chat` 展示核心智能客服能力。
@@ -409,7 +409,15 @@ GET /retrieval-logs?page=1&pageSize=10&keyword=退货
 GET /chat-sessions/{id}/process-traces
 ```
 
-页面建议分为三个标签页：
+页面上半部分是“日志诊断中心”总览，用最近日志聚合出答辩可讲的证据：
+
+- AI 成功率：统计最近 AI 调用日志中 `SUCCESS`、`SKIPPED`、`FAILED` 的比例。
+- 平均耗时：统计最近有耗时记录的模型调用平均响应时长。
+- 知识命中：统计最近检索日志数量、去重命中文档数和平均检索分数。
+- 轨迹步骤：输入会话 ID 后显示该会话成功步骤数和最后处理节点。
+- 高频命中文档：按 `docTitleSnapshot` 聚合，点击文档名可以直接切换到检索日志过滤。
+
+页面下半部分保留三个标签页作为原始证据：
 
 - AI 调用日志：展示提供方、模型名、状态、耗时、错误摘要、请求摘要、响应摘要。
 - 知识检索日志：展示查询词、命中文档、命中原因、分数、快照。

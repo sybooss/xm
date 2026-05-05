@@ -12,6 +12,12 @@ async function expectText(page, text, name) {
   record(name, true, text)
 }
 
+async function expectChatRedirect(page, path) {
+  await page.waitForFunction(() => window.location.pathname === '/chat', null, { timeout: 20000 })
+  await page.getByText('咨询工作台', { exact: false }).first().waitFor({ timeout: 20000 })
+  record(`customer blocked ${path}`, page.url().endsWith('/chat'), page.url())
+}
+
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({ viewport: { width: 1366, height: 860 } })
 
@@ -30,8 +36,7 @@ try {
 
   for (const path of ['/dashboard', '/orders', '/service-tickets', '/logs', '/ai-test', '/knowledge', '/showcase']) {
     await page.goto(`${baseUrl}${path}`, { waitUntil: 'networkidle', timeout: 60000 })
-    await page.waitForURL('**/chat', { timeout: 20000 })
-    record(`customer blocked ${path}`, page.url().endsWith('/chat'), page.url())
+    await expectChatRedirect(page, path)
   }
 
   await page.getByRole('button', { name: /我的订单/ }).click()
