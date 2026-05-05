@@ -51,6 +51,24 @@ function Test-HttpReady($url) {
     }
 }
 
+function Invoke-JsonRequest($method, $url, $body = $null, $headers = @{}) {
+    $params = @{
+        Uri = $url
+        Method = $method
+        Headers = $headers
+        TimeoutSec = 30
+    }
+    if ($null -ne $body) {
+        $params.ContentType = "application/json; charset=utf-8"
+        $params.Body = ($body | ConvertTo-Json -Depth 8)
+    }
+    $response = Invoke-RestMethod @params
+    if ($response.code -ne 1) {
+        throw "$url failed: $($response.msg)"
+    }
+    return $response.data
+}
+
 function Invoke-DockerCompose([string[]]$arguments) {
     Invoke-Native "docker" (@("compose", "--project-name", "returns-assistant") + $arguments)
 }
@@ -145,11 +163,32 @@ try {
                 do {
                     Start-Sleep -Seconds 5
                     if ((Test-HttpReady "http://localhost:8081/system/health") -and (Test-HttpReady "http://localhost:$env:WEB_PORT/login")) {
-                        return
+                        break
                     }
                 } while ((Get-Date) -lt $deadline)
-                Invoke-DockerCompose @("ps")
-                throw "Docker compose stack did not become healthy before timeout."
+                if (-not ((Test-HttpReady "http://localhost:8081/system/health") -and (Test-HttpReady "http://localhost:$env:WEB_PORT/login"))) {
+                    Invoke-DockerCompose @("ps")
+                    throw "Docker compose stack did not become healthy before timeout."
+                }
+                $login = Invoke-JsonRequest "Post" "http://localhost:$env:WEB_PORT/api/auth/login" @{ username = "admin"; password = "123456" }
+                $headers = @{ Authorization = "Bearer $($login.token)" }
+                $status = Invoke-JsonRequest "Get" "http://localhost:$env:WEB_PORT/api/system/status" $null $headers
+                if ($status.database.status -ne "UP") {
+                    throw "Docker backend database status is $($status.database.status)."
+                }
+                $enums = Invoke-JsonRequest "Get" "http://localhost:$env:WEB_PORT/api/system/enums" $null $headers
+                if (@($enums.intentCodes).Count -lt 7) {
+                    throw "Docker backend enum payload is incomplete."
+                }
+                $hits = Invoke-JsonRequest "Get" "http://localhost:$env:WEB_PORT/api/knowledge-docs/search?query=%E9%80%80%E8%B4%A7&intentCode=RETURN_APPLY&limit=3"
+                if (@($hits).Count -lt 1) {
+                    throw "Docker knowledge seed data is not searchable."
+                }
+                $order = Invoke-JsonRequest "Get" "http://localhost:$env:WEB_PORT/api/orders/no/DD202604290001" $null $headers
+                if ($order.orderNo -ne "DD202604290001") {
+                    throw "Docker order seed data is not readable."
+                }
+                return
             } finally {
                 Pop-Location
             }
