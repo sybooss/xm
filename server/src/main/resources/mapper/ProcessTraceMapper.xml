@@ -9,4 +9,8 @@
     <select id="listBySessionId" resultType="com.user.returnsassistant.pojo.ProcessTrace">
         select * from process_trace where session_id=#{sessionId} order by created_at asc, id asc
     </select>
+
+    <select id="listRecent" resultType="com.user.returnsassistant.pojo.ProcessTrace">
+        select * from process_trace order by created_at desc, id desc limit #{limit}
+    </select>
 </mapper>

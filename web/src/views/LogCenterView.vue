@@ -36,8 +36,49 @@
         <article class="hero-metric">
           <span>轨迹步骤</span>
           <strong>{{ traceProgressLabel }}</strong>
-          <small>{{ traceSessionId ? `会话 ${traceSessionId}` : '输入会话 ID 查看' }}</small>
+          <small>{{ traceMetricHint }}</small>
         </article>
+      </div>
+    </section>
+
+    <section class="health-panel panel">
+      <div class="panel-header">
+        <h3 class="panel-title">健康趋势与风险诊断</h3>
+        <span class="panel-caption">基于最近日志样本自动归纳，便于现场快速说明系统运行状态。</span>
+      </div>
+      <div class="panel-body health-body">
+        <article class="health-primary" :class="healthTone">
+          <span>运行健康度</span>
+          <strong>{{ healthLevel }}</strong>
+          <small>{{ healthRationale }}</small>
+        </article>
+        <article class="health-card">
+          <span>最近趋势</span>
+          <strong>{{ trendLabel }}</strong>
+          <small>{{ trendDetail }}</small>
+        </article>
+        <article class="health-card">
+          <span>故障入口</span>
+          <strong>{{ failureEntryLabel }}</strong>
+          <small>{{ failureEntryDetail }}</small>
+        </article>
+      </div>
+      <div class="risk-layout">
+        <div class="risk-block">
+          <div class="section-title">风险信号</div>
+          <div class="risk-list">
+            <div v-for="signal in riskSignals" :key="signal.title" class="risk-row" :class="signal.tone">
+              <span>{{ signal.title }}</span>
+              <p>{{ signal.detail }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="risk-block">
+          <div class="section-title">处置建议</div>
+          <ol class="action-list">
+            <li v-for="item in actionItems" :key="item">{{ item }}</li>
+          </ol>
+        </div>
       </div>
     </section>
 
@@ -181,15 +222,20 @@ import { Collection, Connection, Cpu, Refresh, Search, TrendCharts } from '@elem
 import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { listTraces } from '../api/chatApi'
-import { pageAiCallLogs, pageRetrievalLogs } from '../api/logApi'
+import { getLogDiagnostics, pageAiCallLogs, pageRetrievalLogs } from '../api/logApi'
 
 const activeTab = ref('ai')
 const aiQuery = reactive({ page: 1, pageSize: 50, status: '' })
 const retrievalQuery = reactive({ page: 1, pageSize: 50, keyword: '' })
 const aiLogs = ref([])
 const retrievalLogs = ref([])
+const diagnostics = ref(null)
 const traceSessionId = ref(null)
 const traces = ref([])
+
+async function loadDiagnostics() {
+  diagnostics.value = await getLogDiagnostics()
+}
 
 async function loadAiLogs() {
   const data = await pageAiCallLogs(aiQuery)
@@ -213,6 +259,7 @@ function refresh() {
 }
 
 function refreshAll() {
+  loadDiagnostics()
   loadAiLogs()
   loadRetrievalLogs()
   if (traceSessionId.value) loadTrace()
@@ -246,29 +293,44 @@ function statusCount(status) {
   return aiLogs.value.filter(item => item.status === status).length
 }
 
-const successCount = computed(() => statusCount('SUCCESS'))
-const skippedCount = computed(() => statusCount('SKIPPED'))
-const failedCount = computed(() => statusCount('FAILED'))
+const diagnosticAi = computed(() => diagnostics.value?.ai || null)
+const diagnosticRetrieval = computed(() => diagnostics.value?.retrieval || null)
+const diagnosticTrace = computed(() => diagnostics.value?.trace || null)
+
+const successCount = computed(() => diagnosticAi.value?.successCount ?? statusCount('SUCCESS'))
+const skippedCount = computed(() => diagnosticAi.value?.skippedCount ?? statusCount('SKIPPED'))
+const failedCount = computed(() => diagnosticAi.value?.failedCount ?? statusCount('FAILED'))
 
 const aiSuccessRateLabel = computed(() => {
+  if (diagnosticAi.value?.successRateLabel) return diagnosticAi.value.successRateLabel
   if (!aiLogs.value.length) return '-'
   return `${Math.round((successCount.value / aiLogs.value.length) * 100)}%`
 })
 
 const avgLatencyLabel = computed(() => {
+  if (diagnosticAi.value?.averageLatencyLabel) return diagnosticAi.value.averageLatencyLabel
   const values = aiLogs.value.map(item => Number(item.latencyMs)).filter(value => Number.isFinite(value) && value > 0)
   if (!values.length) return '-'
   const avg = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
   return `${avg} ms`
 })
 
+const avgLatencyValue = computed(() => {
+  if (diagnosticAi.value?.averageLatencyMs) return diagnosticAi.value.averageLatencyMs
+  const values = aiLogs.value.map(item => Number(item.latencyMs)).filter(value => Number.isFinite(value) && value > 0)
+  if (!values.length) return 0
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+})
+
 const tokenTotal = computed(() => {
+  if (typeof diagnosticAi.value?.totalTokens === 'number') return diagnosticAi.value.totalTokens
   return aiLogs.value.reduce((sum, item) => {
     return sum + Number(item.promptTokens || 0) + Number(item.completionTokens || 0)
   }, 0)
 })
 
 const primaryModel = computed(() => {
+  if (diagnosticAi.value?.primaryModel) return diagnosticAi.value.primaryModel
   const first = aiLogs.value.find(item => item.modelName || item.provider)
   if (!first) return '-'
   return [first.provider, first.modelName].filter(Boolean).join(' / ')
@@ -286,11 +348,83 @@ const aiStatusBars = computed(() => {
   }))
 })
 
+function successRate(items) {
+  if (!items.length) return null
+  return items.filter(item => item.status === 'SUCCESS').length / items.length
+}
+
+const recentAiWindow = computed(() => aiLogs.value.slice(0, 10))
+const previousAiWindow = computed(() => aiLogs.value.slice(10, 20))
+const recentSuccessRate = computed(() => successRate(recentAiWindow.value))
+const previousSuccessRate = computed(() => successRate(previousAiWindow.value))
+
+const trendLabel = computed(() => {
+  if (diagnosticAi.value?.trendLabel) return diagnosticAi.value.trendLabel
+  if (recentSuccessRate.value === null) return '等待样本'
+  if (previousSuccessRate.value === null) return '样本积累中'
+  const delta = recentSuccessRate.value - previousSuccessRate.value
+  if (delta >= 0.1) return '成功率上升'
+  if (delta <= -0.1) return '成功率下降'
+  return '趋势平稳'
+})
+
+const trendDetail = computed(() => {
+  if (diagnosticAi.value?.trendDetail) return diagnosticAi.value.trendDetail
+  if (recentSuccessRate.value === null) return '还没有 AI 调用日志，先完成一次聊天或 AI 测试。'
+  const current = `${Math.round(recentSuccessRate.value * 100)}%`
+  if (previousSuccessRate.value === null) return `最近 ${recentAiWindow.value.length} 条样本成功率 ${current}。`
+  const previous = `${Math.round(previousSuccessRate.value * 100)}%`
+  return `最近窗口 ${current}，上一窗口 ${previous}，用于判断模型链路是否波动。`
+})
+
+const healthLevel = computed(() => {
+  if (diagnosticAi.value?.healthLevel) return diagnosticAi.value.healthLevel
+  if (!aiLogs.value.length) return '等待样本'
+  const failedRate = failedCount.value / aiLogs.value.length
+  if (failedRate >= 0.3) return '需要关注'
+  if (failedCount.value > 0) return '可用但有波动'
+  if (skippedCount.value === aiLogs.value.length) return '兜底稳定'
+  if ((recentSuccessRate.value || 0) >= 0.8) return '运行稳定'
+  return '样本观察中'
+})
+
+const healthTone = computed(() => {
+  if (diagnosticAi.value?.healthTone) return diagnosticAi.value.healthTone
+  if (healthLevel.value === '需要关注') return 'danger'
+  if (healthLevel.value === '可用但有波动' || healthLevel.value === '样本观察中') return 'warning'
+  return 'success'
+})
+
+const healthRationale = computed(() => {
+  if (diagnosticAi.value?.healthRationale) return diagnosticAi.value.healthRationale
+  if (!aiLogs.value.length) return '日志页会在真实调用后自动形成健康判断。'
+  if (healthLevel.value === '需要关注') return `最近样本中有 ${failedCount.value} 次失败，应优先检查模型网关和密钥配置。`
+  if (healthLevel.value === '可用但有波动') return `存在 ${failedCount.value} 次失败，但主链路仍保留本地兜底。`
+  if (healthLevel.value === '兜底稳定') return '当前全部走本地兜底，适合无模型环境稳定演示。'
+  return '最近调用成功率和检索证据都可用于支撑系统稳定性说明。'
+})
+
+const failureEntryLabel = computed(() => {
+  if (diagnosticAi.value?.failureEntryLabel) return diagnosticAi.value.failureEntryLabel
+  const firstFailure = aiLogs.value.find(item => item.status === 'FAILED')
+  if (!firstFailure) return '暂无失败'
+  return firstFailure.sessionId ? `会话 ${firstFailure.sessionId}` : `日志 ${firstFailure.id}`
+})
+
+const failureEntryDetail = computed(() => {
+  if (diagnosticAi.value?.failureEntryDetail) return diagnosticAi.value.failureEntryDetail
+  const firstFailure = aiLogs.value.find(item => item.status === 'FAILED')
+  if (!firstFailure) return '最近样本没有失败记录，可继续查看原始日志作为佐证。'
+  return firstFailure.errorMessage || '失败日志缺少错误摘要，建议检查后端运行日志。'
+})
+
 const uniqueDocCount = computed(() => {
+  if (typeof diagnosticRetrieval.value?.uniqueDocCount === 'number') return diagnosticRetrieval.value.uniqueDocCount
   return new Set(retrievalLogs.value.map(item => item.docTitleSnapshot).filter(Boolean)).size
 })
 
 const avgRetrievalScoreLabel = computed(() => {
+  if (diagnosticRetrieval.value?.averageScoreLabel) return diagnosticRetrieval.value.averageScoreLabel
   const values = retrievalLogs.value.map(item => Number(item.score)).filter(value => Number.isFinite(value))
   if (!values.length) return '-'
   const avg = values.reduce((sum, value) => sum + value, 0) / values.length
@@ -298,6 +432,7 @@ const avgRetrievalScoreLabel = computed(() => {
 })
 
 const topDocs = computed(() => {
+  if (diagnosticRetrieval.value?.topDocs?.length) return diagnosticRetrieval.value.topDocs
   const counts = new Map()
   retrievalLogs.value.forEach(item => {
     const title = item.docTitleSnapshot || '未命名文档'
@@ -310,9 +445,89 @@ const topDocs = computed(() => {
 })
 
 const traceProgressLabel = computed(() => {
+  if (!traces.value.length && diagnosticTrace.value?.latestProgressLabel) return diagnosticTrace.value.latestProgressLabel
   if (!traces.value.length) return '-'
   const success = traces.value.filter(item => item.stepStatus === 'SUCCESS').length
   return `${success}/${traces.value.length}`
+})
+
+const traceMetricHint = computed(() => {
+  if (traceSessionId.value) return `会话 ${traceSessionId.value}`
+  if (diagnosticTrace.value?.latestSessionId) return `最近会话 ${diagnosticTrace.value.latestSessionId}`
+  return '输入会话 ID 查看'
+})
+
+const riskSignals = computed(() => {
+  if (diagnostics.value?.riskSignals?.length) return diagnostics.value.riskSignals
+  const signals = []
+  if (!aiLogs.value.length) {
+    signals.push({
+      title: '样本不足',
+      detail: '还没有 AI 调用日志，无法判断模型链路稳定性。',
+      tone: 'info'
+    })
+  }
+  if (failedCount.value > 0) {
+    signals.push({
+      title: '模型调用失败',
+      detail: `最近 ${aiLogs.value.length} 条样本中有 ${failedCount.value} 次失败，需要关注网关、密钥或模型名。`,
+      tone: failedCount.value / Math.max(aiLogs.value.length, 1) >= 0.3 ? 'danger' : 'warning'
+    })
+  }
+  if (aiLogs.value.length && skippedCount.value === aiLogs.value.length) {
+    signals.push({
+      title: '全部本地兜底',
+      detail: '系统可稳定演示，但当前样本不能证明真实模型链路已经打通。',
+      tone: 'warning'
+    })
+  }
+  if (avgLatencyValue.value > 6000) {
+    signals.push({
+      title: '响应偏慢',
+      detail: `平均耗时 ${avgLatencyValue.value} ms，演示时建议先确认 sub2api 或模型服务状态。`,
+      tone: 'warning'
+    })
+  }
+  if (!retrievalLogs.value.length) {
+    signals.push({
+      title: '缺少 RAG 证据',
+      detail: '当前没有知识检索日志，答辩时难以展示回答依据链路。',
+      tone: 'info'
+    })
+  } else if (retrievalLogs.value.length >= 5 && uniqueDocCount.value <= 1) {
+    signals.push({
+      title: '命中文档集中',
+      detail: '最近检索主要集中在单一文档，可补充关键词或意图覆盖来提升召回解释力。',
+      tone: 'warning'
+    })
+  }
+  if (!signals.length) {
+    signals.push({
+      title: '暂无明显风险',
+      detail: '最近样本中模型调用、知识命中和日志证据处于可演示状态。',
+      tone: 'success'
+    })
+  }
+  return signals
+})
+
+const actionItems = computed(() => {
+  if (diagnostics.value?.actionItems?.length) return diagnostics.value.actionItems
+  const items = []
+  if (!aiLogs.value.length) {
+    items.push('先在咨询工作台发送一轮售后问题，生成 AI 调用、检索和处理轨迹样本。')
+  }
+  if (failedCount.value > 0) {
+    items.push('优先检查 OPENAI_BASE_URL、OPENAI_API_KEY、模型名和 sub2api 健康状态。')
+  }
+  if (skippedCount.value === aiLogs.value.length && aiLogs.value.length) {
+    items.push('如果要展示真实模型能力，开启 AI 配置后重新执行 AI 测试和聊天烟测。')
+  }
+  if (!retrievalLogs.value.length || uniqueDocCount.value <= 1) {
+    items.push('用知识库调试面板检索退货、退款、物流、投诉等问题，确认多类规则都能留下命中日志。')
+  }
+  items.push('演示时先展示健康趋势，再切到 AI 调用日志、知识检索日志和处理轨迹三类原始证据。')
+  return items.slice(0, 4)
 })
 
 watch(activeTab, refresh)
@@ -396,6 +611,117 @@ onMounted(refreshAll)
   display: grid;
   grid-template-columns: minmax(300px, 0.36fr) minmax(0, 0.64fr);
   gap: 14px;
+}
+
+.health-panel {
+  margin-bottom: 14px;
+}
+
+.health-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.health-primary,
+.health-card {
+  min-height: 116px;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.health-primary span,
+.health-card span,
+.health-primary small,
+.health-card small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.health-primary strong,
+.health-card strong {
+  display: block;
+  margin: 9px 0 7px;
+  color: #111827;
+  font-size: 23px;
+  line-height: 1.1;
+}
+
+.health-primary {
+  border-color: rgb(15 159 110 / 24%);
+  background: linear-gradient(180deg, #ffffff, #f0fdf8);
+}
+
+.health-primary.warning {
+  border-color: rgb(217 119 6 / 26%);
+  background: linear-gradient(180deg, #ffffff, #fffbeb);
+}
+
+.health-primary.danger {
+  border-color: rgb(220 38 38 / 24%);
+  background: linear-gradient(180deg, #ffffff, #fef2f2);
+}
+
+.risk-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.48fr) minmax(0, 0.52fr);
+  gap: 14px;
+  padding: 0 18px 18px;
+}
+
+.risk-block {
+  min-width: 0;
+}
+
+.risk-list {
+  display: grid;
+  gap: 8px;
+}
+
+.risk-row {
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.risk-row span {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.risk-row p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.risk-row.success {
+  border-color: rgb(15 159 110 / 22%);
+}
+
+.risk-row.warning {
+  border-color: rgb(217 119 6 / 24%);
+}
+
+.risk-row.danger {
+  border-color: rgb(220 38 38 / 24%);
+}
+
+.action-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .panel-caption {
@@ -564,7 +890,9 @@ onMounted(refreshAll)
 
 @media (max-width: 1180px) {
   .diagnostic-hero,
-  .diagnostic-layout {
+  .diagnostic-layout,
+  .health-body,
+  .risk-layout {
     grid-template-columns: 1fr;
   }
 }

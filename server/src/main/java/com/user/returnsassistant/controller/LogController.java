@@ -23,4 +23,10 @@ public class LogController {
     public Result retrievalLogs(Integer page, Integer pageSize, String keyword) {
         return Result.success(logService.pageRetrievalLogs(page, pageSize, keyword));
     }
+
+    @GetMapping("/log-diagnostics")
+    @OperatorAnno
+    public Result diagnostics() {
+        return Result.success(logService.getDiagnostics());
+    }
 }

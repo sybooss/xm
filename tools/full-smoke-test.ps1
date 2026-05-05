@@ -313,6 +313,10 @@ try {
     $retrievalLogs = Api-Get "/retrieval-logs?page=1&pageSize=10&keyword=return"
     Add-Result "retrieval logs" ($retrievalLogs.total -ge 1) "total=$($retrievalLogs.total)"
 
+    $diagnostics = Api-Get "/log-diagnostics"
+    $diagnosticsOk = $diagnostics.ai.sampleSize -ge 1 -and $diagnostics.riskSignals.Count -ge 1 -and $diagnostics.actionItems.Count -ge 1
+    Add-Result "log diagnostics health summary" $diagnosticsOk "health=$($diagnostics.ai.healthLevel), trend=$($diagnostics.ai.trendLabel), risks=$($diagnostics.riskSignals.Count)"
+
     Api-Delete "/chat-sessions/$($created.sessionId)" | Out-Null
     $created.sessionId = $null
     $created.ticketId = $null

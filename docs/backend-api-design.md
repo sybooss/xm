@@ -911,7 +911,15 @@ GET /ai-call-logs?page=1&pageSize=10&status=FAILED
 GET /retrieval-logs?page=1&pageSize=10&keyword=退货
 ```
 
-### 9.4 查询操作日志
+### 9.4 查询日志健康诊断
+
+```http
+GET /log-diagnostics
+```
+
+返回最近 AI 调用、知识检索和处理轨迹的聚合结果，包含 `healthLevel`、`trendLabel`、`riskSignals`、`actionItems` 等字段。前端日志诊断中心使用该接口展示运行健康度、风险信号和处置建议，便于答辩时说明系统稳定性与可观测性。
+
+### 9.5 查询操作日志
 
 ```http
 GET /operate-logs?page=1&pageSize=10
