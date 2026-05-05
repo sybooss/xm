@@ -76,6 +76,7 @@
 | --- | --- | --- | --- | --- |
 | 2026-05-05-1 | 新增 `/showcase` 答辩展示中心、管理员默认入口、侧栏菜单、浏览器烟测覆盖、README/docs 同步 | `mvn -q -DskipTests package` 通过；`npm.cmd run build` 通过；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`npm.cmd run test:browser` FAILED_COUNT=0；`npm.cmd run test:browser:roles` FAILED_COUNT=0 | Passed | 结项报告和个人答辩材料仍需补齐；后续可继续 polish 看板/日志数据分析 |
 | 2026-05-05-2 | 新增结项报告草稿、个人答辩讲解稿、个人答辩 Q&A，并在 README/演示脚本中加入入口 | `mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过；文档材料存在且包含核心代码与验证命令引用 | Passed | 需要正式 DOC 模板化和 PPT 化 |
+| 2026-05-05-3 | 新增 `tools/generate-final-report-docx.py`，生成正式结项报告 `docs/final-report.docx`，并完成 DOCX->PDF->PNG 渲染检查 | `python tools\generate-final-report-docx.py` 通过；`soffice.com --headless --convert-to pdf --outdir output\doc docs\final-report.docx` 通过；`pdftoppm.exe -png output\doc\final-report.pdf output\doc\final-report-pages\page` 通过；DOCX 结构检查为 65 段、4 表；7 页渲染图人工检查无乱码/重叠/截断；`mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过，只有 Vite chunk size 警告 | Passed | 个人答辩材料仍可继续压缩为 PPT/演示卡片；日志/看板数据可视化仍有高收益 |
 
 ## Validation Commands
 
@@ -93,7 +94,7 @@
 - Database docs: 本轮未改数据库。
 - Test cases: 已新增展示中心与客户权限核验项。
 - Demo script: 已改为六步演示，第一步从展示中心开始，并链接配套答辩材料。
-- Report: `docs/final-report-draft.md`
+- Report: `docs/final-report-draft.md`, `docs/final-report.docx`
 - Personal defense notes: `docs/personal-defense-script.md`
 - Q&A: `docs/personal-defense-qa.md`
 
@@ -103,7 +104,7 @@
 - Required functions: Current iteration verified
 - Highlight features: 8+ real highlights, current iteration verified
 - Frontend premium quality: Showcase page first pass verified by screenshot
-- Report consistency: Markdown draft ready, formal DOC conversion pending
+- Report consistency: Markdown draft and formal DOCX report ready; PDF/PNG render checked
 - Personal defense readiness: Script and Q&A ready, PPT compression pending
 - Self-iteration completed: Current iteration reviewed; continue because report/personal defense remain high-value
 - Git status: Pending
