@@ -354,5 +354,7 @@ mvn -q -DskipTests package
 - 演示脚本：[docs/demo-script.md](docs/demo-script.md)
 - 测试用例：[docs/test-cases.md](docs/test-cases.md)
 - 结项报告草稿：[docs/final-report-draft.md](docs/final-report-draft.md)
+- 正式结项报告：[docs/final-report.docx](docs/final-report.docx)
 - 个人答辩讲解稿：[docs/personal-defense-script.md](docs/personal-defense-script.md)
 - 个人答辩 Q&A：[docs/personal-defense-qa.md](docs/personal-defense-qa.md)
+- 个人答辩 PPT：[docs/personal-defense-slides.pptx](docs/personal-defense-slides.pptx)

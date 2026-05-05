@@ -20,8 +20,8 @@
 - Frontend: Vue 3 + Vite + Pinia + Element Plus，已有登录/注册、咨询工作台、系统总览、知识库、订单、工单、日志、AI 测试页面。
 - Database: `sql/schema.sql` 覆盖核心业务表；`sql/seed.sql` 提供演示数据。
 - AI: LangChain4j 接入 OpenAI-compatible 服务；保留本地规则兜底；已有 SSE 流式消息接口和 AI/检索/轨迹日志。
-- Docs/report: README、后端/前端/数据库/测试/演示文档已存在；已补结项报告草稿、个人答辩讲解稿和个人答辩 Q&A。
-- Current blockers: 本轮功能验证已通过；正式结项报告和日志诊断中心已完成；后续高收益点主要是个人答辩 PPT/演示卡片，以及工单/知识库页面继续产品化 polish。
+- Docs/report: README、后端/前端/数据库/测试/演示文档已存在；已补结项报告草稿、正式 DOCX、个人答辩讲解稿、个人答辩 Q&A 和个人答辩 PPT。
+- Current blockers: 本轮功能验证已通过；正式结项报告、日志诊断中心和个人答辩 PPT 已完成。后续可继续 polish 工单/知识库页面，但相对当前评分材料的收益已经较低。
 
 ## Score-Gap Table
 
@@ -30,7 +30,7 @@
 | 开题报告可行性与创新 | 20 | 17 | 18+ | 需要与最终系统同步 | 后续补最终功能变化说明 | `docs/opening-report.md` |
 | 结项答辩运行顺畅与需求满足 | 30 | 25 | 28+ | 演示入口与稳定证据需更清晰 | 新增答辩展示中心并验证 | `/showcase` |
 | 程序设计规范与 UI 友好 | 10 | 9 | 9+ | 展示中心和日志诊断中心已有高级产品感，工单/知识库仍可继续 polish | 后续按答辩收益选择局部页面 | Vue 页面与浏览器截图 |
-| 个人自述与问答 | 20 | 17 | 18+ | 已有讲解稿和 Q&A，后续可继续压缩成 PPT 讲稿 | 生成答辩幻灯片或个人贡献页 | `docs/personal-defense-script.md`, `docs/personal-defense-qa.md` |
+| 个人自述与问答 | 20 | 19 | 18+ | 讲解稿、Q&A 和 11 页 PPT 已完成 | 答辩前按个人实际分工微调姓名/贡献措辞 | `docs/personal-defense-script.md`, `docs/personal-defense-qa.md`, `docs/personal-defense-slides.pptx` |
 | 结项报告详实度与拓展建议 | 20 | 17 | 18+ | 已有 Markdown 草稿，后续可转为课程模板 DOC | 转为正式报告格式并补截图索引 | `docs/final-report-draft.md` |
 
 ## Required Function Checklist
@@ -78,6 +78,7 @@
 | 2026-05-05-2 | 新增结项报告草稿、个人答辩讲解稿、个人答辩 Q&A，并在 README/演示脚本中加入入口 | `mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过；文档材料存在且包含核心代码与验证命令引用 | Passed | 需要正式 DOC 模板化和 PPT 化 |
 | 2026-05-05-3 | 新增 `tools/generate-final-report-docx.py`，生成正式结项报告 `docs/final-report.docx`，并完成 DOCX->PDF->PNG 渲染检查 | `python tools\generate-final-report-docx.py` 通过；`soffice.com --headless --convert-to pdf --outdir output\doc docs\final-report.docx` 通过；`pdftoppm.exe -png output\doc\final-report.pdf output\doc\final-report-pages\page` 通过；DOCX 结构检查为 65 段、4 表；7 页渲染图人工检查无乱码/重叠/截断；`mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过，只有 Vite chunk size 警告 | Passed | 个人答辩材料仍可继续压缩为 PPT/演示卡片；日志/看板数据可视化仍有高收益 |
 | 2026-05-05-4 | 将 `/logs` 升级为日志诊断中心，新增 AI 成功率、平均耗时、知识命中、平均检索分数、轨迹步骤、高频命中文档和状态分布；同步 README、前端文档、测试用例、演示脚本、个人答辩材料和正式报告 | `mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`npm.cmd run test:browser` FAILED_COUNT=0；`npm.cmd run test:browser:roles` FAILED_COUNT=0；`python tools\generate-final-report-docx.py` 通过；`soffice.com --headless --convert-to pdf --outdir output\doc docs\final-report.docx` 通过；`pdftoppm.exe -png output\doc\final-report.pdf output\doc\final-report-pages\page` 通过；`docs/final-report.docx` 包含“日志诊断中心/AI 成功率/平均耗时/知识命中”；`output/playwright/09-logs.png` 人工检查无明显溢出/遮挡 | Passed | PPT/演示卡片仍是最高收益；工单/知识库可继续细化但收益次之 |
+| 2026-05-05-5 | 新增 `tools/generate-personal-defense-slides-pptx.py`，生成 11 页个人答辩 PPT `docs/personal-defense-slides.pptx`，同步 README、演示脚本和个人答辩讲解稿 | `python -X utf8` in-memory compile 通过；`python tools\generate-personal-defense-slides-pptx.py` 通过；PPTX OpenXML 检查为 11 页且每页 slide relationship 完整；关键文本“电商退换货 AI 客服系统/LangChain4j/本地兜底//showcase/日志诊断中心/FAILED_COUNT=0”存在；`soffice.com --headless --convert-to pdf --outdir output\doc\personal-defense-slides-render docs\personal-defense-slides.pptx` 通过；`pdfinfo.exe` 显示 11 页、无加密、无 suspects；`pdftoppm.exe -png -r 160 ...` 生成 11 张非零 PNG；人工检查封面、流程页、日志诊断页和验证证据页无明显乱码/重叠/截断 | Passed | 工单/知识库页面仍可细化，但对当前评分材料的边际收益低 |
 
 ## Validation Commands
 
@@ -89,7 +90,7 @@
 
 ## Report And Defense Artifacts
 
-- README: 已新增答辩展示中心和结项/个人答辩材料入口。
+- README: 已新增答辩展示中心、结项报告和个人答辩 PPT 入口。
 - Backend docs: 本轮未改后端接口。
 - Frontend docs: 已新增 `/showcase` 设计说明。
 - Database docs: 本轮未改数据库。
@@ -97,6 +98,7 @@
 - Demo script: 已改为七步演示，从展示中心开始，以日志诊断中心收尾，并链接配套答辩材料。
 - Report: `docs/final-report-draft.md`, `docs/final-report.docx`
 - Personal defense notes: `docs/personal-defense-script.md`
+- Personal defense slides: `docs/personal-defense-slides.pptx`
 - Q&A: `docs/personal-defense-qa.md`
 
 ## Final Review
@@ -106,7 +108,7 @@
 - Highlight features: 8+ real highlights, current iteration verified
 - Frontend premium quality: Showcase page and log diagnostic center verified by screenshots
 - Report consistency: Markdown draft and formal DOCX report ready; PDF/PNG render checked
-- Personal defense readiness: Script and Q&A ready, PPT compression pending
-- Self-iteration completed: Current iteration reviewed; continue because personal defense PPT remains high-value
+- Personal defense readiness: Script, Q&A and 11-page PPT ready; PPTX/PDF/PNG render checked
+- Self-iteration completed: Current iteration reviewed; remaining polish ideas are lower-return than the completed system/report/defense package
 - Git status: Pending
 - Commit/push: Pending
