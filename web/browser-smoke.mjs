@@ -85,6 +85,12 @@ try {
   await page.goto(`${baseUrl}/knowledge`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '知识库', 'knowledge page visible')
   await expectText(page, '检索调试', 'knowledge search panel visible')
+  await page.getByPlaceholder('输入用户问题，例如：退货多久到账').fill('退款多久到账')
+  await page.getByRole('button', { name: /^检索$/ }).click()
+  await expectText(page, '命中文档', 'knowledge hit count visible')
+  await expectText(page, '意图覆盖', 'knowledge intent coverage visible')
+  await expectText(page, '命中解释', 'knowledge hit reason visible')
+  await expectText(page, '排序依据', 'knowledge ranking reason visible')
   await page.screenshot({ path: path.join(artifactDir, '06-knowledge.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/orders`, { waitUntil: 'networkidle', timeout: 60000 })

@@ -52,17 +52,69 @@
 
     <section class="panel search-panel">
       <div class="panel-header">
-        <h3 class="panel-title">检索调试</h3>
+        <div>
+          <h3 class="panel-title">检索调试</h3>
+          <p class="panel-note">验证用户问题如何命中知识库，便于解释 RAG 依据来源。</p>
+        </div>
       </div>
       <div class="panel-body search-body">
         <el-input v-model="searchText" placeholder="输入用户问题，例如：退货多久到账" clearable />
-        <el-button type="primary" :icon="Search" @click="runSearch">检索</el-button>
+        <el-select v-model="searchIntent" placeholder="指定意图" clearable>
+          <el-option v-for="item in intentOptions" :key="item.code" :label="item.name" :value="item.code" />
+        </el-select>
+        <el-button type="primary" :icon="Search" :loading="searching" @click="runSearch">检索</el-button>
       </div>
-      <div v-if="searchHits.length" class="panel-body hit-grid">
-        <div v-for="hit in searchHits" :key="hit.id" class="hit-item">
-          <strong>{{ hit.title }}</strong>
-          <p>{{ hit.contentPreview || hit.answer || hit.content }}</p>
+
+      <div v-if="searchRan" class="panel-body search-diagnostics">
+        <div class="diagnostic-card">
+          <span>命中文档</span>
+          <strong>{{ searchHits.length }}</strong>
+          <small>{{ searchHits.length ? '已找到可引用依据' : '未命中，建议补充知识文档' }}</small>
         </div>
+        <div class="diagnostic-card">
+          <span>意图覆盖</span>
+          <strong>{{ matchedIntentCount }}</strong>
+          <small>{{ matchedIntentSummary }}</small>
+        </div>
+        <div class="diagnostic-card">
+          <span>最高优先级</span>
+          <strong>{{ topPriority }}</strong>
+          <small>用于排序并优先注入回答上下文</small>
+        </div>
+        <div class="diagnostic-card">
+          <span>排序依据</span>
+          <strong>优先级</strong>
+          <small>同优先级按更新时间和文档编号降序</small>
+        </div>
+      </div>
+
+      <div v-if="searchHits.length" class="panel-body hit-grid">
+        <div v-for="(hit, index) in decoratedHits" :key="hit.id" class="hit-item">
+          <div class="hit-head">
+            <div>
+              <span class="rank-badge">#{{ index + 1 }}</span>
+              <strong>{{ hit.title }}</strong>
+            </div>
+            <StatusTag :value="hit.intentCode" />
+          </div>
+          <div class="hit-meta">
+            <span>{{ hit.categoryName || '未分类' }}</span>
+            <span>{{ hit.docType }}</span>
+            <span>优先级 {{ hit.priority ?? 0 }}</span>
+          </div>
+          <p>{{ hit.contentPreview || hit.answer || hit.content }}</p>
+          <div class="hit-reason">
+            <strong>命中解释</strong>
+            <span>{{ hit.reasonText }}</span>
+          </div>
+          <div v-if="hit.keywordList.length" class="keyword-row">
+            <span v-for="keyword in hit.keywordList" :key="keyword">{{ keyword }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="searchRan" class="panel-body">
+        <EmptyState text="未命中知识文档，请调整问题或补充知识库" />
       </div>
     </section>
 
@@ -125,6 +177,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   createKnowledgeDoc,
@@ -143,12 +196,33 @@ const categories = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editingId = ref(null)
-const searchText = ref('退货多久到账')
+const searchText = ref('退款多久到账')
+const searchIntent = ref('')
 const searchHits = ref([])
+const searchRan = ref(false)
+const searching = ref(false)
 
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: '', intentCode: '' })
 const form = reactive(defaultForm())
 const intentOptions = computed(() => systemStore.enums?.intentCodes || [])
+const decoratedHits = computed(() =>
+  searchHits.value.map(hit => ({
+    ...hit,
+    keywordList: splitKeywords(hit.keywords),
+    reasonText: buildHitReason(hit)
+  }))
+)
+const matchedIntentCount = computed(() => new Set(searchHits.value.map(item => item.intentCode).filter(Boolean)).size)
+const matchedIntentSummary = computed(() => {
+  const intents = [...new Set(searchHits.value.map(item => item.intentCode).filter(Boolean))]
+  return intents.length ? intents.join(' / ') : '暂无意图命中'
+})
+const topPriority = computed(() => {
+  if (!searchHits.value.length) {
+    return '-'
+  }
+  return Math.max(...searchHits.value.map(item => Number(item.priority || 0)))
+})
 
 function defaultForm() {
   return {
@@ -214,7 +288,43 @@ async function remove(row) {
 }
 
 async function runSearch() {
-  searchHits.value = await searchKnowledgeDocs({ query: searchText.value, limit: 5 })
+  searching.value = true
+  try {
+    searchHits.value = await searchKnowledgeDocs({ query: searchText.value, intentCode: searchIntent.value, limit: 5 })
+    searchRan.value = true
+  } finally {
+    searching.value = false
+  }
+}
+
+function splitKeywords(value) {
+  if (!value) {
+    return []
+  }
+  return String(value)
+    .split(/[,，、\s]+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+    .slice(0, 6)
+}
+
+function buildHitReason(hit) {
+  const parts = []
+  if (hit.hitReason) {
+    parts.push(hit.hitReason)
+  }
+  if (hit.intentCode) {
+    parts.push(`匹配意图 ${hit.intentCode}`)
+  }
+  const keywords = splitKeywords(hit.keywords)
+  const matchedKeywords = keywords.filter(keyword => searchText.value.includes(keyword)).slice(0, 3)
+  if (matchedKeywords.length) {
+    parts.push(`问题包含关键词：${matchedKeywords.join('、')}`)
+  }
+  if (hit.priority != null) {
+    parts.push(`文档优先级 ${hit.priority}`)
+  }
+  return parts.join('；') || '根据标题、问题、正文和关键词召回'
 }
 
 onMounted(async () => {
@@ -234,8 +344,52 @@ onMounted(async () => {
 
 .search-body {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) 180px auto;
   gap: 10px;
+}
+
+.panel-note {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.search-diagnostics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.diagnostic-card {
+  min-height: 98px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.diagnostic-card span,
+.diagnostic-card small {
+  display: block;
+}
+
+.diagnostic-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.diagnostic-card strong {
+  display: block;
+  margin: 8px 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.diagnostic-card small {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .hit-grid {
@@ -246,21 +400,109 @@ onMounted(async () => {
 }
 
 .hit-item {
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.hit-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hit-head > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hit-head strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.hit-item p {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.hit-reason {
+  margin-top: 10px;
   padding: 10px;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   background: var(--surface-soft);
 }
 
-.hit-item p {
-  margin: 6px 0 0;
+.hit-reason strong,
+.hit-reason span {
+  display: block;
+}
+
+.hit-reason strong {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.hit-reason span {
   color: var(--text-muted);
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.keyword-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.keyword-row span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+}
+
+@media (max-width: 1080px) {
+  .search-diagnostics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
   .search-body,
-  .hit-grid {
+  .hit-grid,
+  .search-diagnostics {
     grid-template-columns: 1fr;
   }
 }

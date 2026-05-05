@@ -24,7 +24,7 @@
 | 客服会话与多轮追问 | Done | `/chat` | `/chat-sessions`, `/message-stream` | `chat_session`, `chat_message` | 全链路烟测 |
 | 退货/换货/退款/物流/投诉 | Done | `/chat`, `/orders` | `ChatServiceImpl`, `OrderController` | seed 订单与知识库 | 接口和浏览器烟测 |
 | 订单与售后记录 | Done | `/orders` | `/orders`, `/after-sale-records` | `demo_order`, `after_sale_record` | 全链路烟测 |
-| 知识库管理与检索 | Done | `/knowledge` | `/knowledge-docs/search` | `knowledge_doc`, `retrieval_log` | 检索日志 |
+| 知识库管理与检索 | Done | `/knowledge` | `/knowledge-docs/search` | `knowledge_doc`, `retrieval_log` | 浏览器烟测已覆盖命中数量、意图覆盖、排序依据和命中解释 |
 | AI 回复与本地兜底 | Done | `/chat`, `/ai-test` | `AiServiceImpl` | `ai_call_log` | AI 测试和日志 |
 | 工单创建与处理 | Done | `/service-tickets` | `/service-tickets`, `/chat-sessions/{id}/service-tickets` | `service_ticket` | 浏览器烟测已覆盖 SLA 风险、下一步动作和时间线 |
 | 日志追踪与演示数据 | Done | `/logs` | `/ai-call-logs`, `/retrieval-logs`, `/process-traces` | 日志表 | 日志中心和浏览器烟测 |
@@ -34,7 +34,7 @@
 | Priority | Highlight | Score Value | Status | Validation |
 | ---: | --- | --- | --- | --- |
 | 1 | AI 流式客服与处理过程 | 高 | Done | `npm run test:browser` |
-| 2 | RAG 知识依据与检索日志 | 高 | Done | `tools/full-smoke-test.ps1`, `/logs` |
+| 2 | RAG 知识依据与检索日志 | 高 | Done | `tools/full-smoke-test.ps1`, `npm run test:browser` |
 | 3 | LangChain4j 业务工具封装 | 高 | Done | 后端编译 |
 | 4 | 本地规则兜底 | 高 | Done | AI SKIPPED/FALLBACK 路径 |
 | 5 | 多轮上下文 | 高 | Done | 全链路烟测 |
@@ -48,8 +48,8 @@
 | Page | Current Quality | Program Gap | Next Action | Evidence |
 | --- | --- | --- | --- | --- |
 | `/showcase` | High | 暂无高收益程序缺口 | 保持稳定 | 浏览器烟测截图 |
-| `/chat` | Medium+ | 信息密度高，后续可细化聊天洞察面板 | 暂缓 | `ChatWorkbenchView.vue` |
-| `/knowledge` | Medium | 可增加更强检索解释感 | 后续候选 | `KnowledgeDocView.vue` |
+| `/chat` | Medium+ | 信息密度高，后续可细化聊天洞察面板 | 下一轮候选 | `ChatWorkbenchView.vue` |
+| `/knowledge` | High | 已补齐检索解释和 RAG 调试证据 | 保持稳定 | `KnowledgeDocView.vue`, `output/playwright/06-knowledge.png` |
 | `/service-tickets` | High | 已补齐工单闭环演示感 | 后续只需保持稳定 | `ServiceTicketView.vue`, `output/playwright/08-service-tickets.png` |
 | `/logs` | High | 趋势图可扩展，但当前收益低于工单闭环 | 暂缓 | 浏览器烟测截图 |
 
@@ -68,6 +68,7 @@
 | Iteration | Change | Validation | Result | Remaining Program Gap |
 | --- | --- | --- | --- | --- |
 | 2026-05-06-program-1 | 工单页新增 SLA 风险、下一步动作和售后处理时间线；浏览器烟测补新区域断言；README 同步程序运行说明 | `cd server; mvn -q -DskipTests package` 通过；`cd web; npm run build` 通过，仅有既有 Vite chunk size 警告；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 知识库检索解释和聊天洞察面板仍是下一批候选，但收益低于本轮工单闭环 |
+| 2026-05-06-program-2 | 知识库页新增检索诊断卡、意图覆盖、排序依据、命中解释和关键词标签；`/knowledge-docs/search` 增加整句未命中时的售后意图推断召回，并补 rank/score/hitReason | `cd server; mvn -q -DskipTests package` 通过；`cd web; npm run build` 通过，仅有既有 Vite chunk size 警告；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 聊天工作台洞察区仍可进一步产品化，但本轮 RAG 可解释性已补齐 |
 
 ## Validation Commands
 
@@ -81,4 +82,4 @@
 ## Program-Only Stop Gate
 
 - 只有当核心链路、特色功能、接口烟测、浏览器烟测、构建验证、工作区检查、提交和推送都满足，并且实际审计没有明显高收益程序优化点时，才允许输出完成承诺。
-- 当前状态: 本轮程序优化验证通过，尚未提交和推送；推送后继续审计知识库/聊天页是否还有明显高收益优化点。
+- 当前状态: 第二轮程序优化验证通过，尚未提交和推送；推送后继续审计聊天工作台洞察区是否还有明显高收益优化点。
