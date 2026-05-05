@@ -98,6 +98,9 @@ try {
   await expectText(page, '状态', 'service ticket status field visible')
   await expectText(page, 'AI 摘要', 'service ticket AI summary visible')
   await expectText(page, '处理建议', 'service ticket detail visible')
+  await expectText(page, 'SLA 风险', 'service ticket SLA risk visible')
+  await expectText(page, '售后处理时间线', 'service ticket timeline visible')
+  await expectText(page, '下一步动作', 'service ticket next action visible')
   await page.screenshot({ path: path.join(artifactDir, '08-service-tickets.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/logs`, { waitUntil: 'networkidle', timeout: 60000 })
