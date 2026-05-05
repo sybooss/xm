@@ -25,7 +25,7 @@
 | 数据库 | MySQL 8.x |
 | AI | LangChain4j `langchain4j-open-ai`, OpenAI-compatible API |
 | 前端 | Vue 3, Vite, Pinia, Vue Router, Axios, Element Plus |
-| 测试 | PowerShell API smoke test, Playwright browser smoke test, GitHub Actions CI |
+| 交付 | Docker Compose, PowerShell smoke test, Playwright browser smoke test, GitHub Actions CI |
 
 ## 目录结构
 
@@ -37,6 +37,7 @@
 ├─ docs/                   数据库、接口、前后端设计文档
 ├─ tools/                  本地启动、烟测和一键验证脚本
 ├─ .github/workflows/      GitHub Actions 构建门禁
+├─ docker-compose.yml       Docker 一键演示环境
 ├─ tmp/                    本地临时测试脚本，默认不提交
 ├─ output/                 本地日志、截图、报告输出，默认不提交
 ├─ .env.example            环境变量模板
@@ -316,9 +317,33 @@ npm run test:browser
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithSmoke -WithBrowser -WithRoleBrowser
 ```
 
-## 9. 常见问题
+如果本机安装了 Docker，也可以验证容器化交付：
 
-### 9.1 后端提示数据库连接失败
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithDocker
+```
+
+## 9. Docker 演示部署
+
+容器化演示环境包含 MySQL、Spring Boot 后端和 Nginx 前端，不需要把真实密钥写入仓库。默认 `AI_ENABLED=false`，系统会使用本地规则兜底，适合无模型环境稳定演示。
+
+```powershell
+docker compose --project-name returns-assistant up -d --build
+```
+
+启动后访问：
+
+```text
+前端：http://localhost:5173
+后端：http://localhost:8081
+健康检查：http://localhost:8081/system/health
+```
+
+如需启用真实模型，在本机环境变量或 `.env` 中设置 `AI_ENABLED=true`、`OPENAI_API_KEY`、`OPENAI_BASE_URL` 和 `OPENAI_MODEL` 后再执行上面的 Compose 命令。Compose 默认把宿主机 `8080` 网关映射为 `http://host.docker.internal:8080/v1`。
+
+## 10. 常见问题
+
+### 10.1 后端提示数据库连接失败
 
 确认 MySQL 已启动，且 `test3` 数据库已导入：
 
@@ -329,7 +354,7 @@ mysql -uroot -p1234 -e "SHOW DATABASES;"
 
 如果密码不是 `1234`，修改 `.env` 中的 `MYSQL_PASSWORD`。
 
-### 9.2 AI 状态是 `SKIPPED`
+### 10.2 AI 状态是 `SKIPPED`
 
 一般是没有设置 `AI_ENABLED=true` 或 `OPENAI_API_KEY`。检查：
 
@@ -338,7 +363,7 @@ Get-Content .env
 Invoke-RestMethod http://localhost:8081/system/status
 ```
 
-### 9.3 sub2api 健康检查
+### 10.3 sub2api 健康检查
 
 如果使用本地 sub2api：
 
@@ -348,7 +373,7 @@ Invoke-RestMethod http://127.0.0.1:8080/health
 
 返回 `status=ok` 后，再启动本项目后端。
 
-### 9.4 Maven 打包时 jar 被锁
+### 10.4 Maven 打包时 jar 被锁
 
 说明旧后端进程还在运行，先停掉 8081 端口进程：
 
@@ -359,7 +384,7 @@ cd server
 mvn -q -DskipTests package
 ```
 
-## 10. 文档入口
+## 11. 文档入口
 
 - 数据库设计：[docs/database-design.md](docs/database-design.md)
 - 后端接口设计：[docs/backend-api-design.md](docs/backend-api-design.md)

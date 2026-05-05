@@ -16,6 +16,7 @@
 - Database: `sql/schema.sql` 覆盖核心业务表；`sql/seed.sql` 提供演示数据；注册密码迁移脚本已存在。
 - AI: LangChain4j 接入 OpenAI-compatible 服务；本地规则兜底保留；已有 SSE 流式消息接口和 AI/检索/轨迹日志。
 - Tests: `tools/full-smoke-test.ps1`、`web/browser-smoke.mjs`、`web/browser-role-smoke.mjs` 覆盖核心接口、页面和角色权限；`tools/verify-program.ps1` 和 `.github/workflows/ci.yml` 提供本地/远程构建门禁。
+- Delivery: `docker-compose.yml` 提供 MySQL、Spring Boot 和 Nginx 前端的一键容器化演示入口，默认本地规则兜底，不要求真实模型密钥。
 
 ## Required Function Checklist
 
@@ -73,12 +74,15 @@
 | 2026-05-06-program-3 | 聊天工作台右侧新增 AI 决策摘要、实时进度、业务工具、建议追问、知识命中分数和命中解释；浏览器烟测补关键断言；README 同步运行说明 | `cd server; mvn -q -DskipTests package` 通过；`cd web; npm run build` 通过，仅有既有 Vite chunk size 警告；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 核心高收益页面已完成；剩余候选多为低收益细节 polish |
 | 2026-05-06-program-4 | 前端工程化优化：路由视图懒加载、Element Plus 组件按需注册、移除全量图标注册、Vite 拆分 Vue/Element Plus/图标/业务视图 chunks，消除构建大 chunk 警告 | `cd web; npm run build` 通过且无 chunk size 警告；`cd server; mvn -q -DskipTests package` 通过；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`cd web; npm run test:browser` FAILED_COUNT=0；`cd web; npm run test:browser:roles` FAILED_COUNT=0 | Passed | 工程化交付入口仍可增强 |
 | 2026-05-06-program-5 | 新增 `tools/verify-program.ps1` 一键本地构建门禁和 `.github/workflows/ci.yml` GitHub Actions CI；README 同步本地/远程验证说明 | `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1` FAILED_COUNT=0；`powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithSmoke -WithBrowser -WithRoleBrowser` FAILED_COUNT=0，覆盖后端打包、前端构建、全链路接口烟测、浏览器主流程和角色权限烟测 | Passed | 工程化门禁已补齐，后续可继续做 Docker 化但收益低于当前 CI 门禁 |
+| 2026-05-06-program-6 | 新增 Docker Compose 演示交付：MySQL 初始化 schema/seed、后端 Dockerfile、前端 Nginx Dockerfile、`.dockerignore`、`/system/health` 健康检查和 `verify-program.ps1 -WithDocker/-WithDockerUp` | `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1` FAILED_COUNT=0；代理环境下 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithDocker` FAILED_COUNT=0；`WEB_PORT=5180 AI_ENABLED=false powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithDockerUp` FAILED_COUNT=0，容器 MySQL、后端、前端均健康后已 `docker compose --project-name returns-assistant down` 清理 | Passed | Docker 化演示交付已补齐 |
 
 ## Validation Commands
 
 - `cd server; mvn -q -DskipTests package`
 - `cd web; npm run build`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithDocker`
+- `WEB_PORT=5180 AI_ENABLED=false powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithDockerUp`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\full-smoke-test.ps1`
 - `cd web; npm run test:browser`
 - `cd web; npm run test:browser:roles`
@@ -87,4 +91,4 @@
 ## Program-Only Stop Gate
 
 - 只有当核心链路、特色功能、接口烟测、浏览器烟测、构建验证、工作区检查、提交和推送都满足，并且实际审计没有明显高收益程序优化点时，才允许输出完成承诺。
-- 当前状态: 第五轮工程化验证入口已完成并通过；待提交和推送。
+- 当前状态: 第六轮 Docker 化演示交付已完成并通过；待提交和推送。

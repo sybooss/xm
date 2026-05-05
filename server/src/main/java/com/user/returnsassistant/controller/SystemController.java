@@ -34,6 +34,12 @@ public class SystemController {
     @Value("${langchain4j.open-ai.chat-model.base-url:}")
     private String baseUrl;
 
+    @GetMapping("/health")
+    public Result health() {
+        jdbcTemplate.queryForObject("select 1", Integer.class);
+        return Result.success(Map.of("status", "UP", "appName", "returns-assistant"));
+    }
+
     @GetMapping("/status")
     @OperatorAnno
     public Result status() {

@@ -2,6 +2,8 @@ param(
     [switch]$WithSmoke,
     [switch]$WithBrowser,
     [switch]$WithRoleBrowser,
+    [switch]$WithDocker,
+    [switch]$WithDockerUp,
     [string]$FrontendUrl = "http://localhost:5173",
     [string]$BackendUrl = "http://localhost:8081"
 )
@@ -33,6 +35,13 @@ function Invoke-Step($name, [scriptblock]$block) {
     }
 }
 
+function Invoke-Native($command, [string[]]$arguments) {
+    & $command @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$command exited with code $LASTEXITCODE"
+    }
+}
+
 function Test-HttpReady($url) {
     try {
         $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 10
@@ -42,11 +51,15 @@ function Test-HttpReady($url) {
     }
 }
 
+function Invoke-DockerCompose([string[]]$arguments) {
+    Invoke-Native "docker" (@("compose", "--project-name", "returns-assistant") + $arguments)
+}
+
 try {
     Invoke-Step "backend package" {
         Push-Location $serverDir
         try {
-            mvn -q -DskipTests package
+            Invoke-Native "mvn" @("-q", "-DskipTests", "package")
         } finally {
             Pop-Location
         }
@@ -55,7 +68,7 @@ try {
     Invoke-Step "frontend build" {
         Push-Location $webDir
         try {
-            npm run build
+            Invoke-Native "npm" @("run", "build")
         } finally {
             Pop-Location
         }
@@ -80,7 +93,7 @@ try {
         Invoke-Step "browser smoke" {
             Push-Location $webDir
             try {
-                npm run test:browser
+                Invoke-Native "npm" @("run", "test:browser")
             } finally {
                 Pop-Location
             }
@@ -94,7 +107,49 @@ try {
         Invoke-Step "role browser smoke" {
             Push-Location $webDir
             try {
-                npm run test:browser:roles
+                Invoke-Native "npm" @("run", "test:browser:roles")
+            } finally {
+                Pop-Location
+            }
+        }
+    }
+
+    if ($WithDocker) {
+        Invoke-Step "docker compose config" {
+            Push-Location $root
+            try {
+                Invoke-DockerCompose @("config", "--quiet")
+            } finally {
+                Pop-Location
+            }
+        }
+
+        Invoke-Step "docker compose build" {
+            Push-Location $root
+            try {
+                Invoke-DockerCompose @("build")
+            } finally {
+                Pop-Location
+            }
+        }
+    }
+
+    if ($WithDockerUp) {
+        Invoke-Step "docker compose up health" {
+            Push-Location $root
+            try {
+                $env:AI_ENABLED = if ($env:AI_ENABLED) { $env:AI_ENABLED } else { "false" }
+                $env:WEB_PORT = if ($env:WEB_PORT) { $env:WEB_PORT } else { "5180" }
+                Invoke-DockerCompose @("up", "-d", "--no-build")
+                $deadline = (Get-Date).AddMinutes(5)
+                do {
+                    Start-Sleep -Seconds 5
+                    if ((Test-HttpReady "http://localhost:8081/system/health") -and (Test-HttpReady "http://localhost:$env:WEB_PORT/login")) {
+                        return
+                    }
+                } while ((Get-Date) -lt $deadline)
+                Invoke-DockerCompose @("ps")
+                throw "Docker compose stack did not become healthy before timeout."
             } finally {
                 Pop-Location
             }

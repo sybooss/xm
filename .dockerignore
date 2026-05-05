@@ -1,0 +1,13 @@
+.git
+.codex
+.env
+.env.local
+*.local
+output
+tmp
+server/target
+web/node_modules
+web/dist
+xiangmu
+**/.idea
+**/.vscode
