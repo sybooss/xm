@@ -113,4 +113,4 @@
 - Personal defense readiness: Script, Q&A and 11-page PPT ready; PPTX/PDF/PNG render checked
 - Self-iteration completed: Current iteration reviewed; remaining polish ideas are lower-return than the completed system/report/defense package
 - Git status: Clean on `codex/fuse-peer-features...origin/codex/fuse-peer-features`
-- Commit/push: Pending latest browser smoke robustness commit
+- Commit/push: Pushed through `08f01df Stabilize browser smoke ticket assertions`
