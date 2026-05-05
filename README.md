@@ -353,3 +353,6 @@ mvn -q -DskipTests package
 - Agent 协作规则：[AGENTS.md](AGENTS.md)
 - 演示脚本：[docs/demo-script.md](docs/demo-script.md)
 - 测试用例：[docs/test-cases.md](docs/test-cases.md)
+- 结项报告草稿：[docs/final-report-draft.md](docs/final-report-draft.md)
+- 个人答辩讲解稿：[docs/personal-defense-script.md](docs/personal-defense-script.md)
+- 个人答辩 Q&A：[docs/personal-defense-qa.md](docs/personal-defense-qa.md)

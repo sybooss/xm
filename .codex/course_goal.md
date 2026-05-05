@@ -20,8 +20,8 @@
 - Frontend: Vue 3 + Vite + Pinia + Element Plus，已有登录/注册、咨询工作台、系统总览、知识库、订单、工单、日志、AI 测试页面。
 - Database: `sql/schema.sql` 覆盖核心业务表；`sql/seed.sql` 提供演示数据。
 - AI: LangChain4j 接入 OpenAI-compatible 服务；保留本地规则兜底；已有 SSE 流式消息接口和 AI/检索/轨迹日志。
-- Docs/report: README、后端/前端/数据库/测试/演示文档已存在；结项报告和个人答辩材料还需要后续系统化补齐。
-- Current blockers: 本轮功能验证已通过；报告与个人答辩材料仍需后续强化。
+- Docs/report: README、后端/前端/数据库/测试/演示文档已存在；已补结项报告草稿、个人答辩讲解稿和个人答辩 Q&A。
+- Current blockers: 本轮功能验证已通过；后续还可把结项报告从 Markdown 转为模板 DOC，继续 polish 日志/看板数据可视化。
 
 ## Score-Gap Table
 
@@ -30,8 +30,8 @@
 | 开题报告可行性与创新 | 20 | 17 | 18+ | 需要与最终系统同步 | 后续补最终功能变化说明 | `docs/opening-report.md` |
 | 结项答辩运行顺畅与需求满足 | 30 | 25 | 28+ | 演示入口与稳定证据需更清晰 | 新增答辩展示中心并验证 | `/showcase` |
 | 程序设计规范与 UI 友好 | 10 | 8 | 9+ | 页面质感仍需持续 polish | 本轮先做高级展示页 | Vue 页面与浏览器截图 |
-| 个人自述与问答 | 20 | 13 | 18+ | 个人贡献、核心代码、Q&A 尚未成册 | 后续新增个人答辩材料 | TBD |
-| 结项报告详实度与拓展建议 | 20 | 13 | 18+ | 缺结项报告正文和真实验证证据整理 | 后续生成/更新报告材料 | TBD |
+| 个人自述与问答 | 20 | 17 | 18+ | 已有讲解稿和 Q&A，后续可继续压缩成 PPT 讲稿 | 生成答辩幻灯片或个人贡献页 | `docs/personal-defense-script.md`, `docs/personal-defense-qa.md` |
+| 结项报告详实度与拓展建议 | 20 | 17 | 18+ | 已有 Markdown 草稿，后续可转为课程模板 DOC | 转为正式报告格式并补截图索引 | `docs/final-report-draft.md` |
 
 ## Required Function Checklist
 
@@ -75,6 +75,7 @@
 | Iteration | Change | Validation | Result | Remaining Gap |
 | --- | --- | --- | --- | --- |
 | 2026-05-05-1 | 新增 `/showcase` 答辩展示中心、管理员默认入口、侧栏菜单、浏览器烟测覆盖、README/docs 同步 | `mvn -q -DskipTests package` 通过；`npm.cmd run build` 通过；`tools/full-smoke-test.ps1` FAILED_COUNT=0；`npm.cmd run test:browser` FAILED_COUNT=0；`npm.cmd run test:browser:roles` FAILED_COUNT=0 | Passed | 结项报告和个人答辩材料仍需补齐；后续可继续 polish 看板/日志数据分析 |
+| 2026-05-05-2 | 新增结项报告草稿、个人答辩讲解稿、个人答辩 Q&A，并在 README/演示脚本中加入入口 | `mvn.cmd -q -DskipTests package` 通过；`npm.cmd run build` 通过；文档材料存在且包含核心代码与验证命令引用 | Passed | 需要正式 DOC 模板化和 PPT 化 |
 
 ## Validation Commands
 
@@ -86,15 +87,15 @@
 
 ## Report And Defense Artifacts
 
-- README: 已新增答辩展示中心入口说明。
+- README: 已新增答辩展示中心和结项/个人答辩材料入口。
 - Backend docs: 本轮未改后端接口。
 - Frontend docs: 已新增 `/showcase` 设计说明。
 - Database docs: 本轮未改数据库。
 - Test cases: 已新增展示中心与客户权限核验项。
-- Demo script: 已改为六步演示，第一步从展示中心开始。
-- Report: 待补结项报告。
-- Personal defense notes: 待补个人贡献、核心代码和 Q&A。
-- Q&A: 待补。
+- Demo script: 已改为六步演示，第一步从展示中心开始，并链接配套答辩材料。
+- Report: `docs/final-report-draft.md`
+- Personal defense notes: `docs/personal-defense-script.md`
+- Q&A: `docs/personal-defense-qa.md`
 
 ## Final Review
 
@@ -102,8 +103,8 @@
 - Required functions: Current iteration verified
 - Highlight features: 8+ real highlights, current iteration verified
 - Frontend premium quality: Showcase page first pass verified by screenshot
-- Report consistency: In Progress
-- Personal defense readiness: Pending
+- Report consistency: Markdown draft ready, formal DOC conversion pending
+- Personal defense readiness: Script and Q&A ready, PPT compression pending
 - Self-iteration completed: Current iteration reviewed; continue because report/personal defense remain high-value
 - Git status: Pending
 - Commit/push: Pending

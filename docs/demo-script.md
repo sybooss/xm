@@ -22,3 +22,8 @@
 - 投诉和异常问题会自动生成工单，也可以由客服手动点击“转人工”，体现真实客服系统闭环。
 - 客户注册后默认是 `CUSTOMER`，不能进入系统总览、知识库、订单管理、人工工单、日志中心和 AI 测试等后台页面。
 - 即使没有配置 OpenAI Key，也能使用本地规则模板稳定演示，避免现场网络问题影响验收。
+
+## 配套答辩材料
+- 结项报告正文草稿：`docs/final-report-draft.md`
+- 个人答辩讲解稿：`docs/personal-defense-script.md`
+- 个人答辩 Q&A：`docs/personal-defense-qa.md`
