@@ -12,7 +12,7 @@
 Vue 页面
   -> v-model / ref / reactive 收集页面参数
   -> web/src/api/*.js 里封装 Axios 请求
-  -> web/src/api/request.js 自动加 Authorization
+  -> web/src/api/request.js 自动加 Authorization: Bearer <JWT>
   -> Spring Controller 接收 query/path/body/header
   -> ServiceImpl 做权限、校验、状态流转、AI 或兜底逻辑
   -> Mapper 接口调用 MyBatis XML
@@ -25,7 +25,7 @@ Vue 页面
 
 统一响应在 `server/src/main/java/com/user/returnsassistant/pojo/Result.java`，字段是 `code`、`msg`、`data`。成功时后端返回 `Result.success(data)`，失败时返回 `Result.error(msg)`。分页对象在 `PageResult.java`，字段是 `total` 和 `rows`。
 
-前端统一请求封装在 `web/src/api/request.js`。这里创建了 Axios 实例，`baseURL` 默认是 `/api`，请求拦截器从 `localStorage` 读取 `returns_assistant_token`，然后写入请求头 `Authorization: Bearer token`。响应拦截器判断后端返回的 `code`，如果 `code === 1` 就直接返回 `result.data`，所以页面里拿到的就是业务数据，不需要每个页面重复判断 `code/msg/data`。
+前端统一请求封装在 `web/src/api/request.js`。这里创建了 Axios 实例，`baseURL` 默认是 `/api`，请求拦截器从 `localStorage` 读取 `returns_assistant_token`，然后写入请求头 `Authorization: Bearer <JWT>`。响应拦截器判断后端返回的 `code`，如果 `code === 1` 就直接返回 `result.data`，所以页面里拿到的就是业务数据，不需要每个页面重复判断 `code/msg/data`。
 
 数据库表主要在 `sql/schema.sql`。核心表包括：
 
@@ -40,7 +40,7 @@ Vue 页面
 
 老师如果问我整体怎么做的，我可以这样回答：
 
-> 我不是只写了一个页面，也不是让前端直接拼假数据。我把前端页面、接口封装、后端 Controller、Service、Mapper、XML 和数据库表连成了完整链路。比如一个查询请求，前端先用 `v-model` 收集查询条件，再调用 `api` 文件里的函数，Axios 自动带上 token。后端 Controller 接收参数后调用 Service，Service 再调用 Mapper。Mapper 的 SQL 写在 XML 里，查询数据库后返回 Java 对象，Controller 用 `Result.success` 包成 JSON。前端响应拦截器取出 `data`，页面把 `rows`、`total` 或详情对象写回响应式变量，表格和详情区域就会自动更新。
+> 我不是只写了一个页面，也不是让前端直接拼假数据。我把前端页面、接口封装、后端 Controller、Service、Mapper、XML 和数据库表连成了完整链路。比如一个查询请求，前端先用 `v-model` 收集查询条件，再调用 `api` 文件里的函数，Axios 自动带上 JWT token。后端 Controller 接收参数后调用 Service，Service 再调用 Mapper。Mapper 的 SQL 写在 XML 里，查询数据库后返回 Java 对象，Controller 用 `Result.success` 包成 JSON。前端响应拦截器取出 `data`，页面把 `rows`、`total` 或详情对象写回响应式变量，表格和详情区域就会自动更新。
 
 ## 2. 登录、注册和权限路由
 
@@ -63,13 +63,38 @@ getMe() -> GET /auth/me
 logout() -> POST /auth/logout
 ```
 
-后端入口是 `server/src/main/java/com/user/returnsassistant/controller/AuthController.java`，类上有 `@RequestMapping("/auth")`。登录方法是 `@PostMapping("/login")`，接收 `@RequestBody LoginRequest request`；注册方法是 `@PostMapping("/register")`，接收 `RegisterRequest`；`/auth/me` 和 `/auth/logout` 通过 `HttpServletRequest` 读取请求头里的 token。
+后端入口是 `server/src/main/java/com/user/returnsassistant/controller/AuthController.java`，类上有 `@RequestMapping("/auth")`。登录方法是 `@PostMapping("/login")`，接收 `@RequestBody LoginRequest request`；注册方法是 `@PostMapping("/register")`，接收 `RegisterRequest`；`/auth/me` 和 `/auth/logout` 通过 `HttpServletRequest` 读取请求头里的 `Authorization`，也就是前端传来的 `Bearer <JWT>`。
 
 ### Service 和数据库
 
-业务在 `AuthServiceImpl.java`。登录时 `login(username, password)` 先用 `UserAccountMapper.getByUsername(username)` 查询 `user_account` 表，再校验密码。注册时 `register(...)` 会校验用户名格式、手机号格式、两次密码是否一致，然后调用 `UserAccountMapper.insert(userAccount)` 插入新用户。
+业务在 `AuthServiceImpl.java`。登录时 `login(username, password)` 先用 `UserAccountMapper.getByUsername(username)` 查询 `user_account` 表，判断账号是否存在、`status` 是否启用，再用 `passwordMatches(user, password)` 校验密码。注册时 `register(...)` 会校验用户名格式、手机号格式、两次密码是否一致，然后调用 `UserAccountMapper.insert(userAccount)` 插入新用户。
 
-`AuthServiceImpl` 里维护了一个内存 `sessions`，登录成功后生成 token，返回 `LoginResponse`。`LoginResponse` 里包含 `token`、`userId`、`username`、`displayName`、`role`、`expiresAt`。
+现在登录已经改成 JWT。`AuthServiceImpl` 登录或注册成功后不再把会话放进内存 `sessions`，而是调用 `JwtTokenProvider.createToken(user, Duration.ofHours(tokenHours))` 签发 JWT。`JwtTokenProvider` 位于 `server/src/main/java/com/user/returnsassistant/utils/JwtTokenProvider.java`，使用 `io.jsonwebtoken` 生成三段式 token，里面写入：
+
+```text
+jti -> token 唯一编号，用于退出登录黑名单
+iss -> 签发者，对应 application.yml 的 app.auth.jwt-issuer
+sub -> 用户 ID
+username/displayName/role -> 用户展示信息和角色
+iat -> 签发时间
+exp -> 过期时间
+```
+
+JWT 的密钥和签发者配置在 `server/src/main/resources/application.yml`：
+
+```yaml
+app:
+  auth:
+    token-hours: ${APP_AUTH_TOKEN_HOURS:8}
+    jwt-secret: ${APP_AUTH_JWT_SECRET:returns-assistant-dev-jwt-secret-change-me-2026}
+    jwt-issuer: ${APP_AUTH_JWT_ISSUER:returns-assistant}
+```
+
+后续接口鉴权时，Controller 或拦截器把 `Authorization` 传给 `authService.requireUser/requireAdmin/requireCustomer`。Service 先用 `normalize(token)` 去掉 `Bearer ` 前缀，再调用 `JwtTokenProvider.parseToken` 校验签名、签发者、过期时间和必要字段。解析出 `sub` 后，Service 还会再调用 `UserAccountMapper.getById(userId)` 查询数据库，确认账号仍然存在且 `status = 1`，这样即使 JWT 没过期，账号被停用后也不能继续访问。
+
+退出登录时，`logout(token)` 会解析 JWT 的 `jti` 和过期时间，把 `jti` 放入 `revokedJwtIds` 黑名单。之后同一个 token 再访问接口时，`parseRequired` 会发现这个 `jti` 还没过期，就返回“登录已退出，请重新登录”。`cleanupRevokedJwtIds()` 会清理已经过期的黑名单记录。
+
+`LoginResponse` 里仍然包含 `token`、`userId`、`username`、`displayName`、`role`、`expiresAt`，所以前端登录存储逻辑不用大改，只是 token 内容从原来的普通随机串变成了标准 JWT。
 
 MyBatis 映射在 `server/src/main/resources/mapper/UserAccountMapper.xml`，包括：
 
@@ -83,7 +108,7 @@ insert
 
 ### 前端返回绑定和路由拦截
 
-`web/src/stores/authStore.js` 用 Pinia 保存登录状态。`login()` 调用接口成功后执行 `saveAuth(data)`，把 token 存入 `returns_assistant_token`，把用户信息存入 `returns_assistant_user`。`isLoggedIn` 根据 token 判断是否登录，`isAdmin` 根据 `user.role === 'ADMIN'` 判断是不是管理员。
+`web/src/stores/authStore.js` 用 Pinia 保存登录状态。`login()` 调用接口成功后执行 `saveAuth(data)`，把 JWT 存入 `returns_assistant_token`，把用户信息存入 `returns_assistant_user`。`isLoggedIn` 根据 token 判断是否登录，`isAdmin` 根据 `user.role === 'ADMIN'` 判断是不是管理员。页面刷新后，Pinia 会从 `localStorage` 恢复 token；访问接口时 Axios 自动带上 `Authorization: Bearer <JWT>`，后端再解析 JWT 获得当前用户。
 
 路由在 `web/src/router/index.js`。`beforeEach` 做权限控制：
 
@@ -96,7 +121,7 @@ insert
 
 老师问登录怎么做，我可以这样回答：
 
-> 我登录页不是只判断本地账号，而是通过 `authApi.login` 请求后端 `/auth/login`。后端 `AuthController` 接收 `LoginRequest`，交给 `AuthServiceImpl`，Service 通过 `UserAccountMapper.getByUsername` 查询 `user_account` 表并校验密码。登录成功后返回 token 和用户角色，前端 Pinia 的 `authStore` 保存 token。后面所有请求都会由 Axios 拦截器自动把 token 放到 `Authorization` 请求头。路由守卫根据 `authStore.isAdmin` 判断用户是管理员还是顾客，所以管理员和顾客会进入不同页面。
+> 我登录页不是只判断本地账号，而是通过 `authApi.login` 请求后端 `/auth/login`。后端 `AuthController` 接收 `LoginRequest`，交给 `AuthServiceImpl`。Service 通过 `UserAccountMapper.getByUsername` 查询 `user_account` 表，先判断账号是否启用，再校验密码。登录成功后调用 `JwtTokenProvider.createToken` 生成 JWT，JWT 里包含用户 ID、账号、昵称、角色、签发时间、过期时间和 `jti`。后端把 JWT 和用户角色包装成 `LoginResponse` 返回，前端 Pinia 的 `authStore` 把 JWT 保存到 `returns_assistant_token`。后面所有请求都会由 Axios 拦截器自动把 JWT 放到 `Authorization: Bearer ...` 请求头。后端每次鉴权会解析 JWT，并根据 token 里的用户 ID 回查数据库确认账号仍然可用。路由守卫根据 `authStore.isAdmin` 判断用户是管理员还是顾客，所以管理员和顾客会进入不同页面。
 
 ## 3. 顾客售后中心
 
@@ -1052,7 +1077,7 @@ applyForm/evidenceForm/reviewForm -> 三个弹窗表单
 
 | Store | 文件 | 职责 |
 | --- | --- | --- |
-| `authStore` | `web/src/stores/authStore.js` | 保存 token、用户信息、登录状态、管理员判断 |
+| `authStore` | `web/src/stores/authStore.js` | 保存 JWT、用户信息、登录状态、管理员判断 |
 | `chatStore` | `web/src/stores/chatStore.js` | 保存会话、消息、AI 洞察、发送状态 |
 | `systemStore` | `web/src/stores/systemStore.js` | 保存系统状态、枚举、AI 模型列表、当前模型 |
 
@@ -1086,11 +1111,11 @@ Mapper XML: 写 SQL 和动态查询条件
 | SLA | `SlaTaskController` | `SlaTaskServiceImpl` | `SlaTaskMapper.xml` |
 | 日志 | `LogController` | `LogServiceImpl` | `AiCallLogMapper.xml`、`RetrievalLogMapper.xml` |
 
-我在 Service 层保留业务规则，而不是把规则写在前端。比如售后金额不能超过订单金额、终态不能补凭证、顾客只能访问自己的订单、管理员才能审核，这些都在 Java 后端校验。前端只负责交互和展示。
+我在 Service 层保留业务规则，而不是把规则写在前端。比如 JWT 解析后还要回查用户状态、售后金额不能超过订单金额、终态不能补凭证、顾客只能访问自己的订单、管理员才能审核，这些都在 Java 后端校验。前端只负责交互和展示。
 
 老师问为什么这样分层，我可以这样回答：
 
-> 我按 Spring Boot 常见分层写。Controller 只负责接请求和返回 JSON；Service 放业务规则，比如权限、状态机、金额校验、日志写入；Mapper 接口只定义数据库方法；SQL 写在 MyBatis XML 中。这样老师问一个接口时，我可以从前端页面一路讲到数据库表，也能说明为什么业务规则不放在前端。
+> 我按 Spring Boot 常见分层写。Controller 只负责接请求和返回 JSON；Service 放业务规则，比如 JWT 鉴权、权限判断、状态机、金额校验、日志写入；Mapper 接口只定义数据库方法；SQL 写在 MyBatis XML 中。这样老师问一个接口时，我可以从前端页面一路讲到数据库表，也能说明为什么业务规则不放在前端。
 
 ## 18. 一条完整例子：顾客申请售后从页面到数据库再返回页面
 
@@ -1102,9 +1127,9 @@ Mapper XML: 写 SQL 和动态查询条件
 4. 点击“申请售后”，`openApplyDialog(order)` 打开弹窗，`applyForm` 保存售后类型、原因、金额和说明。
 5. 点击“提交申请”，`submitApplication()` 组装 `orderId/serviceType/reasonCode/reasonText/refundAmount`。
 6. 前端 `customerAfterSaleApi.createCustomerAfterSale` 请求 `POST /customer/after-sales`。
-7. Axios 在 `request.js` 自动带上 `Authorization` token。
+7. Axios 在 `request.js` 自动带上 `Authorization: Bearer <JWT>`。
 8. 后端 `CustomerAfterSaleController.create` 接收 `AfterSaleApplicationCreateRequest`。
-9. Controller 调用 `authService.requireCustomer` 确认当前是顾客。
+9. Controller 调用 `authService.requireCustomer`，后端解析 JWT、回查 `user_account`，确认当前是顾客。
 10. Service `AfterSaleApplicationServiceImpl.create` 查询 `demo_order`，校验订单归属、支付状态、金额、是否已有进行中售后。
 11. Service 创建 `AfterSaleApplication`，状态设为 `SUBMITTED`，优先级和风险等级由规则计算。
 12. `AfterSaleApplicationMapper.insert` 插入 `after_sale_application`。
@@ -1137,7 +1162,7 @@ sql/schema.sql
 
 如果老师问“你这个系统的功能到底是怎么做出来的”，我可以用下面这段作为总回答：
 
-> 我的系统不是只做了静态页面，而是按真实双端售后系统做的。前端是 Vue 3，页面用 Element Plus 做表格、表单、弹窗、时间线和状态标签，用 `ref`、`reactive`、`computed` 管理状态。每个页面的按钮都会调用 `web/src/api` 里的接口函数，Axios 统一带 token 并处理后端返回的 `Result`。
+> 我的系统不是只做了静态页面，而是按真实双端售后系统做的。前端是 Vue 3，页面用 Element Plus 做表格、表单、弹窗、时间线和状态标签，用 `ref`、`reactive`、`computed` 管理状态。每个页面的按钮都会调用 `web/src/api` 里的接口函数，Axios 统一带 JWT 并处理后端返回的 `Result`。
 >
 > 后端是 Spring Boot。每个请求先到 Controller，比如顾客售后到 `CustomerAfterSaleController`，管理员审核到 `AdminAfterSaleController`，聊天到 `ChatSessionController`。Controller 只接参数和做身份入口校验，真正业务放在 Service，比如 `AfterSaleApplicationServiceImpl` 负责售后状态流转、金额校验、凭证、流程日志和订单状态同步，`ChatServiceImpl` 负责意图识别、知识库检索、AI 调用、日志和工单转接。
 >
@@ -1149,7 +1174,7 @@ sql/schema.sql
 
 ### Q1：为什么说这是双端系统？
 
-因为路由和权限明确区分顾客端和管理员端。顾客端 `/customer/after-sales` 只能查看自己的订单和售后，管理员端 `/admin/after-sales/review`、`/admin/sla`、`/service-tickets`、`/knowledge` 等可以处理全部业务。`router.beforeEach` 和后端 `authService.requireCustomer/requireAdmin` 都做了限制。
+因为路由和权限明确区分顾客端和管理员端。顾客端 `/customer/after-sales` 只能查看自己的订单和售后，管理员端 `/admin/after-sales/review`、`/admin/sla`、`/service-tickets`、`/knowledge` 等可以处理全部业务。前端 `router.beforeEach` 会根据 Pinia 里的用户角色做页面跳转，后端 `authService.requireCustomer/requireAdmin` 会解析 JWT 并回查数据库做真实权限限制。
 
 ### Q2：前端参数是怎么传给后端的？
 
@@ -1157,7 +1182,7 @@ sql/schema.sql
 
 ### Q3：后端 Controller 怎么接参数？
 
-查询参数用普通对象接收，例如 `AfterSaleApplicationSearch search`、`OrderSearch search`。路径参数用 `@PathVariable Long id`。提交表单用 `@RequestBody`，比如 `AfterSaleApplicationCreateRequest`、`AfterSaleActionRequest`、`ServiceReviewRequest`。需要身份时用 `HttpServletRequest` 读取 `Authorization`。
+查询参数用普通对象接收，例如 `AfterSaleApplicationSearch search`、`OrderSearch search`。路径参数用 `@PathVariable Long id`。提交表单用 `@RequestBody`，比如 `AfterSaleApplicationCreateRequest`、`AfterSaleActionRequest`、`ServiceReviewRequest`。需要身份时用 `HttpServletRequest` 读取 `Authorization`，再交给 `AuthServiceImpl` 去掉 `Bearer ` 前缀并解析 JWT。
 
 ### Q4：Service 层具体做什么？
 
@@ -1178,4 +1203,3 @@ Mapper XML 写真实 SQL。比如 `AfterSaleApplicationMapper.xml` 的 `BaseSele
 ### Q8：如何证明这个项目不是演示页面？
 
 可以从三点证明：第一，数据库有真实业务表，包括售后主表、凭证表、处理日志表、工单表、评价表；第二，后端 Service 有真实校验和状态流转，不是前端改状态；第三，日志中心和证据报告会记录 AI 调用、知识库命中和流程轨迹，能追溯每次处理过程。
-
