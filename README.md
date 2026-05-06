@@ -4,6 +4,8 @@
 
 ## 功能概览
 
+- 顾客售后中心：客户登录后默认进入“我的售后”，可查看订单、发起售后、补充凭证、跟踪进度和提交评价。
+- 管理员售后工作台：管理员登录后默认进入售后审核队列，可处理补材料、审核、SLA、工单、AI 草稿和客户画像。
 - 咨询工作台：支持会话列表、订单绑定、用户提问、AI 增强回复、本地规则兜底。
 - 意图识别：覆盖售前咨询、退货申请、换货申请、退款进度、物流查询、规则说明、投诉转接。
 - 知识库管理：支持分类、文档 CRUD、关键词检索和命中依据展示。
@@ -13,10 +15,10 @@
 - 模型切换：前端顶部可运行时切换模型，例如 `gpt-4o-mini`、`gpt-4.1-mini`。
 - 多轮追问：结合会话摘要和最近消息承接上一轮语境，支持退货后追问退款、物流异常后追问投诉等连续咨询。
 - 流式反馈：聊天发送后立即显示处理进度，最终回复采用逐字呈现效果。
-- 人工工单：投诉、人工客服和异常升级场景可自动生成工单，也支持客服手动转人工。
-- 登录注册与权限：支持客户自助注册、演示账号登录，并对新增、修改、删除类后台操作进行角色拦截。
+- 人工工单：投诉、人工客服和异常升级场景可自动生成工单，客服可在管理端手动转人工。
+- 登录注册与权限：支持客户自助注册、演示账号登录；顾客端和管理员端拥有不同默认入口、菜单和接口权限边界。
 - 日志诊断：记录 AI 调用、知识检索和处理轨迹，并聚合展示 AI 成功率、平均耗时、知识命中文档和会话处理进度，便于调试和答辩举证。
-- 答辩展示中心：`/showcase` 以 Apple-like 视觉展示闭环流程、10+ 特色功能池、系统状态和版本路线图。
+- 答辩展示中心：`/showcase` 作为管理员菜单入口，以 Apple-like 视觉展示闭环流程、10+ 特色功能池、系统状态和版本路线图。
 
 特色功能闭环与后续版本记录见 [`docs/feature-roadmap.md`](docs/feature-roadmap.md)。
 
@@ -147,7 +149,7 @@ APP_AUTH_TOKEN_HOURS=8
 - `OPENAI_API_KEY` 不要提交到 Git；仓库已通过 `.gitignore` 忽略 `.env`。
 - 如果没有配置 AI，系统仍可使用本地规则兜底，但 AI 测试和 AI 增强回复会显示跳过或失败。
 - 默认演示管理员为 `admin / 123456`，默认演示客户为 `demo_customer / 123456`。
-- 新客户可在登录页切换到“注册”，注册后默认角色为 `CUSTOMER`，只能进入咨询工作台和自己的订单售后入口。
+- 新客户可在登录页切换到“注册”，注册后默认角色为 `CUSTOMER`，只能进入“我的售后”、在线咨询和自己的订单售后入口。
 - 注册用户使用个人密码登录；历史演示账号没有单独密码哈希时，继续兼容 `APP_AUTH_ADMIN_PASSWORD` / `APP_AUTH_CUSTOMER_PASSWORD`。
 
 已有数据库升级到注册版本时，执行一次迁移脚本：
@@ -208,7 +210,11 @@ http://localhost:5173
 | 页面 | 路径 | 说明 |
 | --- | --- | --- |
 | 登录/注册 | `/login` | 管理员/客户登录，客户自助注册 |
-| 答辩展示中心 | `/showcase` | 管理员默认入口，集中展示演示顺序、8 个已实现亮点、现场检查清单和关键页面跳转 |
+| 我的售后 | `/customer/after-sales` | 顾客默认入口，可查看订单、提交售后、补凭证、查看进度和评价；支持 `?focus=售后ID` 直达详情 |
+| 售后审核工作台 | `/admin/after-sales/review` | 管理员默认入口，处理顾客提交的售后申请、补材料、审核、完成和工单联动 |
+| SLA 中心 | `/admin/sla` | 管理员集中查看待补材料、即将超时和风险售后任务 |
+| 客户画像 | `/admin/customers/profile` | 管理员查看客户订单、售后、工单、评价和风险聚合 |
+| 答辩展示中心 | `/showcase` | 管理员菜单入口，集中展示演示顺序、已实现亮点、现场检查清单和关键页面跳转 |
 | 咨询工作台 | `/chat` | 发送售后问题，查看 AI 决策摘要、业务工具、建议追问、意图、依据和轨迹 |
 | 系统总览 | `/dashboard` | 查看数据库、AI、模型和快速入口 |
 | 知识库 | `/knowledge` | 管理知识文档，调试检索，并查看命中数量、意图覆盖、排序依据和命中解释 |
@@ -281,7 +287,19 @@ POST   /ai-tests
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1
 ```
 
-该脚本会按顺序执行后端打包和前端构建，适合作为提交前的基础门禁。仓库也提供 `.github/workflows/ci.yml`，在推送 `main`、`codex/**` 分支或向 `main` 提交 PR 时自动执行同一套基础构建验证。
+该脚本会先执行交付预检，再按顺序执行后端打包和前端构建，适合作为提交前的基础门禁。仓库也提供 `.github/workflows/ci.yml`，在推送 `main`、`codex/**` 分支或向 `main` 提交 PR 时自动执行同一套基础构建验证。
+
+只做交付环境预检：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\delivery-preflight.ps1
+```
+
+带运行环境的预检会检查后端、前端、MySQL 和 sub2api 是否可用：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\delivery-preflight.ps1 -RequireRunningServices -RequireMysql -RequireSub2api
+```
 
 后端打包：
 
@@ -319,6 +337,8 @@ npm run test:browser
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -WithSmoke -WithBrowser -WithRoleBrowser
 ```
+
+完整模式会在构建前要求后端、前端、MySQL 和 sub2api 处于可用状态，并覆盖接口主链路、顾客/管理员真实业务流、角色菜单和越权路由拦截。
 
 如果本机安装了 Docker，也可以验证容器化交付：
 

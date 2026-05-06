@@ -4,6 +4,7 @@ param(
     [switch]$WithRoleBrowser,
     [switch]$WithDocker,
     [switch]$WithDockerUp,
+    [switch]$SkipPreflight,
     [string]$FrontendUrl = "http://localhost:5173",
     [string]$BackendUrl = "http://localhost:8081"
 )
@@ -74,6 +75,20 @@ function Invoke-DockerCompose([string[]]$arguments) {
 }
 
 try {
+    if (-not $SkipPreflight) {
+        Invoke-Step "delivery preflight" {
+            $preflightArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $root "tools\delivery-preflight.ps1"))
+            $preflightArgs += @("-BackendUrl", $BackendUrl, "-FrontendUrl", $FrontendUrl)
+            if ($WithSmoke -or $WithBrowser -or $WithRoleBrowser) {
+                $preflightArgs += "-RequireRunningServices"
+            }
+            if ($WithSmoke) {
+                $preflightArgs += @("-RequireMysql", "-RequireSub2api")
+            }
+            Invoke-Native "powershell" $preflightArgs
+        }
+    }
+
     Invoke-Step "backend package" {
         Push-Location $serverDir
         try {
