@@ -30,6 +30,8 @@ app:
     admin-password: ${APP_AUTH_ADMIN_PASSWORD:123456}
     customer-password: ${APP_AUTH_CUSTOMER_PASSWORD:123456}
     token-hours: ${APP_AUTH_TOKEN_HOURS:8}
+    jwt-secret: ${APP_AUTH_JWT_SECRET:returns-assistant-dev-jwt-secret-change-me-2026}
+    jwt-issuer: ${APP_AUTH_JWT_ISSUER:returns-assistant}
   ai:
     enabled: ${AI_ENABLED:false}
     provider: openai-compatible

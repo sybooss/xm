@@ -5,6 +5,7 @@ import com.user.returnsassistant.mapper.UserAccountMapper;
 import com.user.returnsassistant.pojo.LoginResponse;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AuthService;
+import com.user.returnsassistant.utils.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -26,6 +26,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private UserAccountMapper userAccountMapper;
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Value("${app.auth.admin-password:123456}")
     private String adminPassword;
@@ -34,7 +36,7 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.auth.token-hours:8}")
     private Integer tokenHours;
 
-    private final Map<String, AuthSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, Long> revokedJwtIds = new ConcurrentHashMap<>();
 
     @Override
     public LoginResponse login(String username, String password) {
@@ -48,10 +50,8 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordMatches(user, password)) {
             throw new BusinessException("账号或密码错误");
         }
-        long expiresAt = System.currentTimeMillis() + Duration.ofHours(tokenHours == null ? 8 : tokenHours).toMillis();
-        String token = UUID.randomUUID().toString().replace("-", "");
-        sessions.put(token, new AuthSession(user, expiresAt));
-        return toResponse(token, user, expiresAt);
+        JwtTokenProvider.JwtToken token = createJwt(user);
+        return toResponse(token.token(), user, token.expiresAt());
     }
 
     @Override
@@ -71,17 +71,19 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(hashPassword(password));
         user.setStatus(1);
         userAccountMapper.insert(user);
-        long expiresAt = System.currentTimeMillis() + Duration.ofHours(tokenHours == null ? 8 : tokenHours).toMillis();
-        String token = UUID.randomUUID().toString().replace("-", "");
-        sessions.put(token, new AuthSession(user, expiresAt));
-        return toResponse(token, user, expiresAt);
+        JwtTokenProvider.JwtToken token = createJwt(user);
+        return toResponse(token.token(), user, token.expiresAt());
     }
 
     @Override
     public LoginResponse me(String token) {
-        UserAccount user = requireUser(token);
-        AuthSession session = sessions.get(normalize(token));
-        return toResponse(normalize(token), user, session.expiresAt());
+        String normalized = normalize(token);
+        if (!hasText(normalized)) {
+            throw new BusinessException("请先登录");
+        }
+        JwtTokenProvider.JwtUser jwtUser = parseRequired(normalized);
+        UserAccount user = requireActiveUser(jwtUser.userId());
+        return toResponse(normalized, user, jwtUser.expiresAt());
     }
 
     @Override
@@ -90,12 +92,8 @@ public class AuthServiceImpl implements AuthService {
         if (!hasText(normalized)) {
             throw new BusinessException("请先登录");
         }
-        AuthSession session = sessions.get(normalized);
-        if (session == null || session.expiresAt() < System.currentTimeMillis()) {
-            sessions.remove(normalized);
-            throw new BusinessException("登录已过期，请重新登录");
-        }
-        return session.user();
+        JwtTokenProvider.JwtUser jwtUser = parseRequired(normalized);
+        return requireActiveUser(jwtUser.userId());
     }
 
     @Override
@@ -119,9 +117,53 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(String token) {
         String normalized = normalize(token);
-        if (hasText(normalized)) {
-            sessions.remove(normalized);
+        if (!hasText(normalized)) {
+            return;
         }
+        try {
+            JwtTokenProvider.JwtUser jwtUser = jwtTokenProvider.parseToken(normalized);
+            if (hasText(jwtUser.jwtId())) {
+                revokedJwtIds.put(jwtUser.jwtId(), jwtUser.expiresAt());
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Expired or malformed tokens are already unusable.
+        }
+    }
+
+    private JwtTokenProvider.JwtToken createJwt(UserAccount user) {
+        cleanupRevokedJwtIds();
+        return jwtTokenProvider.createToken(user, Duration.ofHours(tokenHours == null ? 8 : tokenHours));
+    }
+
+    private JwtTokenProvider.JwtUser parseRequired(String token) {
+        cleanupRevokedJwtIds();
+        JwtTokenProvider.JwtUser jwtUser;
+        try {
+            jwtUser = jwtTokenProvider.parseToken(token);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException("登录已过期，请重新登录");
+        }
+        Long revokedUntil = revokedJwtIds.get(jwtUser.jwtId());
+        if (revokedUntil != null && revokedUntil > System.currentTimeMillis()) {
+            throw new BusinessException("登录已退出，请重新登录");
+        }
+        return jwtUser;
+    }
+
+    private UserAccount requireActiveUser(Long userId) {
+        if (userId == null) {
+            throw new BusinessException("请先登录");
+        }
+        UserAccount user = userAccountMapper.getById(userId);
+        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("账号不存在或已停用");
+        }
+        return user;
+    }
+
+    private void cleanupRevokedJwtIds() {
+        long now = System.currentTimeMillis();
+        revokedJwtIds.entrySet().removeIf(entry -> entry.getValue() == null || entry.getValue() <= now);
     }
 
     private boolean passwordMatches(UserAccount user, String password) {
@@ -184,8 +226,5 @@ public class AuthServiceImpl implements AuthService {
 
     private boolean hasText(String text) {
         return text != null && !text.isBlank();
-    }
-
-    private record AuthSession(UserAccount user, long expiresAt) {
     }
 }
