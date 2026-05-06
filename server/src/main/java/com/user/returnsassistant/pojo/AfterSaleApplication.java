@@ -32,4 +32,5 @@ public class AfterSaleApplication {
     private LocalDateTime updatedAt;
     private LocalDateTime closedAt;
     private List<AfterSaleProcessLog> processLogs;
+    private List<AfterSaleEvidence> evidences;
 }

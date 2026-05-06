@@ -3,6 +3,7 @@ package com.user.returnsassistant.controller;
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.pojo.AfterSaleApplicationCreateRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
+import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
@@ -51,5 +52,11 @@ public class CustomerAfterSaleController {
             throw new BusinessException("只能查看自己的售后申请");
         }
         return Result.success(application);
+    }
+
+    @PostMapping("/{id}/evidence")
+    public Result addEvidence(@PathVariable Long id, @RequestBody AfterSaleEvidenceRequest evidenceRequest, HttpServletRequest request) {
+        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
+        return Result.success(afterSaleApplicationService.addEvidence(id, evidenceRequest, user));
     }
 }

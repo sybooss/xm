@@ -113,8 +113,26 @@ CREATE TABLE IF NOT EXISTS after_sale_process_log (
   CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
   CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
-  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
   INDEX idx_after_sale_process_log_application (application_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ALTER TABLE after_sale_process_log DROP CHECK ck_after_sale_process_log_action;
+ALTER TABLE after_sale_process_log
+  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
+
+CREATE TABLE IF NOT EXISTS after_sale_evidence (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  application_id BIGINT NOT NULL,
+  evidence_type VARCHAR(30) NOT NULL,
+  file_url VARCHAR(500) NULL,
+  content VARCHAR(1000) NOT NULL,
+  uploaded_by BIGINT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_after_sale_evidence_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
+  CONSTRAINT fk_after_sale_evidence_user FOREIGN KEY (uploaded_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT ck_after_sale_evidence_type CHECK (evidence_type IN ('IMAGE', 'VIDEO', 'TEXT', 'LOGISTICS_NO')),
+  INDEX idx_after_sale_evidence_application (application_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS knowledge_category (

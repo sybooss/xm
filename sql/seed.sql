@@ -87,3 +87,12 @@ WHERE a.application_no='ASA202605060001'
       SELECT 1 FROM after_sale_process_log l
       WHERE l.application_id=a.id AND l.action='SUBMIT'
   );
+
+INSERT INTO after_sale_evidence(application_id, evidence_type, content, uploaded_by)
+SELECT a.id, 'TEXT', '左耳无声音，已尝试重新配对仍无法恢复。', a.user_id
+FROM after_sale_application a
+WHERE a.application_no='ASA202605060001'
+  AND NOT EXISTS (
+      SELECT 1 FROM after_sale_evidence e
+      WHERE e.application_id=a.id AND e.content='左耳无声音，已尝试重新配对仍无法恢复。'
+  );

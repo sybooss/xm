@@ -4,6 +4,8 @@ import com.user.returnsassistant.pojo.AfterSaleActionRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplication;
 import com.user.returnsassistant.pojo.AfterSaleApplicationCreateRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
+import com.user.returnsassistant.pojo.AfterSaleEvidence;
+import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.PageResult;
 import com.user.returnsassistant.pojo.UserAccount;
 
@@ -17,4 +19,8 @@ public interface AfterSaleApplicationService {
     AfterSaleApplication approve(Long id, AfterSaleActionRequest request, UserAccount admin);
 
     AfterSaleApplication reject(Long id, AfterSaleActionRequest request, UserAccount admin);
+
+    AfterSaleApplication requestEvidence(Long id, AfterSaleActionRequest request, UserAccount admin);
+
+    AfterSaleEvidence addEvidence(Long id, AfterSaleEvidenceRequest request, UserAccount customer);
 }

@@ -291,6 +291,26 @@ try {
     $adminAfterSales = Api-Get "/admin/after-sales?page=1&pageSize=10&status=SUBMITTED&keyword=$($realApplication.applicationNo)"
     Add-Result "real after-sale admin queue" ($adminAfterSales.total -ge 1) "total=$($adminAfterSales.total)"
 
+    $requestedEvidence = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/request-evidence" @{
+        remark = "Auto admin requested logistics or issue evidence"
+        assignedTo = $adminUserId
+    }
+    $requestEvidenceOk = $requestedEvidence.status -eq "NEED_MORE_EVIDENCE" -and
+                         (@($requestedEvidence.processLogs | Where-Object { $_.action -eq "REQUEST_MORE_EVIDENCE" }).Count -ge 1)
+    Add-Result "real after-sale admin request evidence" $requestEvidenceOk "status=$($requestedEvidence.status),logs=$(@($requestedEvidence.processLogs).Count)"
+
+    $script:authToken = $customerToken
+    $evidence = Api-Post "/customer/after-sales/$($created.realAfterSaleId)/evidence" @{
+        evidenceType = "LOGISTICS_NO"
+        content = "AUTO-LOGISTICS-$stamp"
+    }
+    $customerEvidenceDetail = Api-Get "/customer/after-sales/$($created.realAfterSaleId)"
+    $evidenceOk = $evidence.evidenceType -eq "LOGISTICS_NO" -and
+                  @($customerEvidenceDetail.evidences).Count -ge 1 -and
+                  (@($customerEvidenceDetail.processLogs | Where-Object { $_.action -eq "SUPPLEMENT_EVIDENCE" }).Count -ge 1)
+    Add-Result "real after-sale customer evidence chain" $evidenceOk "evidences=$(@($customerEvidenceDetail.evidences).Count),logs=$(@($customerEvidenceDetail.processLogs).Count)"
+
+    $script:authToken = $adminToken
     $approvedApplication = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/approve" @{
         remark = "Auto admin approved real after-sale flow"
         approvedAmount = 188.80

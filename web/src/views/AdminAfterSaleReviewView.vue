@@ -109,9 +109,23 @@
               </el-form-item>
               <div class="decision-actions">
                 <el-button type="primary" :icon="Check" :disabled="!canReview" :loading="saving" @click="approveSelected">审核通过</el-button>
+                <el-button type="warning" :disabled="!canReview" :loading="saving" @click="requestEvidenceSelected">要求补材料</el-button>
                 <el-button type="danger" :icon="Close" :disabled="!canReview" :loading="saving" @click="rejectSelected">驳回申请</el-button>
               </div>
             </el-form>
+          </div>
+
+          <div class="evidence-list">
+            <h4>凭证材料</h4>
+            <div v-if="!selected.evidences?.length" class="empty-evidence">暂无凭证材料</div>
+            <div v-for="evidence in selected.evidences || []" :key="evidence.id" class="evidence-item">
+              <div>
+                <StatusTag :value="evidence.evidenceType" />
+                <strong>{{ evidence.uploadedByName || '顾客' }}</strong>
+                <span>{{ evidence.createdAt }}</span>
+              </div>
+              <p>{{ evidence.content }}</p>
+            </div>
           </div>
 
           <div class="timeline-box">
@@ -141,7 +155,8 @@ import {
   approveAfterSale,
   getAdminAfterSale,
   pageAdminAfterSales,
-  rejectAfterSale
+  rejectAfterSale,
+  requestAfterSaleEvidence
 } from '../api/adminAfterSaleApi'
 
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: '', priority: '' })
@@ -155,7 +170,7 @@ const decisionForm = reactive({ approvedAmount: 0, remark: '' })
 const pendingCount = computed(() => applications.value.filter(item => ['SUBMITTED', 'UNDER_REVIEW'].includes(item.status)).length)
 const moreEvidenceCount = computed(() => applications.value.filter(item => item.status === 'NEED_MORE_EVIDENCE').length)
 const highPriorityCount = computed(() => applications.value.filter(item => ['HIGH', 'URGENT'].includes(item.priority)).length)
-const canReview = computed(() => selected.value && ['SUBMITTED', 'UNDER_REVIEW'].includes(selected.value.status))
+const canReview = computed(() => selected.value && ['SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE'].includes(selected.value.status))
 
 async function reload() {
   await loadApplications()
@@ -212,6 +227,22 @@ async function rejectSelected() {
   }
 }
 
+async function requestEvidenceSelected() {
+  if (!decisionForm.remark) {
+    ElMessage.warning('要求补充材料必须填写说明')
+    return
+  }
+  saving.value = true
+  try {
+    selected.value = await requestAfterSaleEvidence(selected.value.id, { ...decisionForm })
+    ElMessage.success('已要求顾客补充材料')
+    hydrateDecisionForm()
+    await loadApplications()
+  } finally {
+    saving.value = false
+  }
+}
+
 function hydrateDecisionForm() {
   decisionForm.approvedAmount = Number(selected.value?.refundAmount || 0)
   decisionForm.remark = selected.value?.status === 'REJECTED' ? '' : '资料完整，符合售后规则，审核通过。'
@@ -250,6 +281,7 @@ onMounted(loadApplications)
 }
 
 .decision-box,
+.evidence-list,
 .timeline-box {
   margin-top: 14px;
   padding: 14px;
@@ -295,6 +327,40 @@ onMounted(loadApplications)
 .timeline-title + p {
   margin: 0;
   color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.empty-evidence {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.evidence-item {
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.evidence-item + .evidence-item {
+  margin-top: 10px;
+}
+
+.evidence-item div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.evidence-item span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.evidence-item p {
+  margin: 0;
+  color: var(--text);
   line-height: 1.6;
 }
 

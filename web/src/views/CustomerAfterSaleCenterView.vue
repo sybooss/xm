@@ -120,6 +120,7 @@
         </div>
         <div class="detail-actions">
           <StatusTag :value="selectedAfterSale.status" />
+          <el-button type="primary" @click="openEvidenceDialog">补充凭证</el-button>
           <el-button @click="goChat">在线咨询</el-button>
         </div>
       </div>
@@ -149,6 +150,18 @@
               <p>{{ log.remark }}</p>
             </el-timeline-item>
           </el-timeline>
+        </div>
+      </div>
+      <div class="evidence-list">
+        <h4>凭证材料</h4>
+        <div v-if="!selectedAfterSale.evidences?.length" class="empty-evidence">暂无凭证材料</div>
+        <div v-for="evidence in selectedAfterSale.evidences || []" :key="evidence.id" class="evidence-item">
+          <div>
+            <StatusTag :value="evidence.evidenceType" />
+            <strong>{{ evidence.uploadedByName || '顾客' }}</strong>
+            <span>{{ evidence.createdAt }}</span>
+          </div>
+          <p>{{ evidence.content }}</p>
         </div>
       </div>
     </section>
@@ -187,6 +200,25 @@
         <el-button type="primary" :loading="submitting" @click="submitApplication">提交申请</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="evidenceDialogVisible" title="补充凭证" width="560px" destroy-on-close>
+      <el-form :model="evidenceForm" label-width="92px">
+        <el-form-item label="凭证类型">
+          <el-select v-model="evidenceForm.evidenceType">
+            <el-option label="文字说明" value="TEXT" />
+            <el-option label="物流单号" value="LOGISTICS_NO" />
+            <el-option label="图片链接" value="IMAGE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="凭证内容">
+          <el-input v-model="evidenceForm.content" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="填写物流单号、问题说明或凭证链接。" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="evidenceDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="evidenceSubmitting" @click="submitEvidence">提交凭证</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -198,6 +230,7 @@ import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { pageOrders } from '../api/orderApi'
 import {
+  addCustomerAfterSaleEvidence,
   createCustomerAfterSale,
   getCustomerAfterSale,
   pageCustomerAfterSales
@@ -216,8 +249,11 @@ const applyingOrder = ref(null)
 const orderLoading = ref(false)
 const afterSaleLoading = ref(false)
 const submitting = ref(false)
+const evidenceSubmitting = ref(false)
 const applyDialogVisible = ref(false)
+const evidenceDialogVisible = ref(false)
 const applyForm = reactive(defaultApplyForm())
+const evidenceForm = reactive(defaultEvidenceForm())
 
 const activeAfterSaleCount = computed(() => afterSales.value.filter(item => !['REJECTED', 'COMPLETED', 'CANCELLED'].includes(item.status)).length)
 const needCustomerActionCount = computed(() => afterSales.value.filter(item => ['NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND'].includes(item.status)).length)
@@ -272,6 +308,11 @@ function openApplyDialog(order) {
   applyDialogVisible.value = true
 }
 
+function openEvidenceDialog() {
+  Object.assign(evidenceForm, defaultEvidenceForm())
+  evidenceDialogVisible.value = true
+}
+
 async function submitApplication() {
   if (!applyingOrder.value) return
   if (!applyForm.reasonText) {
@@ -288,6 +329,23 @@ async function submitApplication() {
     selectedAfterSale.value = await getCustomerAfterSale(created.id)
   } finally {
     submitting.value = false
+  }
+}
+
+async function submitEvidence() {
+  if (!selectedAfterSale.value) return
+  if (!evidenceForm.content) {
+    ElMessage.warning('请填写凭证内容')
+    return
+  }
+  evidenceSubmitting.value = true
+  try {
+    await addCustomerAfterSaleEvidence(selectedAfterSale.value.id, { ...evidenceForm })
+    ElMessage.success('凭证已提交')
+    evidenceDialogVisible.value = false
+    selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
+  } finally {
+    evidenceSubmitting.value = false
   }
 }
 
@@ -326,6 +384,13 @@ function defaultApplyForm() {
     reasonCode: 'QUALITY_PROBLEM',
     reasonText: '',
     refundAmount: 0
+  }
+}
+
+function defaultEvidenceForm() {
+  return {
+    evidenceType: 'TEXT',
+    content: ''
   }
 }
 
@@ -391,6 +456,53 @@ onMounted(reloadAll)
 .timeline-title + p {
   margin: 0;
   color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.evidence-list {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.evidence-list h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.empty-evidence {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.evidence-item {
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.evidence-item + .evidence-item {
+  margin-top: 10px;
+}
+
+.evidence-item div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.evidence-item span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.evidence-item p {
+  margin: 0;
+  color: var(--text);
   line-height: 1.6;
 }
 

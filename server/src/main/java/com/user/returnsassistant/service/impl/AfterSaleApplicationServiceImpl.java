@@ -2,12 +2,15 @@ package com.user.returnsassistant.service.impl;
 
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.AfterSaleApplicationMapper;
+import com.user.returnsassistant.mapper.AfterSaleEvidenceMapper;
 import com.user.returnsassistant.mapper.AfterSaleProcessLogMapper;
 import com.user.returnsassistant.mapper.DemoOrderMapper;
 import com.user.returnsassistant.pojo.AfterSaleActionRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplication;
 import com.user.returnsassistant.pojo.AfterSaleApplicationCreateRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
+import com.user.returnsassistant.pojo.AfterSaleEvidence;
+import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.AfterSaleProcessLog;
 import com.user.returnsassistant.pojo.DemoOrder;
 import com.user.returnsassistant.pojo.PageResult;
@@ -27,13 +30,15 @@ import java.util.Set;
 @Service
 public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationService {
     private static final Set<String> SERVICE_TYPES = Set.of("RETURN", "EXCHANGE", "REFUND", "COMPLAINT");
-    private static final Set<String> REVIEWABLE_STATUSES = Set.of("SUBMITTED", "UNDER_REVIEW");
+    private static final Set<String> REVIEWABLE_STATUSES = Set.of("SUBMITTED", "UNDER_REVIEW", "NEED_MORE_EVIDENCE");
     private static final Set<String> TERMINAL_STATUSES = Set.of("REJECTED", "COMPLETED", "CANCELLED");
 
     @Autowired
     private AfterSaleApplicationMapper applicationMapper;
     @Autowired
     private AfterSaleProcessLogMapper processLogMapper;
+    @Autowired
+    private AfterSaleEvidenceMapper evidenceMapper;
     @Autowired
     private DemoOrderMapper orderMapper;
 
@@ -49,6 +54,7 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
             throw new BusinessException("售后申请不存在");
         }
         application.setProcessLogs(processLogMapper.listByApplicationId(id));
+        application.setEvidences(evidenceMapper.listByApplicationId(id));
         return application;
     }
 
@@ -145,6 +151,45 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         return getById(id);
     }
 
+    @Transactional
+    @Override
+    public AfterSaleApplication requestEvidence(Long id, AfterSaleActionRequest request, UserAccount admin) {
+        AfterSaleApplication application = getById(id);
+        ensureReviewable(application);
+        String remark = cleanRequired(request == null ? null : request.getRemark(), "要求补充材料必须填写说明");
+
+        AfterSaleApplication update = new AfterSaleApplication();
+        update.setId(id);
+        update.setStatus("NEED_MORE_EVIDENCE");
+        update.setApprovedAmount(application.getApprovedAmount());
+        update.setAssignedTo(request == null ? null : request.getAssignedTo());
+        applicationMapper.updateDecision(update);
+        writeLog(id, admin, "REQUEST_MORE_EVIDENCE", application.getStatus(), "NEED_MORE_EVIDENCE", remark);
+        orderMapper.updateAfterSaleStatus(application.getOrderId(), toOrderAfterSaleStatus(application.getServiceType(), "NEED_MORE_EVIDENCE"));
+        return getById(id);
+    }
+
+    @Transactional
+    @Override
+    public AfterSaleEvidence addEvidence(Long id, AfterSaleEvidenceRequest request, UserAccount customer) {
+        AfterSaleApplication application = getById(id);
+        if (!"ADMIN".equals(customer.getRole()) && !Objects.equals(application.getUserId(), customer.getId())) {
+            throw new BusinessException("只能为自己的售后申请补充凭证");
+        }
+        if (TERMINAL_STATUSES.contains(application.getStatus())) {
+            throw new BusinessException("当前售后申请已结束，不能补充凭证");
+        }
+        AfterSaleEvidence evidence = new AfterSaleEvidence();
+        evidence.setApplicationId(id);
+        evidence.setEvidenceType(normalizeEvidenceType(request == null ? null : request.getEvidenceType()));
+        evidence.setFileUrl(hasText(request == null ? null : request.getFileUrl()) ? request.getFileUrl().trim() : null);
+        evidence.setContent(cleanRequired(request == null ? null : request.getContent(), "请填写凭证内容"));
+        evidence.setUploadedBy(customer.getId());
+        evidenceMapper.insert(evidence);
+        writeLog(id, customer, "SUPPLEMENT_EVIDENCE", application.getStatus(), application.getStatus(), "补充凭证：" + evidence.getContent());
+        return evidence;
+    }
+
     private void ensureReviewable(AfterSaleApplication application) {
         if (TERMINAL_STATUSES.contains(application.getStatus()) || !REVIEWABLE_STATUSES.contains(application.getStatus())) {
             throw new BusinessException("当前状态不能执行审核动作");
@@ -168,6 +213,14 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         String value = hasText(serviceType) ? serviceType.trim().toUpperCase() : "RETURN";
         if (!SERVICE_TYPES.contains(value)) {
             throw new BusinessException("售后类型不正确");
+        }
+        return value;
+    }
+
+    private String normalizeEvidenceType(String evidenceType) {
+        String value = hasText(evidenceType) ? evidenceType.trim().toUpperCase() : "TEXT";
+        if (!Set.of("IMAGE", "VIDEO", "TEXT", "LOGISTICS_NO").contains(value)) {
+            throw new BusinessException("凭证类型不正确");
         }
         return value;
     }

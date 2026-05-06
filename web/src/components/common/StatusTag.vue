@@ -74,6 +74,7 @@ const label = computed(() => {
     APPROVE: '审核通过',
     REJECT: '审核驳回',
     REQUEST_MORE_EVIDENCE: '要求补材料',
+    SUPPLEMENT_EVIDENCE: '补充凭证',
     CANCEL: '取消',
     CONFIRM: '确认完成',
     SYSTEM_MARK: '系统标记',
@@ -89,7 +90,7 @@ const tagType = computed(() => {
   if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', '已验证'].includes(normalized.value)) return 'success'
   if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED'].includes(normalized.value)) return 'danger'
   if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID'].includes(normalized.value)) return 'info'
-  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
+  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
   return 'primary'
 })
 </script>

@@ -12,6 +12,7 @@ const pageErrors = []
 let adminToken = ''
 let seededCustomerOrderId = null
 let seededReviewOrderId = null
+let seededReviewApplicationId = null
 
 function record(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail })
@@ -156,12 +157,24 @@ try {
     reasonText: '浏览器自动化为管理员审核台创建待审核售后申请。',
     refundAmount: 188.80
   }, demoCustomerAuth.token)
+  const reviewApplicationPage = await apiGet(`/customer/after-sales?page=1&pageSize=1&keyword=${reviewOrderNo}`, demoCustomerAuth.token)
+  seededReviewApplicationId = reviewApplicationPage.rows?.[0]?.id
   await page.goto(`${baseUrl}/admin/after-sales/review`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '售后审核工作台', 'admin after-sale review page visible')
   await page.getByPlaceholder('售后单号、订单号或商品名').fill(reviewOrderNo)
   await page.getByRole('button', { name: '查询' }).first().click()
   await expectText(page, reviewOrderNo, 'admin after-sale review seeded order visible')
   await expectText(page, '审核处理台', 'admin after-sale review detail visible')
+  await page.getByRole('button', { name: '要求补材料' }).click()
+  await expectText(page, '已要求顾客补充材料', 'admin after-sale request evidence toast')
+  await expectText(page, '待补材料', 'admin after-sale need evidence status visible')
+  await apiPost(`/customer/after-sales/${seededReviewApplicationId}/evidence`, {
+    evidenceType: 'LOGISTICS_NO',
+    content: 'BROWSER-EVIDENCE-' + Date.now()
+  }, demoCustomerAuth.token)
+  await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '凭证材料', 'admin after-sale evidence list visible')
+  await expectText(page, 'BROWSER-EVIDENCE-', 'admin after-sale evidence content visible')
   await page.getByRole('button', { name: '审核通过' }).click()
   await expectText(page, '售后申请已审核通过', 'admin after-sale approve toast')
   await expectText(page, '待买家寄回', 'admin after-sale approved status visible')
