@@ -30,7 +30,10 @@ onMounted(() => {
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: var(--app-bg);
+  background:
+    radial-gradient(circle at 62% 0%, rgb(0 102 204 / 9%), transparent 32%),
+    radial-gradient(circle at 92% 48%, rgb(52 199 89 / 7%), transparent 25%),
+    var(--app-bg);
 }
 
 .main {

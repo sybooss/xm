@@ -93,15 +93,17 @@ async function logout() {
   justify-content: space-between;
   gap: 14px;
   min-height: var(--header-height);
-  padding: 8px 18px;
-  border-bottom: 1px solid var(--line-soft);
-  background: rgb(255 255 255 / 92%);
-  backdrop-filter: blur(10px);
+  padding: 8px 22px;
+  border-bottom: 1px solid rgb(210 210 215 / 70%);
+  background: rgb(255 255 255 / 78%);
+  backdrop-filter: blur(22px) saturate(160%);
 }
 
 h1 {
   margin: 0;
-  font-size: 18px;
+  color: #1d1d1f;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.25;
 }
 
@@ -121,7 +123,15 @@ h1 {
 }
 
 .model-select {
-  width: 152px;
+  width: 164px;
+}
+
+.user-chip {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgb(210 210 215 / 82%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 70%);
 }
 
 @media (max-width: 720px) {

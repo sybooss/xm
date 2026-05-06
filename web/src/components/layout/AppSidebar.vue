@@ -48,8 +48,10 @@ const visibleMenus = computed(() => menus.filter(item => !item.adminOnly || auth
   inset: 0 auto 0 0;
   z-index: 20;
   width: var(--sidebar-width);
-  background: var(--sidebar);
-  color: white;
+  border-right: 1px solid rgb(210 210 215 / 72%);
+  background: rgb(255 255 255 / 78%);
+  color: var(--text);
+  backdrop-filter: blur(22px) saturate(150%);
 }
 
 .brand {
@@ -57,21 +59,25 @@ const visibleMenus = computed(() => menus.filter(item => !item.adminOnly || auth
   align-items: center;
   gap: 10px;
   height: var(--header-height);
-  padding: 0 16px;
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  padding: 0 18px;
+  border-bottom: 1px solid rgb(210 210 215 / 70%);
 }
 
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: #2563eb;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #0a84ff, #0066cc);
+  color: #ffffff;
+  font-size: 15px;
   font-weight: 800;
+  box-shadow: 0 12px 28px rgb(0 102 204 / 28%);
 }
 
 .brand-title {
+  color: #1d1d1f;
   font-size: 15px;
   font-weight: 700;
 }
@@ -87,16 +93,23 @@ const visibleMenus = computed(() => menus.filter(item => !item.adminOnly || auth
 }
 
 .menu :deep(.el-menu-item) {
-  color: #d1d5db;
+  height: 46px;
+  margin: 6px 10px;
+  border-radius: 8px;
+  color: #4c4c50;
+  font-weight: 600;
 }
 
 .menu :deep(.el-menu-item.is-active) {
-  background: rgb(37 99 235 / 18%);
-  color: #ffffff;
+  background: linear-gradient(135deg, rgb(0 102 204 / 12%), rgb(255 255 255 / 84%));
+  color: var(--brand);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 102 204 / 13%),
+    0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .menu :deep(.el-menu-item:hover) {
-  background: rgb(255 255 255 / 8%);
+  background: rgb(0 0 0 / 4%);
 }
 
 @media (max-width: 900px) {
@@ -104,11 +117,24 @@ const visibleMenus = computed(() => menus.filter(item => !item.adminOnly || auth
     position: static;
     width: 100%;
     height: auto;
+    overflow: hidden;
   }
 
   .menu {
     display: flex;
     overflow-x: auto;
+    padding: 0 10px 8px;
+    scrollbar-width: none;
+  }
+
+  .menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu :deep(.el-menu-item) {
+    flex: 0 0 auto;
+    min-width: 124px;
+    margin: 6px 4px;
   }
 }
 </style>

@@ -46,8 +46,9 @@ try {
   await page.locator('.login-form .login-button').click()
   await expectText(page, '答辩展示中心', 'login redirects to showcase')
   await expectText(page, '退换货客服', 'layout brand visible')
-  await expectText(page, '系统核心亮点', 'showcase highlights visible')
+  await expectText(page, '闭环特色功能', 'showcase feature roadmap visible')
   await expectText(page, '演示流程', 'showcase demo flow visible')
+  await expectText(page, '版本路线图', 'showcase version roadmap visible')
   await page.screenshot({ path: path.join(artifactDir, '01-showcase.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle', timeout: 60000 })
