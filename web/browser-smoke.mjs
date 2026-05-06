@@ -13,6 +13,7 @@ let adminToken = ''
 let seededCustomerOrderId = null
 let seededReviewOrderId = null
 let seededReviewApplicationId = null
+let seededReviewTicketSessionId = null
 
 function record(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail })
@@ -183,6 +184,14 @@ try {
   await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '凭证材料', 'admin after-sale evidence list visible')
   await expectText(page, 'BROWSER-EVIDENCE-', 'admin after-sale evidence content visible')
+  await page.getByRole('button', { name: '创建关联工单' }).click()
+  await expectText(page, '已创建关联工单', 'admin after-sale linked ticket toast')
+  await expectText(page, '关联客服工单', 'admin after-sale linked ticket section visible')
+  await expectText(page, '创建工单', 'admin after-sale create ticket log visible')
+  const linkedAfterSaleDetail = await apiGet(`/admin/after-sales/${seededReviewApplicationId}`)
+  seededReviewTicketSessionId = linkedAfterSaleDetail.ticketId
+    ? (await apiGet(`/service-tickets/${linkedAfterSaleDetail.ticketId}`)).sessionId
+    : null
   await page.getByRole('button', { name: '审核通过' }).click()
   await expectText(page, '售后申请已审核通过', 'admin after-sale approve toast')
   await expectText(page, '待买家寄回', 'admin after-sale approved status visible')
@@ -305,6 +314,11 @@ try {
   if (seededReviewOrderId) {
     await apiDelete(`/orders/${seededReviewOrderId}`).catch(error => {
       record('browser review order cleanup', false, error.message)
+    })
+  }
+  if (seededReviewTicketSessionId) {
+    await apiDelete(`/chat-sessions/${seededReviewTicketSessionId}`).catch(error => {
+      record('browser linked ticket session cleanup', false, error.message)
     })
   }
   await browser.close()

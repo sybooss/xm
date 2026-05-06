@@ -7,6 +7,7 @@ import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.ServiceTicketSearch;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AuthService;
+import com.user.returnsassistant.service.AfterSaleApplicationService;
 import com.user.returnsassistant.service.ChatService;
 import com.user.returnsassistant.service.ServiceTicketService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,8 @@ public class ServiceTicketController {
     private ServiceTicketService ticketService;
     @Autowired
     private AuthService authService;
+    @Autowired
+    private AfterSaleApplicationService afterSaleApplicationService;
     @Autowired
     private ChatService chatService;
 
@@ -44,8 +47,11 @@ public class ServiceTicketController {
 
     @PutMapping("/service-tickets/{id}")
     @OperatorAnno
-    public Result update(@PathVariable Long id, @RequestBody ServiceTicket ticket) {
+    public Result update(@PathVariable Long id, @RequestBody ServiceTicket ticket, HttpServletRequest request) {
+        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
         ticketService.update(id, ticket);
+        ServiceTicket updated = ticketService.getById(id);
+        afterSaleApplicationService.appendTicketProcessLog(id, "UPDATE_TICKET", "更新关联工单状态：" + updated.getStatus(), admin);
         return Result.success();
     }
 

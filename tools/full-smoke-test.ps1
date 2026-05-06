@@ -12,6 +12,8 @@ $created = @{
     orderId = $null
     afterSaleId = $null
     realAfterSaleId = $null
+    realAfterSaleTicketId = $null
+    realAfterSaleTicketSessionId = $null
     sessionId = $null
     ticketId = $null
 }
@@ -328,6 +330,26 @@ try {
                      @($approvedDetail.processLogs).Count -ge 2
     Add-Result "real after-sale admin approve/state-log" $approveFlowOk "status=$($approvedApplication.status),logs=$(@($approvedDetail.processLogs).Count)"
 
+    $linkedTicket = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/tickets" @{
+        remark = "Auto admin created linked service ticket for real after-sale flow"
+    }
+    $created.realAfterSaleTicketId = $linkedTicket.id
+    $created.realAfterSaleTicketSessionId = $linkedTicket.sessionId
+    $linkedAfterSaleDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $createTicketOk = $linkedAfterSaleDetail.ticketId -eq $linkedTicket.id -and
+                      $linkedAfterSaleDetail.ticketNo -eq $linkedTicket.ticketNo -and
+                      (@($linkedAfterSaleDetail.processLogs | Where-Object { $_.action -eq "CREATE_TICKET" }).Count -ge 1)
+    Add-Result "real after-sale linked ticket create/log" $createTicketOk "ticket=$($linkedTicket.ticketNo),status=$($linkedTicket.status)"
+
+    $linkedTicketDetail = Api-Get "/service-tickets/$($created.realAfterSaleTicketId)"
+    $linkedTicketDetail.status = "PROCESSING"
+    Api-Put "/service-tickets/$($created.realAfterSaleTicketId)" $linkedTicketDetail | Out-Null
+    $linkedTicketUpdated = Api-Get "/service-tickets/$($created.realAfterSaleTicketId)"
+    $linkedTicketAfterSaleDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $updateTicketOk = $linkedTicketUpdated.status -eq "PROCESSING" -and
+                      (@($linkedTicketAfterSaleDetail.processLogs | Where-Object { $_.action -eq "UPDATE_TICKET" }).Count -ge 1)
+    Add-Result "real after-sale linked ticket update/log" $updateTicketOk "status=$($linkedTicketUpdated.status),logs=$(@($linkedTicketAfterSaleDetail.processLogs).Count)"
+
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"
         orderNo = "DD202604290001"
@@ -440,6 +462,11 @@ try {
     $created.ticketId = $null
     Add-Result "chat session delete" $true "deleted"
 
+    Api-Delete "/chat-sessions/$($created.realAfterSaleTicketSessionId)" | Out-Null
+    $created.realAfterSaleTicketSessionId = $null
+    $created.realAfterSaleTicketId = $null
+    Add-Result "real after-sale linked ticket session delete" $true "deleted"
+
     Api-Delete "/after-sale-records/$($created.afterSaleId)" | Out-Null
     $created.afterSaleId = $null
     Add-Result "after-sale delete" $true "deleted"
@@ -469,6 +496,12 @@ finally {
     } catch {}
     try {
         if ($created.ticketId) { Api-Delete "/service-tickets/$($created.ticketId)" | Out-Null }
+    } catch {}
+    try {
+        if ($created.realAfterSaleTicketId) { Api-Delete "/service-tickets/$($created.realAfterSaleTicketId)" | Out-Null }
+    } catch {}
+    try {
+        if ($created.realAfterSaleTicketSessionId) { Api-Delete "/chat-sessions/$($created.realAfterSaleTicketSessionId)" | Out-Null }
     } catch {}
     try {
         if ($created.afterSaleId) { Api-Delete "/after-sale-records/$($created.afterSaleId)" | Out-Null }

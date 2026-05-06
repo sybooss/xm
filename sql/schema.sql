@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS after_sale_application (
   priority VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
   sla_deadline DATETIME NULL,
   assigned_to BIGINT NULL,
+  ticket_id BIGINT NULL,
   ai_summary TEXT NULL,
   risk_level VARCHAR(20) NOT NULL DEFAULT 'LOW',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -95,9 +96,42 @@ CREATE TABLE IF NOT EXISTS after_sale_application (
   CONSTRAINT ck_after_sale_application_risk CHECK (risk_level IN ('LOW', 'MEDIUM', 'HIGH')),
   INDEX idx_after_sale_application_user (user_id, status),
   INDEX idx_after_sale_application_order (order_id),
+  INDEX idx_after_sale_application_ticket (ticket_id),
   INDEX idx_after_sale_application_status (status, priority, updated_at),
   INDEX idx_after_sale_application_sla (sla_deadline, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+SET @after_sale_application_ticket_column_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'after_sale_application'
+    AND column_name = 'ticket_id'
+);
+SET @after_sale_application_ticket_column_sql = IF(
+  @after_sale_application_ticket_column_exists = 0,
+  'ALTER TABLE after_sale_application ADD COLUMN ticket_id BIGINT NULL AFTER assigned_to',
+  'SELECT 1'
+);
+PREPARE after_sale_application_ticket_column_stmt FROM @after_sale_application_ticket_column_sql;
+EXECUTE after_sale_application_ticket_column_stmt;
+DEALLOCATE PREPARE after_sale_application_ticket_column_stmt;
+
+SET @after_sale_application_ticket_index_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.statistics
+  WHERE table_schema = DATABASE()
+    AND table_name = 'after_sale_application'
+    AND index_name = 'idx_after_sale_application_ticket'
+);
+SET @after_sale_application_ticket_index_sql = IF(
+  @after_sale_application_ticket_index_exists = 0,
+  'ALTER TABLE after_sale_application ADD INDEX idx_after_sale_application_ticket (ticket_id)',
+  'SELECT 1'
+);
+PREPARE after_sale_application_ticket_index_stmt FROM @after_sale_application_ticket_index_sql;
+EXECUTE after_sale_application_ticket_index_stmt;
+DEALLOCATE PREPARE after_sale_application_ticket_index_stmt;
 
 CREATE TABLE IF NOT EXISTS after_sale_process_log (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -113,13 +147,13 @@ CREATE TABLE IF NOT EXISTS after_sale_process_log (
   CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
   CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
-  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
   INDEX idx_after_sale_process_log_application (application_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 ALTER TABLE after_sale_process_log DROP CHECK ck_after_sale_process_log_action;
 ALTER TABLE after_sale_process_log
-  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
+  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
 
 CREATE TABLE IF NOT EXISTS after_sale_evidence (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,

@@ -4,7 +4,9 @@ import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.AfterSaleApplicationMapper;
 import com.user.returnsassistant.mapper.AfterSaleEvidenceMapper;
 import com.user.returnsassistant.mapper.AfterSaleProcessLogMapper;
+import com.user.returnsassistant.mapper.ChatSessionMapper;
 import com.user.returnsassistant.mapper.DemoOrderMapper;
+import com.user.returnsassistant.mapper.ServiceTicketMapper;
 import com.user.returnsassistant.pojo.AfterSaleActionRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplication;
 import com.user.returnsassistant.pojo.AfterSaleApplicationCreateRequest;
@@ -12,8 +14,10 @@ import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
 import com.user.returnsassistant.pojo.AfterSaleEvidence;
 import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.AfterSaleProcessLog;
+import com.user.returnsassistant.pojo.ChatSession;
 import com.user.returnsassistant.pojo.DemoOrder;
 import com.user.returnsassistant.pojo.PageResult;
+import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
 import com.user.returnsassistant.utils.NoUtils;
@@ -41,6 +45,10 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
     private AfterSaleEvidenceMapper evidenceMapper;
     @Autowired
     private DemoOrderMapper orderMapper;
+    @Autowired
+    private ChatSessionMapper sessionMapper;
+    @Autowired
+    private ServiceTicketMapper ticketMapper;
 
     @Override
     public PageResult<AfterSaleApplication> page(AfterSaleApplicationSearch search) {
@@ -188,6 +196,55 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         evidenceMapper.insert(evidence);
         writeLog(id, customer, "SUPPLEMENT_EVIDENCE", application.getStatus(), application.getStatus(), "补充凭证：" + evidence.getContent());
         return evidence;
+    }
+
+    @Transactional
+    @Override
+    public ServiceTicket createTicket(Long id, AfterSaleActionRequest request, UserAccount admin) {
+        AfterSaleApplication application = getById(id);
+        if (application.getTicketId() != null) {
+            ServiceTicket existing = ticketMapper.getById(application.getTicketId());
+            if (existing != null) {
+                return existing;
+            }
+        }
+        ChatSession session = new ChatSession();
+        session.setSessionNo(NoUtils.sessionNo());
+        session.setUserId(application.getUserId());
+        session.setOrderId(application.getOrderId());
+        session.setTitle("售后申请转人工工单：" + application.getApplicationNo());
+        session.setChannel("ADMIN_TEST");
+        session.setStatus("ACTIVE");
+        session.setCurrentIntent("COMPLAINT_TRANSFER");
+        session.setSummary("由真实售后申请创建的工单：" + application.getReasonText());
+        sessionMapper.insert(session);
+
+        ServiceTicket ticket = new ServiceTicket();
+        ticket.setTicketNo(NoUtils.ticketNo());
+        ticket.setSessionId(session.getId());
+        ticket.setOrderId(application.getOrderId());
+        ticket.setUserId(application.getUserId());
+        ticket.setIntentCode("COMPLAINT_TRANSFER");
+        ticket.setPriority(application.getPriority());
+        ticket.setStatus("PENDING");
+        ticket.setCustomerIssue(application.getReasonText());
+        ticket.setAiSummary(application.getAiSummary());
+        ticket.setSuggestedAction(cleanRemark(request, "请客服结合售后申请、凭证和处理记录继续跟进。"));
+        ticket.setAssignedTo(admin.getDisplayName());
+        ticketMapper.insert(ticket);
+        applicationMapper.bindTicket(id, ticket.getId());
+        writeLog(id, admin, "CREATE_TICKET", application.getStatus(), application.getStatus(), "创建关联工单：" + ticket.getTicketNo());
+        return ticketMapper.getById(ticket.getId());
+    }
+
+    @Transactional
+    @Override
+    public void appendTicketProcessLog(Long ticketId, String action, String remark, UserAccount admin) {
+        AfterSaleApplication application = applicationMapper.getByTicketId(ticketId);
+        if (application == null) {
+            return;
+        }
+        writeLog(application.getId(), admin, action, application.getStatus(), application.getStatus(), remark);
     }
 
     private void ensureReviewable(AfterSaleApplication application) {

@@ -92,6 +92,22 @@
             <el-descriptions-item label="AI 摘要" :span="2">{{ selected.aiSummary || '暂无 AI 摘要，按人工审核流程处理。' }}</el-descriptions-item>
           </el-descriptions>
 
+          <div class="ticket-box">
+            <div class="ticket-main">
+              <div>
+                <h4>关联客服工单</h4>
+                <p v-if="selected.ticketNo">
+                  <strong>{{ selected.ticketNo }}</strong>
+                  <StatusTag :value="selected.ticketStatus" />
+                </p>
+                <p v-else>复杂投诉或异常申请可以转成人工工单，后续工单状态会回写到售后处理记录。</p>
+              </div>
+              <el-button type="primary" :icon="Ticket" :loading="creatingTicket" :disabled="Boolean(selected.ticketId)" @click="createLinkedTicket">
+                {{ selected.ticketId ? '已关联工单' : '创建关联工单' }}
+              </el-button>
+            </div>
+          </div>
+
           <div class="decision-box">
             <div class="decision-header">
               <div>
@@ -150,10 +166,11 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
-import { Check, Close, Refresh, Search } from '@element-plus/icons-vue'
+import { Check, Close, Refresh, Search, Ticket } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   approveAfterSale,
+  createAfterSaleTicket,
   getAdminAfterSale,
   pageAdminAfterSales,
   rejectAfterSale,
@@ -166,6 +183,7 @@ const applications = ref([])
 const total = ref(0)
 const loading = ref(false)
 const saving = ref(false)
+const creatingTicket = ref(false)
 const selected = ref(null)
 const decisionForm = reactive({ approvedAmount: 0, remark: '' })
 
@@ -245,6 +263,23 @@ async function requestEvidenceSelected() {
   }
 }
 
+async function createLinkedTicket() {
+  if (!selected.value) {
+    return
+  }
+  creatingTicket.value = true
+  try {
+    const ticket = await createAfterSaleTicket(selected.value.id, {
+      remark: decisionForm.remark || '请客服结合售后申请、凭证和处理记录继续跟进。'
+    })
+    ElMessage.success(`已创建关联工单：${ticket.ticketNo}`)
+    selected.value = await getAdminAfterSale(selected.value.id)
+    await loadApplications()
+  } finally {
+    creatingTicket.value = false
+  }
+}
+
 function hydrateDecisionForm() {
   decisionForm.approvedAmount = Number(selected.value?.refundAmount || 0)
   decisionForm.remark = selected.value?.status === 'REJECTED' ? '' : '资料完整，符合售后规则，审核通过。'
@@ -286,6 +321,7 @@ onMounted(() => {
 }
 
 .decision-box,
+.ticket-box,
 .evidence-list,
 .timeline-box {
   margin-top: 14px;
@@ -293,6 +329,27 @@ onMounted(() => {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: #fff;
+}
+
+.ticket-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ticket-main h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.ticket-main p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 .decision-header {

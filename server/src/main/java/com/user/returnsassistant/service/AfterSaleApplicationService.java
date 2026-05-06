@@ -7,6 +7,7 @@ import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
 import com.user.returnsassistant.pojo.AfterSaleEvidence;
 import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.PageResult;
+import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.UserAccount;
 
 public interface AfterSaleApplicationService {
@@ -23,4 +24,8 @@ public interface AfterSaleApplicationService {
     AfterSaleApplication requestEvidence(Long id, AfterSaleActionRequest request, UserAccount admin);
 
     AfterSaleEvidence addEvidence(Long id, AfterSaleEvidenceRequest request, UserAccount customer);
+
+    ServiceTicket createTicket(Long id, AfterSaleActionRequest request, UserAccount admin);
+
+    void appendTicketProcessLog(Long ticketId, String action, String remark, UserAccount admin);
 }

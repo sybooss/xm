@@ -56,4 +56,11 @@ public class AdminAfterSaleController {
         UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.requestEvidence(id, actionRequest, admin));
     }
+
+    @PostMapping("/{id}/tickets")
+    @OperatorAnno
+    public Result createTicket(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
+        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        return Result.success(afterSaleApplicationService.createTicket(id, actionRequest, admin));
+    }
 }

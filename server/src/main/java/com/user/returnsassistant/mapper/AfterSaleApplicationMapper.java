@@ -13,9 +13,13 @@ public interface AfterSaleApplicationMapper {
 
     AfterSaleApplication getById(@Param("id") Long id);
 
+    AfterSaleApplication getByTicketId(@Param("ticketId") Long ticketId);
+
     int countActiveByOrderId(@Param("orderId") Long orderId);
 
     void insert(AfterSaleApplication application);
 
     void updateDecision(AfterSaleApplication application);
+
+    void bindTicket(@Param("id") Long id, @Param("ticketId") Long ticketId);
 }

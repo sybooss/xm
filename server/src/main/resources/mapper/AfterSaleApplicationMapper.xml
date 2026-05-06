@@ -7,11 +7,14 @@
                o.product_name,
                o.sku_name,
                u.display_name as user_display_name,
-               assignee.display_name as assigned_to_name
+               assignee.display_name as assigned_to_name,
+               t.ticket_no,
+               t.status as ticket_status
         from after_sale_application a
         left join demo_order o on a.order_id=o.id
         left join user_account u on a.user_id=u.id
         left join user_account assignee on a.assigned_to=assignee.id
+        left join service_ticket t on a.ticket_id=t.id
     </sql>
 
     <sql id="SearchWhere">
@@ -51,6 +54,12 @@
         where a.id=#{id}
     </select>
 
+    <select id="getByTicketId" resultType="com.user.returnsassistant.pojo.AfterSaleApplication">
+        <include refid="BaseSelect"/>
+        where a.ticket_id=#{ticketId}
+        limit 1
+    </select>
+
     <select id="countActiveByOrderId" resultType="int">
         select count(*)
         from after_sale_application
@@ -76,5 +85,9 @@
             assigned_to=#{assignedTo},
             closed_at=#{closedAt}
         where id=#{id}
+    </update>
+
+    <update id="bindTicket">
+        update after_sale_application set ticket_id=#{ticketId} where id=#{id}
     </update>
 </mapper>

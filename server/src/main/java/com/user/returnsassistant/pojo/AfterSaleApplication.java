@@ -26,6 +26,9 @@ public class AfterSaleApplication {
     private LocalDateTime slaDeadline;
     private Long assignedTo;
     private String assignedToName;
+    private Long ticketId;
+    private String ticketNo;
+    private String ticketStatus;
     private String aiSummary;
     private String riskLevel;
     private LocalDateTime createdAt;
