@@ -1,8 +1,6 @@
 package com.user.returnsassistant.config;
 
 import com.user.returnsassistant.anno.OperatorAnno;
-import com.user.returnsassistant.exception.BusinessException;
-import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,10 +23,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (anno == null) {
             return true;
         }
-        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
-        if (!"ADMIN".equals(user.getRole())) {
-            throw new BusinessException("权限不足，仅管理员可执行该操作");
-        }
+        authService.requireAdmin(request.getHeader("Authorization"));
         return true;
     }
 }

@@ -18,7 +18,7 @@ const LogCenterView = () => import('../views/LogCenterView.vue')
 const AiTestView = () => import('../views/AiTestView.vue')
 
 const routes = [
-  { path: '/', redirect: '/showcase' },
+  { path: '/', redirect: '/admin/after-sales/review' },
   { path: '/login', name: 'login', component: LoginView, meta: { title: '登录', public: true } },
   { path: '/showcase', name: 'showcase', component: ShowcaseView, meta: { title: '答辩展示中心', adminOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { title: '系统总览', adminOnly: true } },
@@ -45,7 +45,7 @@ router.beforeEach((to) => {
   const authStore = useAuthStore()
   if (to.meta.public) {
     if (to.path === '/login' && authStore.isLoggedIn) {
-      return authStore.isAdmin ? '/showcase' : '/customer/after-sales'
+      return authStore.isAdmin ? '/admin/after-sales/review' : '/customer/after-sales'
     }
     return true
   }
@@ -56,7 +56,7 @@ router.beforeEach((to) => {
     return '/customer/after-sales'
   }
   if (to.meta.customerOnly && authStore.isAdmin) {
-    return '/showcase'
+    return '/admin/after-sales/review'
   }
   return true
 })

@@ -4,7 +4,7 @@
       <div class="login-copy">
         <span class="login-mark">退</span>
         <h1>电商退换货智能客服系统</h1>
-        <p>登录后进入咨询工作台，演示 AI 增强、多轮追问、处理轨迹和人工工单闭环。</p>
+        <p>客户进入我的售后中心，管理员进入售后处理工作台；AI 作为副驾驶辅助摘要、草稿和风险识别。</p>
       </div>
 
       <el-form class="login-form" label-position="top" @submit.prevent="submit">
@@ -35,7 +35,7 @@
         <el-button class="login-button" type="primary" size="large" :loading="authStore.loading" @click="submit">
           {{ mode === 'register' ? '注册并登录' : '登录' }}
         </el-button>
-        <p class="login-tip">{{ mode === 'register' ? '注册后默认拥有客户权限，可进入咨询工作台。' : '管理员：admin / 123456；客户：demo_customer / 123456' }}</p>
+        <p class="login-tip">{{ mode === 'register' ? '注册后默认拥有客户权限，可进入我的售后中心。' : '管理员：admin / 123456；客户：demo_customer / 123456' }}</p>
       </el-form>
     </div>
   </section>
@@ -101,7 +101,7 @@ async function submit() {
     await authStore.login(form.username, form.password)
     ElMessage.success('登录成功')
   }
-  await router.replace(authStore.isAdmin ? '/showcase' : '/customer/after-sales')
+  await router.replace(authStore.isAdmin ? '/admin/after-sales/review' : '/customer/after-sales')
 }
 </script>
 

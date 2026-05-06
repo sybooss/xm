@@ -15,9 +15,18 @@
       <p class="muted">当前回复未触发人工转接。</p>
     </template>
 
-    <el-button class="handoff-button" size="small" :icon="Service" :loading="creating" :disabled="!sessionId" @click="manualCreate">
+    <el-button
+      v-if="authStore.isAdmin"
+      class="handoff-button"
+      size="small"
+      :icon="Service"
+      :loading="creating"
+      :disabled="!sessionId"
+      @click="manualCreate"
+    >
       转人工
     </el-button>
+    <p v-else class="muted">需要人工客服时，请在聊天中说明诉求，系统会按规则生成转接工单。</p>
   </div>
 </template>
 
@@ -27,6 +36,7 @@ import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Service } from '@element-plus/icons-vue'
 import StatusTag from '../common/StatusTag.vue'
 import { createSessionTicket } from '../../api/serviceTicketApi'
+import { useAuthStore } from '../../stores/authStore'
 
 const props = defineProps({
   ticket: {
@@ -52,6 +62,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['created'])
+const authStore = useAuthStore()
 const creating = ref(false)
 
 async function manualCreate() {

@@ -15,6 +15,7 @@ let seededReviewOrderId = null
 let seededReviewApplicationId = null
 let seededReviewTicketSessionId = null
 let demoCustomerToken = ''
+let lastOrderResponseSummary = ''
 
 function record(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail })
@@ -22,6 +23,16 @@ function record(name, ok, detail = '') {
 
 async function expectText(page, text, name) {
   await page.getByText(text, { exact: false }).first().waitFor({ timeout: 20000 })
+  record(name, true, text)
+}
+
+async function expectVisibleBodyText(page, text, name) {
+  try {
+    await page.waitForFunction(expected => document.body.innerText.includes(expected), text, { timeout: 20000 })
+  } catch (error) {
+    const body = await page.locator('body').innerText().catch(() => '')
+    throw new Error(`${name} missing ${text}. Last order response: ${lastOrderResponseSummary}. Body snapshot: ${body.slice(0, 1200)}`)
+  }
   record(name, true, text)
 }
 
@@ -74,6 +85,12 @@ page.on('console', message => {
   }
 })
 page.on('pageerror', error => pageErrors.push(error.message))
+page.on('response', async response => {
+  if (response.url().includes('/api/orders') && response.url().includes('keyword=')) {
+    const text = await response.text().catch(error => error.message)
+    lastOrderResponseSummary = `${response.status()} ${response.url()} ${text.slice(0, 500)}`
+  }
+})
 
 try {
   const adminAuth = await apiPost('/auth/login', { username: 'admin', password: '123456' }, '')
@@ -97,7 +114,18 @@ try {
   await page.getByRole('button', { name: '客户' }).click()
   await page.locator('.login-form .login-button').click()
   await expectText(page, '我的售后', 'demo customer redirects to customer after-sales')
-  const demoCustomer = await page.evaluate(() => JSON.parse(localStorage.getItem('returns_assistant_user') || '{}'))
+  const demoCustomer = await apiPost('/auth/login', { username: 'demo_customer', password: '123456' }, '')
+  const browserCustomerToken = demoCustomer.token
+  await page.evaluate(user => {
+    localStorage.setItem('returns_assistant_token', user.token)
+    localStorage.setItem('returns_assistant_user', JSON.stringify({
+      userId: user.userId,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      expiresAt: user.expiresAt
+    }))
+  }, demoCustomer)
   const orderNoForUiApply = 'BROWSER' + Date.now()
   await apiPost('/orders', {
     orderNo: orderNoForUiApply,
@@ -115,10 +143,23 @@ try {
   })
   const seededOrder = await apiGet(`/orders/no/${orderNoForUiApply}`)
   seededCustomerOrderId = seededOrder?.id
-  await page.getByPlaceholder('订单号或商品名').fill(orderNoForUiApply)
-  await page.getByRole('button', { name: '查询' }).first().click()
-  await expectText(page, orderNoForUiApply, 'customer seeded order visible')
-  await page.getByRole('button', { name: '申请' }).nth(1).click()
+  const seededCustomerOrderPage = await apiGet(`/orders?page=1&pageSize=8&keyword=${orderNoForUiApply}`, browserCustomerToken)
+  record('customer seeded order api visible', seededCustomerOrderPage.total === 1, `total=${seededCustomerOrderPage.total}, user=${demoCustomer.userId}`)
+  await page.goto(`${baseUrl}/customer/after-sales`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '我的订单', 'customer after-sale center reloaded after seeding order')
+  const customerOrderPanel = page.locator('.workspace-grid .panel').first()
+  await customerOrderPanel.locator('input').first().fill(orderNoForUiApply)
+  await Promise.all([
+    page.waitForResponse(response => response.url().includes('/api/orders') && response.url().includes(`keyword=${orderNoForUiApply}`), { timeout: 30000 }),
+    customerOrderPanel.locator('button').first().click()
+  ])
+  await expectVisibleBodyText(page, orderNoForUiApply, 'customer seeded order visible')
+  await customerOrderPanel.locator('.el-table__body-wrapper tbody tr')
+    .filter({ hasText: orderNoForUiApply })
+    .first()
+    .locator('button')
+    .first()
+    .click()
   await expectText(page, '申请售后', 'customer after-sale apply dialog visible')
   await page.locator('textarea[placeholder*="请说明问题"]').fill('浏览器自动化提交售后申请：商品存在质量问题，需要退货退款。')
   await page.getByRole('button', { name: '提交申请' }).click()
@@ -130,7 +171,7 @@ try {
   await page.locator('header').getByRole('button', { name: /退出/ }).click()
   await expectText(page, '管理员登录', 'registered customer logout returns login')
   await page.locator('.login-form .login-button').click()
-  await expectText(page, '答辩展示中心', 'login redirects to showcase')
+  await expectText(page, '售后审核工作台', 'admin login redirects to after-sale review')
   await expectText(page, '退换货客服', 'layout brand visible')
   const demoCustomerPage = await apiGet('/orders?page=1&pageSize=1')
   const demoCustomerId = demoCustomerPage.rows?.[0]?.userId || 1
@@ -215,9 +256,20 @@ try {
   await page.getByRole('button', { name: '客户' }).click()
   await page.locator('.login-form .login-button').click()
   await expectText(page, '我的售后', 'demo customer back to after-sales for review')
-  await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
-  await expectText(page, reviewOrderNo, 'customer completed after-sale visible')
-  await page.getByText(reviewOrderNo, { exact: false }).first().click()
+  await page.evaluate(user => {
+    localStorage.setItem('returns_assistant_token', user.token)
+    localStorage.setItem('returns_assistant_user', JSON.stringify({
+      userId: user.userId,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      expiresAt: user.expiresAt
+    }))
+  }, demoCustomerAuth)
+  const customerReviewApplication = await apiGet(`/customer/after-sales/${seededReviewApplicationId}`, demoCustomerAuth.token)
+  record('customer completed after-sale api visible', customerReviewApplication.orderNo === reviewOrderNo && customerReviewApplication.status === 'COMPLETED', `status=${customerReviewApplication.status},order=${customerReviewApplication.orderNo}`)
+  await page.goto(`${baseUrl}/customer/after-sales?focus=${seededReviewApplicationId}`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectVisibleBodyText(page, reviewOrderNo, 'customer completed after-sale visible')
   await page.getByRole('button', { name: '评价服务' }).click()
   await expectText(page, '评价服务', 'customer review dialog visible')
   await page.getByPlaceholder('例如：响应快、处理清楚、还需跟进').fill('响应快,处理清楚')
@@ -230,7 +282,7 @@ try {
   await expectText(page, '管理员登录', 'customer logout before profile')
   await page.getByRole('button', { name: '管理员' }).click()
   await page.locator('.login-form .login-button').click()
-  await expectText(page, '答辩展示中心', 'admin login before customer profile')
+  await expectText(page, '售后审核工作台', 'admin login before customer profile')
   await page.goto(`${baseUrl}/admin/customers/profile?userId=${demoCustomerAuth.userId}`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '客户画像', 'admin customer profile page visible')
   await expectText(page, '服务评价', 'admin customer profile reviews visible')

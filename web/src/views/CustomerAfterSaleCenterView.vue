@@ -251,7 +251,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
@@ -266,6 +266,7 @@ import {
 } from '../api/customerAfterSaleApi'
 
 const router = useRouter()
+const route = useRoute()
 const orderQuery = reactive({ page: 1, pageSize: 8, keyword: '' })
 const afterSaleQuery = reactive({ page: 1, pageSize: 8, status: '' })
 const orders = ref([])
@@ -317,6 +318,11 @@ async function loadAfterSales() {
     const data = await pageCustomerAfterSales(afterSaleQuery)
     afterSales.value = data?.rows || []
     afterSaleTotal.value = data?.total || 0
+    const focusId = Number(route.query.focus || 0)
+    if (focusId) {
+      await selectAfterSale({ id: focusId })
+      return
+    }
     if (!selectedAfterSale.value && afterSales.value.length) {
       await selectAfterSale(afterSales.value[0])
     }

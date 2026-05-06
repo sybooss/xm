@@ -99,6 +99,24 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public UserAccount requireAdmin(String token) {
+        UserAccount user = requireUser(token);
+        if (!"ADMIN".equals(user.getRole())) {
+            throw new BusinessException("权限不足，仅管理员可执行该操作");
+        }
+        return user;
+    }
+
+    @Override
+    public UserAccount requireCustomer(String token) {
+        UserAccount user = requireUser(token);
+        if (!"CUSTOMER".equals(user.getRole())) {
+            throw new BusinessException("权限不足，仅客户可使用顾客端接口");
+        }
+        return user;
+    }
+
+    @Override
     public void logout(String token) {
         String normalized = normalize(token);
         if (hasText(normalized)) {

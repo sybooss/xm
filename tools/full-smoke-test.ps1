@@ -19,6 +19,7 @@ $created = @{
     sessionId = $null
     ticketId = $null
 }
+$otherCustomerToken = $null
 
 function U($codes) {
     return -join ($codes | ForEach-Object { [char]$_ })
@@ -97,6 +98,16 @@ function Api-Get-Text($path) {
     return $response.Content
 }
 
+function Api-Get-Raw($path) {
+    $headers = Auth-Headers
+    $response = Invoke-WebRequest -Uri "$base$path" -Method Get -Headers $headers -TimeoutSec 60 -UseBasicParsing
+    return $response.Content | ConvertFrom-Json
+}
+
+function Is-Rejected($response) {
+    return $response.code -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$response.msg)
+}
+
 function Auth-Headers() {
     if ($script:authToken) {
         return @{ Authorization = "Bearer $script:authToken" }
@@ -152,6 +163,20 @@ try {
     $customerToken = $registeredLogin.token
     $customerUserId = $registeredLogin.userId
     Add-Result "auth registered customer login" ($registeredLogin.username -eq $registerUsername -and $registeredLogin.role -eq "CUSTOMER") "role=$($registeredLogin.role)"
+
+    $otherCustomerLogin = Api-Post "/auth/login" @{ username = "demo_customer"; password = "123456" }
+    $otherCustomerToken = $otherCustomerLogin.token
+    Add-Result "auth demo customer login for permission checks" ($otherCustomerLogin.role -eq "CUSTOMER" -and $otherCustomerLogin.userId -ne $customerUserId) "user=$($otherCustomerLogin.username),role=$($otherCustomerLogin.role)"
+
+    $script:authToken = $customerToken
+    $blockedAdminQueue = Api-Get-Raw "/admin/after-sales?page=1&pageSize=1"
+    Add-Result "permission customer blocked admin after-sales" (Is-Rejected $blockedAdminQueue) $blockedAdminQueue.msg
+    $blockedTicketQueue = Api-Get-Raw "/service-tickets?page=1&pageSize=1"
+    Add-Result "permission customer blocked service ticket queue" (Is-Rejected $blockedTicketQueue) $blockedTicketQueue.msg
+
+    $script:authToken = $adminToken
+    $blockedCustomerCenter = Api-Get-Raw "/customer/after-sales?page=1&pageSize=1"
+    Add-Result "permission admin blocked customer after-sales" (Is-Rejected $blockedCustomerCenter) $blockedCustomerCenter.msg
 
     $script:authToken = $adminToken
 
@@ -291,6 +316,15 @@ try {
                       $customerAfterSaleDetail.processLogs[0].action -eq "SUBMIT"
     Add-Result "real after-sale customer submit/timeline" $customerFlowOk "id=$($created.realAfterSaleId),status=$($realApplication.status),logs=$(@($customerAfterSaleDetail.processLogs).Count)"
 
+    $script:authToken = $otherCustomerToken
+    $blockedOtherCustomerDetail = Api-Get-Raw "/customer/after-sales/$($created.realAfterSaleId)"
+    Add-Result "permission other customer blocked after-sale detail" (Is-Rejected $blockedOtherCustomerDetail) $blockedOtherCustomerDetail.msg
+    $blockedOtherCustomerEvidence = Api-Post-Raw "/customer/after-sales/$($created.realAfterSaleId)/evidence" @{
+        evidenceType = "TEXT"
+        content = "Unauthorized evidence should be rejected"
+    }
+    Add-Result "permission other customer blocked evidence submit" (Is-Rejected $blockedOtherCustomerEvidence) $blockedOtherCustomerEvidence.msg
+
     $script:authToken = $adminToken
     $adminAfterSales = Api-Get "/admin/after-sales?page=1&pageSize=10&status=SUBMITTED&keyword=$($realApplication.applicationNo)"
     Add-Result "real after-sale admin queue" ($adminAfterSales.total -ge 1) "total=$($adminAfterSales.total)"
@@ -419,6 +453,18 @@ try {
         remark = "Auto admin completed reviewable after-sale flow"
     }
     Add-Result "real after-sale admin complete for review" ($reviewCompleted.status -eq "COMPLETED") "status=$($reviewCompleted.status)"
+
+    $blockedAdminReview = Api-Post-Raw "/customer/after-sales/$($created.reviewAfterSaleId)/reviews" @{
+        rating = 5
+        tags = "should be rejected"
+        comment = "Admin cannot submit a customer review"
+    }
+    Add-Result "permission admin blocked customer review submit" (Is-Rejected $blockedAdminReview) $blockedAdminReview.msg
+
+    $script:authToken = $otherCustomerToken
+    $blockedOtherCustomerReview = Api-Get-Raw "/customer/after-sales/$($created.reviewAfterSaleId)/reviews"
+    Add-Result "permission other customer blocked review read" (Is-Rejected $blockedOtherCustomerReview) $blockedOtherCustomerReview.msg
+
     $script:authToken = $customerToken
     $review = Api-Post "/customer/after-sales/$($created.reviewAfterSaleId)/reviews" @{
         rating = 5

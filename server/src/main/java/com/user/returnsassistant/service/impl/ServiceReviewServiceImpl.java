@@ -70,8 +70,11 @@ public class ServiceReviewServiceImpl implements ServiceReviewService {
     }
 
     @Override
-    public ServiceReview getByApplicationId(Long applicationId) {
-        requireApplication(applicationId);
+    public ServiceReview getByApplicationId(Long applicationId, UserAccount customer) {
+        AfterSaleApplication application = requireApplication(applicationId);
+        if (!Objects.equals(application.getUserId(), customer.getId())) {
+            throw new BusinessException("只能查看自己的服务评价");
+        }
         return reviewMapper.getByApplicationId(applicationId);
     }
 

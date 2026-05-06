@@ -12,5 +12,9 @@ public interface AuthService {
 
     UserAccount requireUser(String token);
 
+    UserAccount requireAdmin(String token);
+
+    UserAccount requireCustomer(String token);
+
     void logout(String token);
 }

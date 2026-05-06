@@ -10,7 +10,7 @@ import java.util.List;
 public interface ServiceReviewService {
     ServiceReview create(Long applicationId, ServiceReviewRequest request, UserAccount customer);
 
-    ServiceReview getByApplicationId(Long applicationId);
+    ServiceReview getByApplicationId(Long applicationId, UserAccount customer);
 
     List<ServiceReview> listByUserId(Long userId);
 

@@ -26,14 +26,14 @@ public class ServiceReviewController {
     public Result create(@PathVariable Long applicationId,
                          @RequestBody ServiceReviewRequest reviewRequest,
                          HttpServletRequest request) {
-        UserAccount customer = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount customer = authService.requireCustomer(request.getHeader("Authorization"));
         return Result.success(reviewService.create(applicationId, reviewRequest, customer));
     }
 
     @GetMapping("/customer/after-sales/{applicationId}/reviews")
     public Result getByApplicationId(@PathVariable Long applicationId, HttpServletRequest request) {
-        authService.requireUser(request.getHeader("Authorization"));
-        return Result.success(reviewService.getByApplicationId(applicationId));
+        UserAccount customer = authService.requireCustomer(request.getHeader("Authorization"));
+        return Result.success(reviewService.getByApplicationId(applicationId, customer));
     }
 
     @GetMapping("/admin/customers/{userId}/profile")

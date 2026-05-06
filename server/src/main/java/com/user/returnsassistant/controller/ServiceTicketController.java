@@ -48,7 +48,7 @@ public class ServiceTicketController {
     @PutMapping("/service-tickets/{id}")
     @OperatorAnno
     public Result update(@PathVariable Long id, @RequestBody ServiceTicket ticket, HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         ticketService.update(id, ticket);
         ServiceTicket updated = ticketService.getById(id);
         afterSaleApplicationService.appendTicketProcessLog(id, "UPDATE_TICKET", "更新关联工单状态：" + updated.getStatus(), admin);
@@ -69,6 +69,7 @@ public class ServiceTicketController {
     }
 
     @PostMapping("/chat-sessions/{sessionId}/service-tickets")
+    @OperatorAnno
     public Result createBySession(@PathVariable Long sessionId, @RequestBody ServiceTicket ticket, HttpServletRequest request) {
         ensureSessionAccess(sessionId, request);
         ticket.setSessionId(sessionId);

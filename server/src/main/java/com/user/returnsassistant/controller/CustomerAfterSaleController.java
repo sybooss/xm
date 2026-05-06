@@ -1,11 +1,11 @@
 package com.user.returnsassistant.controller;
 
-import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.pojo.AfterSaleApplicationCreateRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
 import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.UserAccount;
+import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
 import com.user.returnsassistant.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,26 +27,20 @@ public class CustomerAfterSaleController {
 
     @GetMapping
     public Result page(AfterSaleApplicationSearch search, HttpServletRequest request) {
-        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
-        if ("ADMIN".equals(user.getRole())) {
-            throw new BusinessException("管理员请使用管理端售后接口");
-        }
+        UserAccount user = authService.requireCustomer(request.getHeader("Authorization"));
         search.setUserId(user.getId());
         return Result.success(afterSaleApplicationService.page(search));
     }
 
     @PostMapping
     public Result create(@RequestBody AfterSaleApplicationCreateRequest createRequest, HttpServletRequest request) {
-        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
-        if ("ADMIN".equals(user.getRole())) {
-            throw new BusinessException("管理员不能代替顾客从顾客端提交售后");
-        }
+        UserAccount user = authService.requireCustomer(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.create(createRequest, user));
     }
 
     @GetMapping("/{id}")
     public Result getById(@PathVariable Long id, HttpServletRequest request) {
-        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount user = authService.requireCustomer(request.getHeader("Authorization"));
         var application = afterSaleApplicationService.getById(id);
         if (!application.getUserId().equals(user.getId())) {
             throw new BusinessException("只能查看自己的售后申请");
@@ -56,7 +50,7 @@ public class CustomerAfterSaleController {
 
     @PostMapping("/{id}/evidence")
     public Result addEvidence(@PathVariable Long id, @RequestBody AfterSaleEvidenceRequest evidenceRequest, HttpServletRequest request) {
-        UserAccount user = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount user = authService.requireCustomer(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.addEvidence(id, evidenceRequest, user));
     }
 }
