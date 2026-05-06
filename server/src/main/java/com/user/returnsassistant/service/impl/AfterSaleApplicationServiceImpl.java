@@ -63,6 +63,7 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         }
         application.setProcessLogs(processLogMapper.listByApplicationId(id));
         application.setEvidences(evidenceMapper.listByApplicationId(id));
+        hydrateCustomerResult(application);
         return application;
     }
 
@@ -377,5 +378,83 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
             return "RETURN_APPLYING";
         }
         return "RETURN_APPLYING";
+    }
+
+    private void hydrateCustomerResult(AfterSaleApplication application) {
+        if (application == null) {
+            return;
+        }
+        List<AfterSaleProcessLog> logs = application.getProcessLogs() == null ? List.of() : application.getProcessLogs();
+        AfterSaleProcessLog finalDecision = latestLog(logs, "CONFIRM", "REJECT", "APPROVE", "REQUEST_MORE_EVIDENCE");
+        AfterSaleProcessLog finalReply = latestLog(logs, "USE_REPLY_DRAFT");
+        application.setCustomerResultSummary(buildCustomerResultSummary(application, finalDecision));
+        application.setCustomerFinalReply(finalReply == null ? null : extractCustomerReply(finalReply.getRemark()));
+        application.setCustomerNextAction(buildCustomerNextAction(application));
+    }
+
+    private AfterSaleProcessLog latestLog(List<AfterSaleProcessLog> logs, String... actions) {
+        Set<String> actionSet = Set.of(actions);
+        for (int i = logs.size() - 1; i >= 0; i--) {
+            AfterSaleProcessLog log = logs.get(i);
+            if (actionSet.contains(log.getAction())) {
+                return log;
+            }
+        }
+        return null;
+    }
+
+    private String extractCustomerReply(String remark) {
+        if (!hasText(remark)) {
+            return null;
+        }
+        String marker = "摘要：";
+        int markerIndex = remark.indexOf(marker);
+        if (markerIndex >= 0 && markerIndex + marker.length() < remark.length()) {
+            return remark.substring(markerIndex + marker.length()).trim();
+        }
+        return remark.trim();
+    }
+
+    private String buildCustomerResultSummary(AfterSaleApplication application, AfterSaleProcessLog finalDecision) {
+        String amountText = application.getApprovedAmount() == null
+                ? "金额以处理记录为准"
+                : "审核金额 ¥" + application.getApprovedAmount().stripTrailingZeros().toPlainString();
+        if ("COMPLETED".equals(application.getStatus())) {
+            String remark = finalDecision == null || !hasText(finalDecision.getRemark())
+                    ? "管理员确认售后处理完成"
+                    : finalDecision.getRemark();
+            return "处理完成：" + amountText + "。客服说明：" + remark;
+        }
+        if ("REJECTED".equals(application.getStatus())) {
+            String remark = finalDecision == null || !hasText(finalDecision.getRemark())
+                    ? "申请未通过审核"
+                    : finalDecision.getRemark();
+            return "申请已驳回。原因：" + remark;
+        }
+        if ("NEED_MORE_EVIDENCE".equals(application.getStatus())) {
+            String remark = finalDecision == null || !hasText(finalDecision.getRemark())
+                    ? "请补充商品问题、物流或其他说明"
+                    : finalDecision.getRemark();
+            return "等待补充材料：" + remark;
+        }
+        if ("WAIT_BUYER_SEND".equals(application.getStatus()) || "REFUNDING".equals(application.getStatus()) || "EXCHANGING".equals(application.getStatus())) {
+            return "审核通过：" + amountText + "。请按下一步提示继续处理。";
+        }
+        return "当前申请仍在处理中，请关注时间线和下一步提示。";
+    }
+
+    private String buildCustomerNextAction(AfterSaleApplication application) {
+        return switch (application.getStatus()) {
+            case "SUBMITTED", "UNDER_REVIEW" -> "等待管理员审核，期间可继续补充凭证。";
+            case "NEED_MORE_EVIDENCE" -> "请补充物流单号、图片链接或文字说明，提交后客服会复核。";
+            case "WAIT_BUYER_SEND" -> "请按客服要求寄回商品，并在凭证材料中填写物流单号。";
+            case "WAIT_SELLER_RECEIVE" -> "等待商家确认收货。";
+            case "REFUNDING" -> "等待退款处理完成，如超时可在线咨询。";
+            case "EXCHANGING" -> "等待换货商品发出，如地址有变请及时联系。";
+            case "REJECTED" -> "查看驳回原因，必要时整理新凭证后重新申请。";
+            case "COMPLETED" -> "处理已完成，可提交服务评价并保留处理记录。";
+            case "CANCELLED" -> "申请已取消，无需继续处理。";
+            default -> "查看时间线并等待客服下一步通知。";
+        };
     }
 }

@@ -349,7 +349,9 @@ try {
     $customerEvidenceDetail = Api-Get "/customer/after-sales/$($created.realAfterSaleId)"
     $evidenceOk = $evidence.evidenceType -eq "LOGISTICS_NO" -and
                   @($customerEvidenceDetail.evidences).Count -ge 1 -and
-                  (@($customerEvidenceDetail.processLogs | Where-Object { $_.action -eq "SUPPLEMENT_EVIDENCE" }).Count -ge 1)
+                  (@($customerEvidenceDetail.processLogs | Where-Object { $_.action -eq "SUPPLEMENT_EVIDENCE" }).Count -ge 1) -and
+                  $customerEvidenceDetail.customerResultSummary.Length -gt 10 -and
+                  $customerEvidenceDetail.customerNextAction.Length -gt 10
     Add-Result "real after-sale customer evidence chain" $evidenceOk "evidences=$(@($customerEvidenceDetail.evidences).Count),logs=$(@($customerEvidenceDetail.processLogs).Count)"
 
     $script:authToken = $adminToken
@@ -402,7 +404,8 @@ try {
     }
     $usedDraftDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
     $usedDraftOk = $usedDraft.status -eq "USED" -and
-                   (@($usedDraftDetail.processLogs | Where-Object { $_.action -eq "USE_REPLY_DRAFT" }).Count -ge 1)
+                   (@($usedDraftDetail.processLogs | Where-Object { $_.action -eq "USE_REPLY_DRAFT" }).Count -ge 1) -and
+                   -not [string]::IsNullOrWhiteSpace([string]$usedDraftDetail.customerFinalReply)
     Add-Result "real after-sale AI copilot draft use/log" $usedDraftOk "status=$($usedDraft.status)"
 
     $discardDraft = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts" @{
@@ -452,7 +455,10 @@ try {
     $reviewCompleted = Api-Post "/admin/after-sales/$($created.reviewAfterSaleId)/complete" @{
         remark = "Auto admin completed reviewable after-sale flow"
     }
-    Add-Result "real after-sale admin complete for review" ($reviewCompleted.status -eq "COMPLETED") "status=$($reviewCompleted.status)"
+    $reviewCompletedOk = $reviewCompleted.status -eq "COMPLETED" -and
+                         $reviewCompleted.customerResultSummary.Length -gt 10 -and
+                         $reviewCompleted.customerNextAction.Length -gt 10
+    Add-Result "real after-sale admin complete for review" $reviewCompletedOk "status=$($reviewCompleted.status),result=$($reviewCompleted.customerResultSummary)"
 
     $blockedAdminReview = Api-Post-Raw "/customer/after-sales/$($created.reviewAfterSaleId)/reviews" @{
         rating = 5
@@ -480,8 +486,11 @@ try {
     $profileOk = $profile.customer.id -eq $customerUserId -and
                  $profile.reviewCount -ge 1 -and
                  $profile.averageRating -ge 5 -and
-                 @($profile.reviews).Count -ge 1
-    Add-Result "admin customer profile aggregates reviews" $profileOk "reviews=$($profile.reviewCount),avg=$($profile.averageRating),risk=$($profile.riskLevel)"
+                 @($profile.reviews).Count -ge 1 -and
+                 $profile.recentAfterSaleCount -ge 1 -and
+                 $null -ne $profile.complaintRate -and
+                 -not [string]::IsNullOrWhiteSpace([string]$profile.operationSuggestion)
+    Add-Result "admin customer profile aggregates reviews" $profileOk "reviews=$($profile.reviewCount),avg=$($profile.averageRating),recent30=$($profile.recentAfterSaleCount),complaintRate=$($profile.complaintRate),risk=$($profile.riskLevel)"
 
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"

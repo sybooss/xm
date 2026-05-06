@@ -42,6 +42,33 @@
         <include refid="SearchWhere"/>
     </select>
 
+    <select id="countByUserSince" resultType="long">
+        select count(*)
+        from after_sale_application
+        where user_id=#{userId}
+          and created_at &gt;= date_sub(now(), interval #{days} day)
+    </select>
+
+    <select id="countByUserServiceType" resultType="long">
+        select count(*)
+        from after_sale_application
+        where user_id=#{userId}
+          and service_type=#{serviceType}
+    </select>
+
+    <select id="countActiveByUserId" resultType="long">
+        select count(*)
+        from after_sale_application
+        where user_id=#{userId}
+          and status not in ('REJECTED', 'COMPLETED', 'CANCELLED')
+    </select>
+
+    <select id="countDistinctOrdersByUserId" resultType="long">
+        select count(distinct order_id)
+        from after_sale_application
+        where user_id=#{userId}
+    </select>
+
     <select id="page" resultType="com.user.returnsassistant.pojo.AfterSaleApplication">
         <include refid="BaseSelect"/>
         <include refid="SearchWhere"/>

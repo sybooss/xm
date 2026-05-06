@@ -13,6 +13,18 @@
         </if>
     </select>
 
+    <select id="sumAmount" resultType="java.math.BigDecimal">
+        select coalesce(sum(order_amount), 0) from demo_order
+        where 1=1
+        <if test="s.userId != null">and user_id=#{s.userId}</if>
+        <if test="s.orderStatus != null and s.orderStatus != ''">and order_status=#{s.orderStatus}</if>
+        <if test="s.logisticsStatus != null and s.logisticsStatus != ''">and logistics_status=#{s.logisticsStatus}</if>
+        <if test="s.afterSaleStatus != null and s.afterSaleStatus != ''">and after_sale_status=#{s.afterSaleStatus}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (order_no like concat('%',#{s.keyword},'%') or product_name like concat('%',#{s.keyword},'%'))
+        </if>
+    </select>
+
     <select id="page" resultType="com.user.returnsassistant.pojo.DemoOrder">
         select * from demo_order
         where 1=1

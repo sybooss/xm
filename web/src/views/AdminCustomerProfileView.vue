@@ -27,6 +27,22 @@
         <div class="metric-label">风险等级</div>
         <div class="metric-value"><StatusTag :value="profile.riskLevel" /></div>
       </div>
+      <div class="metric">
+        <div class="metric-label">近30天售后</div>
+        <div class="metric-value">{{ profile.recentAfterSaleCount }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">投诉占比</div>
+        <div class="metric-value">{{ rateText(profile.complaintRate) }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">低分评价</div>
+        <div class="metric-value">{{ profile.lowRatingCount }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">重复售后</div>
+        <div class="metric-value">{{ profile.repeatAfterSaleCount }}</div>
+      </div>
     </section>
 
     <section v-if="profile" class="profile-grid">
@@ -45,10 +61,14 @@
             <el-descriptions-item label="人工工单">{{ profile.ticketCount }}</el-descriptions-item>
             <el-descriptions-item label="评价数">{{ profile.reviewCount }}</el-descriptions-item>
             <el-descriptions-item label="平均评分">{{ averageRating }}</el-descriptions-item>
+            <el-descriptions-item label="近30天售后">{{ profile.recentAfterSaleCount }}</el-descriptions-item>
+            <el-descriptions-item label="投诉占比">{{ rateText(profile.complaintRate) }}</el-descriptions-item>
+            <el-descriptions-item label="低分原因" :span="2">{{ profile.lowRatingReasons || '暂无低分评价' }}</el-descriptions-item>
           </el-descriptions>
           <div class="risk-box">
             <h4>运营判断</h4>
             <p>{{ riskText }}</p>
+            <p class="suggestion">{{ profile.operationSuggestion || '按标准售后流程处理。' }}</p>
           </div>
         </div>
       </div>
@@ -136,10 +156,10 @@ const averageRating = computed(() => {
 const riskText = computed(() => {
   const risk = profile.value?.riskLevel
   if (risk === 'HIGH') {
-    return '该客户存在低评分、重复售后或多次人工工单信号，建议优先人工跟进并保留处理证据。'
+    return `该客户存在高风险信号：低分评价 ${profile.value?.lowRatingCount || 0} 次、重复售后 ${profile.value?.repeatAfterSaleCount || 0} 次、人工工单 ${profile.value?.ticketCount || 0} 次。`
   }
   if (risk === 'MEDIUM') {
-    return '该客户存在一定售后或工单频次，建议客服在回复中明确下一步动作和时限。'
+    return `该客户存在中等风险信号：近30天售后 ${profile.value?.recentAfterSaleCount || 0} 次，投诉占比 ${rateText(profile.value?.complaintRate)}。`
   }
   return '客户历史较稳定，可按标准售后流程处理。'
 })
@@ -154,6 +174,13 @@ function money(value) {
     return '-'
   }
   return `￥${Number(value).toFixed(2)}`
+}
+
+function rateText(value) {
+  if (value === null || typeof value === 'undefined') {
+    return '0%'
+  }
+  return `${Number(value).toFixed(1)}%`
 }
 
 onMounted(() => loadProfile(queryUserId.value))
@@ -188,6 +215,11 @@ onMounted(() => loadProfile(queryUserId.value))
   margin: 0;
   color: var(--text-muted);
   line-height: 1.6;
+}
+
+.risk-box .suggestion {
+  margin-top: 8px;
+  color: var(--text);
 }
 
 .review-item {

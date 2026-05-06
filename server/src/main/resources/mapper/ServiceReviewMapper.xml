@@ -28,6 +28,22 @@
         select count(*) from service_review where user_id=#{userId}
     </select>
 
+    <select id="countLowRatingByUserId" resultType="long">
+        select count(*)
+        from service_review
+        where user_id=#{userId}
+          and rating &lt;= #{maxRating}
+    </select>
+
+    <select id="lowRatingReasonsByUserId" resultType="string">
+        select coalesce(nullif(tags, ''), nullif(comment, ''), concat(rating, '分评价')) as reason
+        from service_review
+        where user_id=#{userId}
+          and rating &lt;= #{maxRating}
+        order by created_at desc, id desc
+        limit #{limit}
+    </select>
+
     <select id="averageRatingByUserId" resultType="double">
         select avg(rating) from service_review where user_id=#{userId}
     </select>

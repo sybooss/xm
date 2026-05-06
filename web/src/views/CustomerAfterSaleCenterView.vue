@@ -136,6 +136,22 @@
           <el-descriptions-item label="申请原因" :span="2">{{ selectedAfterSale.reasonText }}</el-descriptions-item>
         </el-descriptions>
 
+        <div class="result-box">
+          <div class="result-header">
+            <h4>处理结果说明</h4>
+            <StatusTag :value="selectedAfterSale.status" />
+          </div>
+          <p>{{ selectedAfterSale.customerResultSummary || resultSummary(selectedAfterSale) }}</p>
+          <div v-if="selectedAfterSale.customerFinalReply" class="final-reply">
+            <strong>客服最终回复</strong>
+            <span>{{ selectedAfterSale.customerFinalReply }}</span>
+          </div>
+          <div class="next-action">
+            <strong>下一步</strong>
+            <span>{{ selectedAfterSale.customerNextAction || nextActionLabel(selectedAfterSale.status) }}</span>
+          </div>
+        </div>
+
         <div class="timeline-box">
           <h4>处理时间线</h4>
           <el-timeline>
@@ -440,6 +456,27 @@ function nextActionLabel(status) {
   return map[status] || '查看处理记录'
 }
 
+function resultSummary(item) {
+  if (!item) {
+    return '请选择售后申请查看处理结果。'
+  }
+  if (item.status === 'COMPLETED') {
+    return `处理完成，审核金额为 ${money(item.approvedAmount)}。`
+  }
+  if (item.status === 'REJECTED') {
+    const rejectLog = [...(item.processLogs || [])].reverse().find(log => log.action === 'REJECT')
+    return `申请已驳回。${rejectLog?.remark || '请查看处理时间线中的驳回原因。'}`
+  }
+  if (item.status === 'NEED_MORE_EVIDENCE') {
+    const evidenceLog = [...(item.processLogs || [])].reverse().find(log => log.action === 'REQUEST_MORE_EVIDENCE')
+    return `等待补充材料。${evidenceLog?.remark || '请补充客服要求的凭证。'}`
+  }
+  if (['WAIT_BUYER_SEND', 'REFUNDING', 'EXCHANGING'].includes(item.status)) {
+    return `审核已通过，审核金额为 ${money(item.approvedAmount)}。`
+  }
+  return '当前申请仍在处理中，请关注时间线和下一步提示。'
+}
+
 function defaultApplyForm() {
   return {
     orderId: null,
@@ -508,7 +545,58 @@ onMounted(reloadAll)
 }
 
 .timeline-box {
+  grid-column: 1 / -1;
   min-width: 0;
+}
+
+.result-box {
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.result-header,
+.final-reply,
+.next-action {
+  display: flex;
+  gap: 10px;
+}
+
+.result-header {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.result-header h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.result-box p {
+  margin: 0 0 10px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.final-reply,
+.next-action {
+  align-items: flex-start;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.final-reply + .next-action {
+  margin-top: 8px;
+}
+
+.final-reply strong,
+.next-action strong {
+  flex: 0 0 78px;
+  color: var(--text);
 }
 
 .timeline-box h4 {

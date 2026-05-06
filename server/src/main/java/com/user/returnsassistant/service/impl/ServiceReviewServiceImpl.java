@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class ServiceReviewServiceImpl implements ServiceReviewService {
@@ -99,10 +100,7 @@ public class ServiceReviewServiceImpl implements ServiceReviewService {
         List<DemoOrder> orders = orderMapper.page(orderSearch);
         profile.setRecentOrders(orders);
         profile.setOrderCount(orderMapper.count(orderSearch));
-        profile.setTotalOrderAmount(orders.stream()
-                .map(DemoOrder::getOrderAmount)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        profile.setTotalOrderAmount(defaultAmount(orderMapper.sumAmount(orderSearch)));
 
         AfterSaleApplicationSearch afterSaleSearch = new AfterSaleApplicationSearch();
         afterSaleSearch.setUserId(userId);
@@ -111,9 +109,11 @@ public class ServiceReviewServiceImpl implements ServiceReviewService {
         List<AfterSaleApplication> afterSales = applicationMapper.page(afterSaleSearch);
         profile.setRecentAfterSales(afterSales);
         profile.setAfterSaleCount(applicationMapper.count(afterSaleSearch));
-        profile.setActiveAfterSaleCount(afterSales.stream()
-                .filter(item -> !List.of("REJECTED", "COMPLETED", "CANCELLED").contains(item.getStatus()))
-                .count());
+        profile.setActiveAfterSaleCount(applicationMapper.countActiveByUserId(userId));
+        profile.setComplaintCount(applicationMapper.countByUserServiceType(userId, "COMPLAINT"));
+        profile.setRecentAfterSaleCount(applicationMapper.countByUserSince(userId, 30));
+        profile.setRepeatAfterSaleCount(Math.max(0, profile.getAfterSaleCount() - applicationMapper.countDistinctOrdersByUserId(userId)));
+        profile.setComplaintRate(rate(profile.getComplaintCount(), profile.getAfterSaleCount()));
 
         List<ServiceTicket> tickets = ticketMapper.listByUserId(userId, 8);
         profile.setRecentTickets(tickets);
@@ -122,8 +122,11 @@ public class ServiceReviewServiceImpl implements ServiceReviewService {
         List<ServiceReview> reviews = reviewMapper.listByUserId(userId);
         profile.setReviews(reviews);
         profile.setReviewCount(reviewMapper.countByUserId(userId));
+        profile.setLowRatingCount(reviewMapper.countLowRatingByUserId(userId, 3));
+        profile.setLowRatingReasons(lowRatingReasons(userId));
         profile.setAverageRating(reviewMapper.averageRatingByUserId(userId));
         profile.setRiskLevel(resolveRisk(profile));
+        profile.setOperationSuggestion(buildOperationSuggestion(profile));
         return profile;
     }
 
@@ -150,13 +153,43 @@ public class ServiceReviewServiceImpl implements ServiceReviewService {
 
     private String resolveRisk(CustomerProfile profile) {
         double avg = profile.getAverageRating() == null ? 5.0 : profile.getAverageRating();
-        if (avg < 3.0 || profile.getAfterSaleCount() >= 4 || profile.getTicketCount() >= 3) {
+        if (avg < 3.0 || profile.getAfterSaleCount() >= 4 || profile.getTicketCount() >= 3 || profile.getLowRatingCount() >= 2) {
             return "HIGH";
         }
-        if (avg < 4.0 || profile.getAfterSaleCount() >= 2 || profile.getTicketCount() >= 1) {
+        if (avg < 4.0 || profile.getAfterSaleCount() >= 2 || profile.getTicketCount() >= 1 || profile.getRecentAfterSaleCount() >= 2 || profile.getComplaintCount() >= 1) {
             return "MEDIUM";
         }
         return "LOW";
+    }
+
+    private BigDecimal defaultAmount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private double rate(long numerator, long denominator) {
+        if (denominator <= 0) {
+            return 0.0;
+        }
+        return Math.round((numerator * 1000.0 / denominator)) / 10.0;
+    }
+
+    private String lowRatingReasons(Long userId) {
+        List<String> reasons = reviewMapper.lowRatingReasonsByUserId(userId, 3, 3).stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .collect(Collectors.toList());
+        return reasons.isEmpty() ? "暂无低分评价" : String.join("；", reasons);
+    }
+
+    private String buildOperationSuggestion(CustomerProfile profile) {
+        if ("HIGH".equals(profile.getRiskLevel())) {
+            return "建议安排资深客服跟进，优先解释处理结果、补齐证据链，并在完成后主动确认满意度。";
+        }
+        if ("MEDIUM".equals(profile.getRiskLevel())) {
+            return "建议在回复中明确处理时限和下一步动作，减少重复咨询和重复投诉。";
+        }
+        return "按标准售后流程处理即可，持续记录凭证和评价反馈。";
     }
 
     private String cleanText(String value, int maxLength) {

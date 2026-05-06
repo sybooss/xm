@@ -34,6 +34,9 @@ public class AfterSaleApplication {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime closedAt;
+    private String customerResultSummary;
+    private String customerFinalReply;
+    private String customerNextAction;
     private List<AfterSaleProcessLog> processLogs;
     private List<AfterSaleEvidence> evidences;
 }

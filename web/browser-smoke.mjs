@@ -267,9 +267,18 @@ try {
     }))
   }, demoCustomerAuth)
   const customerReviewApplication = await apiGet(`/customer/after-sales/${seededReviewApplicationId}`, demoCustomerAuth.token)
-  record('customer completed after-sale api visible', customerReviewApplication.orderNo === reviewOrderNo && customerReviewApplication.status === 'COMPLETED', `status=${customerReviewApplication.status},order=${customerReviewApplication.orderNo}`)
+  record(
+    'customer completed after-sale api visible',
+    customerReviewApplication.orderNo === reviewOrderNo &&
+      customerReviewApplication.status === 'COMPLETED' &&
+      customerReviewApplication.customerResultSummary?.includes('处理完成') &&
+      customerReviewApplication.customerNextAction?.includes('评价'),
+    `status=${customerReviewApplication.status},order=${customerReviewApplication.orderNo},result=${customerReviewApplication.customerResultSummary}`
+  )
   await page.goto(`${baseUrl}/customer/after-sales?focus=${seededReviewApplicationId}`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectVisibleBodyText(page, reviewOrderNo, 'customer completed after-sale visible')
+  await expectText(page, '处理结果说明', 'customer result explanation visible')
+  await expectText(page, '客服最终回复', 'customer final reply visible')
   await page.getByRole('button', { name: '评价服务' }).click()
   await expectText(page, '评价服务', 'customer review dialog visible')
   await page.getByPlaceholder('例如：响应快、处理清楚、还需跟进').fill('响应快,处理清楚')
@@ -288,6 +297,9 @@ try {
   await expectText(page, '服务评价', 'admin customer profile reviews visible')
   await expectText(page, '浏览器自动化评价', 'admin customer profile review content visible')
   await expectText(page, '风险等级', 'admin customer profile risk visible')
+  await expectText(page, '近30天售后', 'admin customer profile recent stats visible')
+  await expectText(page, '投诉占比', 'admin customer profile complaint rate visible')
+  await expectText(page, '低分原因', 'admin customer profile low rating reason visible')
   await page.goto(`${baseUrl}/showcase`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '闭环特色功能', 'showcase feature roadmap visible')
   await expectText(page, '演示流程', 'showcase demo flow visible')

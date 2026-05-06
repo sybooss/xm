@@ -9,6 +9,14 @@ import java.util.List;
 public interface AfterSaleApplicationMapper {
     long count(@Param("s") AfterSaleApplicationSearch search);
 
+    long countByUserSince(@Param("userId") Long userId, @Param("days") Integer days);
+
+    long countByUserServiceType(@Param("userId") Long userId, @Param("serviceType") String serviceType);
+
+    long countActiveByUserId(@Param("userId") Long userId);
+
+    long countDistinctOrdersByUserId(@Param("userId") Long userId);
+
     List<AfterSaleApplication> page(@Param("s") AfterSaleApplicationSearch search);
 
     AfterSaleApplication getById(@Param("id") Long id);
