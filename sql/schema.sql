@@ -147,13 +147,13 @@ CREATE TABLE IF NOT EXISTS after_sale_process_log (
   CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
   CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
-  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
   INDEX idx_after_sale_process_log_application (application_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 ALTER TABLE after_sale_process_log DROP CHECK ck_after_sale_process_log_action;
 ALTER TABLE after_sale_process_log
-  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
+  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
 
 CREATE TABLE IF NOT EXISTS after_sale_evidence (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -351,6 +351,34 @@ CREATE TABLE IF NOT EXISTS service_ticket (
   INDEX idx_ticket_order (order_id),
   INDEX idx_ticket_status (status, priority, created_at),
   INDEX idx_ticket_intent (intent_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS reply_draft (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  application_id BIGINT NOT NULL,
+  ticket_id BIGINT NULL,
+  draft_content TEXT NOT NULL,
+  source_type VARCHAR(30) NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+  risk_level VARCHAR(20) NOT NULL DEFAULT 'LOW',
+  knowledge_refs VARCHAR(1000) NULL,
+  ai_status VARCHAR(20) NULL,
+  ai_provider VARCHAR(50) NULL,
+  ai_model_name VARCHAR(80) NULL,
+  audit_remark VARCHAR(500) NULL,
+  created_by BIGINT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_reply_draft_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
+  CONSTRAINT fk_reply_draft_ticket FOREIGN KEY (ticket_id) REFERENCES service_ticket(id) ON DELETE SET NULL,
+  CONSTRAINT fk_reply_draft_creator FOREIGN KEY (created_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT ck_reply_draft_source CHECK (source_type IN ('AI', 'TEMPLATE', 'MANUAL')),
+  CONSTRAINT ck_reply_draft_status CHECK (status IN ('DRAFT', 'USED', 'DISCARDED')),
+  CONSTRAINT ck_reply_draft_risk CHECK (risk_level IN ('LOW', 'MEDIUM', 'HIGH')),
+  CONSTRAINT ck_reply_draft_ai_status CHECK (ai_status IS NULL OR ai_status IN ('SUCCESS', 'FAILED', 'SKIPPED')),
+  INDEX idx_reply_draft_application (application_id, status, created_at),
+  INDEX idx_reply_draft_ticket (ticket_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS process_trace (

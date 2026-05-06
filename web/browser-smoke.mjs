@@ -192,6 +192,13 @@ try {
   seededReviewTicketSessionId = linkedAfterSaleDetail.ticketId
     ? (await apiGet(`/service-tickets/${linkedAfterSaleDetail.ticketId}`)).sessionId
     : null
+  await page.getByRole('button', { name: '生成回复草稿' }).click()
+  await expectText(page, '回复草稿已生成', 'admin AI copilot draft toast')
+  await expectText(page, 'AI 副驾驶回复草稿', 'admin AI copilot panel visible')
+  await expectText(page, '草稿', 'admin AI copilot draft status visible')
+  await page.getByRole('button', { name: '采纳草稿' }).first().click()
+  await expectText(page, '回复草稿已采纳', 'admin AI copilot use draft toast')
+  await expectText(page, '已采纳', 'admin AI copilot used status visible')
   await page.getByRole('button', { name: '审核通过' }).click()
   await expectText(page, '售后申请已审核通过', 'admin after-sale approve toast')
   await expectText(page, '待买家寄回', 'admin after-sale approved status visible')

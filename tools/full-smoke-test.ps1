@@ -350,6 +350,36 @@ try {
                       (@($linkedTicketAfterSaleDetail.processLogs | Where-Object { $_.action -eq "UPDATE_TICKET" }).Count -ge 1)
     Add-Result "real after-sale linked ticket update/log" $updateTicketOk "status=$($linkedTicketUpdated.status),logs=$(@($linkedTicketAfterSaleDetail.processLogs).Count)"
 
+    $replyDraft = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts" @{
+        remark = "Auto admin requested AI copilot reply draft"
+    }
+    $draftList = Api-Get "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts"
+    $draftActions = @((Api-Get "/admin/after-sales/$($created.realAfterSaleId)").processLogs | ForEach-Object { $_.action })
+    $draftCreateOk = $replyDraft.status -eq "DRAFT" -and
+                     $replyDraft.draftContent.Length -gt 20 -and
+                     @($draftList | Where-Object { $_.id -eq $replyDraft.id }).Count -eq 1 -and
+                     $draftActions -contains "GENERATE_REPLY_DRAFT"
+    Add-Result "real after-sale AI copilot draft create/log" $draftCreateOk "source=$($replyDraft.sourceType),ai=$($replyDraft.aiStatus),risk=$($replyDraft.riskLevel)"
+
+    $usedDraft = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts/$($replyDraft.id)/use" @{
+        remark = "Auto admin used AI copilot reply draft"
+    }
+    $usedDraftDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $usedDraftOk = $usedDraft.status -eq "USED" -and
+                   (@($usedDraftDetail.processLogs | Where-Object { $_.action -eq "USE_REPLY_DRAFT" }).Count -ge 1)
+    Add-Result "real after-sale AI copilot draft use/log" $usedDraftOk "status=$($usedDraft.status)"
+
+    $discardDraft = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts" @{
+        remark = "Auto admin requested discardable AI copilot reply draft"
+    }
+    $discardedDraft = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts/$($discardDraft.id)/discard" @{
+        remark = "Auto admin discarded AI copilot reply draft"
+    }
+    $discardDraftDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $discardDraftOk = $discardedDraft.status -eq "DISCARDED" -and
+                      (@($discardDraftDetail.processLogs | Where-Object { $_.action -eq "DISCARD_REPLY_DRAFT" }).Count -ge 1)
+    Add-Result "real after-sale AI copilot draft discard/log" $discardDraftOk "status=$($discardedDraft.status)"
+
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"
         orderNo = "DD202604290001"

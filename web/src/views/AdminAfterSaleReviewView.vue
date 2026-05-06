@@ -108,6 +108,33 @@
             </div>
           </div>
 
+          <div class="ai-copilot-box">
+            <div class="copilot-header">
+              <div>
+                <h4>AI 副驾驶回复草稿</h4>
+                <p>只生成建议，不自动改状态；管理员可以采纳或废弃并留下审计记录。</p>
+              </div>
+              <el-button type="primary" :icon="Promotion" :loading="generatingDraft" @click="generateDraft">生成回复草稿</el-button>
+            </div>
+            <div v-if="!replyDrafts.length" class="empty-evidence">暂无回复草稿</div>
+            <div v-for="draft in replyDrafts" :key="draft.id" class="draft-item">
+              <div class="draft-meta">
+                <StatusTag :value="draft.sourceType" />
+                <StatusTag :value="draft.status" />
+                <StatusTag :value="draft.riskLevel" />
+                <span>{{ draft.createdAt }}</span>
+              </div>
+              <p>{{ draft.draftContent }}</p>
+              <div class="draft-foot">
+                <small>{{ draft.knowledgeRefs || '本地售后模板' }} · {{ draft.aiModelName || draft.aiProvider || 'local-rule-template' }}</small>
+                <div v-if="draft.status === 'DRAFT'" class="draft-actions">
+                  <el-button size="small" type="success" :loading="savingDraft" @click="useDraft(draft)">采纳草稿</el-button>
+                  <el-button size="small" type="danger" :loading="savingDraft" @click="discardDraft(draft)">废弃草稿</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="decision-box">
             <div class="decision-header">
               <div>
@@ -166,15 +193,19 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
-import { Check, Close, Refresh, Search, Ticket } from '@element-plus/icons-vue'
+import { Check, Close, Promotion, Refresh, Search, Ticket } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   approveAfterSale,
   createAfterSaleTicket,
+  discardReplyDraft,
+  generateReplyDraft,
   getAdminAfterSale,
+  listReplyDrafts,
   pageAdminAfterSales,
   rejectAfterSale,
-  requestAfterSaleEvidence
+  requestAfterSaleEvidence,
+  useReplyDraft
 } from '../api/adminAfterSaleApi'
 
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: '', priority: '' })
@@ -184,7 +215,10 @@ const total = ref(0)
 const loading = ref(false)
 const saving = ref(false)
 const creatingTicket = ref(false)
+const generatingDraft = ref(false)
+const savingDraft = ref(false)
 const selected = ref(null)
+const replyDrafts = ref([])
 const decisionForm = reactive({ approvedAmount: 0, remark: '' })
 
 const pendingCount = computed(() => applications.value.filter(item => ['SUBMITTED', 'UNDER_REVIEW'].includes(item.status)).length)
@@ -196,6 +230,7 @@ async function reload() {
   await loadApplications()
   if (selected.value) {
     selected.value = await getAdminAfterSale(selected.value.id)
+    await loadReplyDrafts()
     hydrateDecisionForm()
   }
 }
@@ -216,6 +251,7 @@ async function loadApplications() {
 
 async function selectApplication(row) {
   selected.value = await getAdminAfterSale(row.id)
+  await loadReplyDrafts()
   hydrateDecisionForm()
 }
 
@@ -274,9 +310,59 @@ async function createLinkedTicket() {
     })
     ElMessage.success(`已创建关联工单：${ticket.ticketNo}`)
     selected.value = await getAdminAfterSale(selected.value.id)
+    await loadReplyDrafts()
     await loadApplications()
   } finally {
     creatingTicket.value = false
+  }
+}
+
+async function loadReplyDrafts() {
+  if (!selected.value?.id) {
+    replyDrafts.value = []
+    return
+  }
+  replyDrafts.value = await listReplyDrafts(selected.value.id)
+}
+
+async function generateDraft() {
+  if (!selected.value) {
+    return
+  }
+  generatingDraft.value = true
+  try {
+    await generateReplyDraft(selected.value.id, {
+      remark: decisionForm.remark || '管理员请求 AI 副驾驶生成回复草稿。'
+    })
+    ElMessage.success('回复草稿已生成，等待管理员确认')
+    selected.value = await getAdminAfterSale(selected.value.id)
+    await loadReplyDrafts()
+  } finally {
+    generatingDraft.value = false
+  }
+}
+
+async function useDraft(draft) {
+  savingDraft.value = true
+  try {
+    await useReplyDraft(selected.value.id, draft.id, { remark: '管理员采纳该回复草稿。' })
+    ElMessage.success('回复草稿已采纳')
+    selected.value = await getAdminAfterSale(selected.value.id)
+    await loadReplyDrafts()
+  } finally {
+    savingDraft.value = false
+  }
+}
+
+async function discardDraft(draft) {
+  savingDraft.value = true
+  try {
+    await discardReplyDraft(selected.value.id, draft.id, { remark: '管理员废弃该回复草稿。' })
+    ElMessage.success('回复草稿已废弃')
+    selected.value = await getAdminAfterSale(selected.value.id)
+    await loadReplyDrafts()
+  } finally {
+    savingDraft.value = false
   }
 }
 
@@ -322,6 +408,7 @@ onMounted(() => {
 
 .decision-box,
 .ticket-box,
+.ai-copilot-box,
 .evidence-list,
 .timeline-box {
   margin-top: 14px;
@@ -331,6 +418,7 @@ onMounted(() => {
   background: #fff;
 }
 
+.copilot-header,
 .ticket-main {
   display: flex;
   align-items: center;
@@ -338,18 +426,62 @@ onMounted(() => {
   gap: 12px;
 }
 
+.copilot-header h4,
 .ticket-main h4 {
   margin: 0 0 6px;
   font-size: 15px;
+}
+
+.copilot-header p,
+.ticket-main p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 .ticket-main p {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0;
+}
+
+.draft-item {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.draft-meta,
+.draft-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.draft-meta {
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.draft-meta span,
+.draft-foot small {
   color: var(--text-muted);
-  line-height: 1.6;
+  font-size: 12px;
+}
+
+.draft-item p {
+  margin: 0 0 10px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .decision-header {

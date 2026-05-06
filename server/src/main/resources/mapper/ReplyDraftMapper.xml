@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.ReplyDraftMapper">
+    <select id="listByApplicationId" resultType="com.user.returnsassistant.pojo.ReplyDraft">
+        select d.*, u.display_name as created_by_name
+        from reply_draft d
+        left join user_account u on d.created_by=u.id
+        where d.application_id=#{applicationId}
+        order by d.created_at desc, d.id desc
+    </select>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.ReplyDraft">
+        select d.*, u.display_name as created_by_name
+        from reply_draft d
+        left join user_account u on d.created_by=u.id
+        where d.id=#{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into reply_draft(
+            application_id, ticket_id, draft_content, source_type, status, risk_level, knowledge_refs,
+            ai_status, ai_provider, ai_model_name, audit_remark, created_by
+        )
+        values(
+            #{applicationId}, #{ticketId}, #{draftContent}, #{sourceType}, coalesce(#{status}, 'DRAFT'), #{riskLevel}, #{knowledgeRefs},
+            #{aiStatus}, #{aiProvider}, #{aiModelName}, #{auditRemark}, #{createdBy}
+        )
+    </insert>
+
+    <update id="updateStatus">
+        update reply_draft
+        set status=#{status},
+            audit_remark=#{auditRemark},
+            used_at=case when #{used} then coalesce(used_at, now()) else used_at end
+        where id=#{id}
+    </update>
+</mapper>
