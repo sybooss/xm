@@ -24,7 +24,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChatDotRound, Collection, Connection, Cpu, DataAnalysis, Document, Monitor, Operation, Service, Tickets } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, Connection, Cpu, DataAnalysis, Document, Files, Monitor, Operation, Service, Tickets } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/authStore'
 
 const route = useRoute()
@@ -34,14 +34,23 @@ const menus = [
   { path: '/dashboard', label: '系统总览', icon: DataAnalysis, adminOnly: true },
   { path: '/operations', label: '运营指挥', icon: Operation, adminOnly: true },
   { path: '/feature-closures', label: '特色闭环', icon: Connection, adminOnly: true },
-  { path: '/chat', label: '咨询工作台', icon: ChatDotRound },
+  { path: '/customer/after-sales', label: '我的售后', icon: Files, customerOnly: true },
+  { path: '/chat', label: '在线咨询', icon: ChatDotRound },
   { path: '/knowledge', label: '知识库', icon: Collection, adminOnly: true },
   { path: '/orders', label: '订单管理', icon: Tickets, adminOnly: true },
   { path: '/service-tickets', label: '人工工单', icon: Service, adminOnly: true },
   { path: '/logs', label: '日志中心', icon: Document, adminOnly: true },
   { path: '/ai-test', label: 'AI 测试', icon: Cpu, adminOnly: true }
 ]
-const visibleMenus = computed(() => menus.filter(item => !item.adminOnly || authStore.isAdmin))
+const visibleMenus = computed(() => menus.filter(item => {
+  if (item.adminOnly) {
+    return authStore.isAdmin
+  }
+  if (item.customerOnly) {
+    return !authStore.isAdmin
+  }
+  return true
+}))
 </script>
 
 <style scoped>

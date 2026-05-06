@@ -101,7 +101,7 @@ async function submit() {
     await authStore.login(form.username, form.password)
     ElMessage.success('登录成功')
   }
-  await router.replace(authStore.isAdmin ? '/showcase' : '/chat')
+  await router.replace(authStore.isAdmin ? '/showcase' : '/customer/after-sales')
 }
 </script>
 

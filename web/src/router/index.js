@@ -7,6 +7,7 @@ const DashboardView = () => import('../views/DashboardView.vue')
 const OperationCenterView = () => import('../views/OperationCenterView.vue')
 const FeatureClosureView = () => import('../views/FeatureClosureView.vue')
 const ChatWorkbenchView = () => import('../views/ChatWorkbenchView.vue')
+const CustomerAfterSaleCenterView = () => import('../views/CustomerAfterSaleCenterView.vue')
 const KnowledgeDocView = () => import('../views/KnowledgeDocView.vue')
 const OrderView = () => import('../views/OrderView.vue')
 const ServiceTicketView = () => import('../views/ServiceTicketView.vue')
@@ -21,6 +22,7 @@ const routes = [
   { path: '/operations', name: 'operations', component: OperationCenterView, meta: { title: '运营指挥中心', adminOnly: true } },
   { path: '/feature-closures', name: 'feature-closures', component: FeatureClosureView, meta: { title: '特色闭环中心', adminOnly: true } },
   { path: '/chat', name: 'chat', component: ChatWorkbenchView, meta: { title: '咨询工作台' } },
+  { path: '/customer/after-sales', name: 'customer-after-sales', component: CustomerAfterSaleCenterView, meta: { title: '我的售后', customerOnly: true } },
   { path: '/knowledge', name: 'knowledge', component: KnowledgeDocView, meta: { title: '知识库', adminOnly: true } },
   { path: '/orders', name: 'orders', component: OrderView, meta: { title: '订单管理', adminOnly: true } },
   { path: '/service-tickets', name: 'service-tickets', component: ServiceTicketView, meta: { title: '人工工单', adminOnly: true } },
@@ -37,7 +39,7 @@ router.beforeEach((to) => {
   const authStore = useAuthStore()
   if (to.meta.public) {
     if (to.path === '/login' && authStore.isLoggedIn) {
-      return '/chat'
+      return authStore.isAdmin ? '/showcase' : '/customer/after-sales'
     }
     return true
   }
@@ -45,7 +47,10 @@ router.beforeEach((to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (to.meta.adminOnly && !authStore.isAdmin) {
-    return '/chat'
+    return '/customer/after-sales'
+  }
+  if (to.meta.customerOnly && authStore.isAdmin) {
+    return '/showcase'
   }
   return true
 })

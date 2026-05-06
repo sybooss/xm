@@ -58,13 +58,25 @@ const label = computed(() => {
     FINISHED: '已完成',
     REJECTED: '已拒绝',
     APPLIED: '已提交',
+    SUBMITTED: '已提交',
+    UNDER_REVIEW: '审核中',
+    NEED_MORE_EVIDENCE: '待补材料',
     APPROVED: '审核通过',
     WAIT_BUYER_SEND: '待买家寄回',
+    WAIT_SELLER_RECEIVE: '待商家收货',
     WAIT_SELLER_CONFIRM: '待商家确认',
+    EXCHANGING: '换货中',
     RETURN: '退货退款',
     EXCHANGE: '换货',
     REFUND: '仅退款',
     COMPLAINT: '投诉',
+    SUBMIT: '提交申请',
+    APPROVE: '审核通过',
+    REJECT: '审核驳回',
+    REQUEST_MORE_EVIDENCE: '要求补材料',
+    CANCEL: '取消',
+    CONFIRM: '确认完成',
+    SYSTEM_MARK: '系统标记',
     '已验证': '已验证'
   }
   if (typeof props.value === 'boolean') {
@@ -74,10 +86,10 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', '已验证'].includes(normalized.value)) return 'success'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', '已验证'].includes(normalized.value)) return 'success'
   if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED'].includes(normalized.value)) return 'danger'
   if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID'].includes(normalized.value)) return 'info'
-  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'WAIT_BUYER_SEND', 'WAIT_SELLER_CONFIRM', 'PENDING_PAY'].includes(normalized.value)) return 'warning'
+  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
   return 'primary'
 })
 </script>
