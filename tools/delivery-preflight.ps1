@@ -104,7 +104,7 @@ try {
     Test-Command "npm" | Out-Null
     Test-Command "git" | Out-Null
 
-    foreach ($ignored in @(".env", "output", "tmp", "web/dist", "server/target", "web/node_modules")) {
+    foreach ($ignored in @(".env", "output/", "tmp/", "web/dist/", "server/target/", "web/node_modules/")) {
         Test-GitIgnored $ignored
     }
 
