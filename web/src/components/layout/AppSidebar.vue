@@ -24,7 +24,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Monitor, Service, Tickets } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Monitor, Operation, Service, Tickets } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/authStore'
 
 const route = useRoute()
@@ -32,6 +32,7 @@ const authStore = useAuthStore()
 const menus = [
   { path: '/showcase', label: '答辩展示', icon: Monitor, adminOnly: true },
   { path: '/dashboard', label: '系统总览', icon: DataAnalysis, adminOnly: true },
+  { path: '/operations', label: '运营指挥', icon: Operation, adminOnly: true },
   { path: '/chat', label: '咨询工作台', icon: ChatDotRound },
   { path: '/knowledge', label: '知识库', icon: Collection, adminOnly: true },
   { path: '/orders', label: '订单管理', icon: Tickets, adminOnly: true },

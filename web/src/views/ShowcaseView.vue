@@ -16,6 +16,9 @@
               <el-button :icon="DocumentChecked" size="large" @click="$router.push('/logs')">
                 查看验证证据
               </el-button>
+              <el-button :icon="DataAnalysis" size="large" @click="$router.push('/operations')">
+                运营指挥中心
+              </el-button>
             </div>
           </div>
 
@@ -247,11 +250,11 @@ const featureRoadmap = [
     icon: DataAnalysis
   },
   {
-    title: '数据分析看板',
-    detail: '后续补充意图分布、工单状态、热门问题和处理效率。',
-    evidence: '待新增统计接口与图表',
-    state: 'planned',
-    stateLabel: '计划中',
+    title: '售后运营指挥中心',
+    detail: '新增 12 个运营分析特色功能，聚合意图、工单、渠道、知识、订单和 AI 质量。',
+    evidence: 'GET /operation-insights + /operations',
+    state: 'active',
+    stateLabel: '本轮新增',
     icon: TrendCharts
   },
   {

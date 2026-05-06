@@ -277,7 +277,7 @@ const businessTools = computed(() => {
   if (Array.isArray(tools) && tools.length) {
     return tools
   }
-  return chatStore.insight?.intent ? ['queryOrderStatus', 'searchAfterSaleKnowledge', 'createServiceTicket'] : []
+  return ['queryOrderStatus', 'searchAfterSaleKnowledge', 'createServiceTicket']
 })
 const suggestedQuestions = computed(() => {
   const questions = chatStore.insight?.suggestedQuestions

@@ -51,10 +51,24 @@ try {
   await expectText(page, '版本路线图', 'showcase version roadmap visible')
   await page.screenshot({ path: path.join(artifactDir, '01-showcase.png'), fullPage: true })
 
+  await page.goto(`${baseUrl}/operations`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '售后运营指挥中心', 'operations page visible')
+  await expectText(page, '新增特色功能', 'operations new feature metric visible')
+  await expectText(page, '答辩亮点矩阵', 'operations feature matrix visible')
+  await expectText(page, '意图热力雷达', 'operations intent radar visible')
+  await expectText(page, '工单 SLA 风险队列', 'operations ticket risk visible')
+  await expectText(page, '多渠道会话分布', 'operations channel distribution visible')
+  await expectText(page, '知识命中 Top 榜', 'operations knowledge ranking visible')
+  await expectText(page, '订单风险扫描', 'operations order risk visible')
+  await expectText(page, 'AI 运行质量摘要', 'operations ai quality visible')
+  await expectText(page, '下一步动作清单', 'operations action items visible')
+  await expectText(page, '版本里程碑面板', 'operations version milestones visible')
+  await page.screenshot({ path: path.join(artifactDir, '02-operations.png'), fullPage: true })
+
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '系统总览', 'dashboard page visible')
   await expectText(page, 'gpt-4o-mini', 'dashboard model visible')
-  await page.screenshot({ path: path.join(artifactDir, '02-dashboard.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '03-dashboard.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/ai-test`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, 'AI 测试', 'ai test page visible')
@@ -63,7 +77,7 @@ try {
   await page.getByRole('button', { name: /发送测试/ }).click()
   await page.getByText(/成功|跳过|本地兜底/, { exact: false }).first().waitFor({ timeout: 90000 })
   await expectText(page, 'gpt-4o-mini', 'ai test model visible')
-  await page.screenshot({ path: path.join(artifactDir, '03-ai-test-success.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '04-ai-test-success.png'), fullPage: true })
   record('ai test interaction', true, 'AI enabled or local fallback displayed')
 
   await page.goto(`${baseUrl}/chat`, { waitUntil: 'networkidle', timeout: 60000 })
@@ -77,13 +91,13 @@ try {
   await expectText(page, '建议追问', 'chat suggested questions visible')
   await expectText(page, '回答过程', 'chat process flow visible')
   await expectText(page, '上下文承接', 'chat context panel visible')
-  await page.screenshot({ path: path.join(artifactDir, '04-chat-ai-enhanced.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '05-chat-ai-enhanced.png'), fullPage: true })
   record('chat send interaction', true, 'chat reply displayed with AI or fallback source')
 
   await page.locator('textarea[placeholder*="输入售后问题"]').fill('商家一直不处理可以转人工投诉吗？')
   await page.getByRole('button', { name: /发送/ }).click()
   await page.getByText('人工转接', { exact: false }).first().waitFor({ timeout: 120000 })
-  await page.screenshot({ path: path.join(artifactDir, '05-chat-ticket.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '06-chat-ticket.png'), fullPage: true })
   record('chat ticket handoff interaction', true, 'manual handoff displayed')
 
   await page.goto(`${baseUrl}/knowledge`, { waitUntil: 'networkidle', timeout: 60000 })
@@ -95,12 +109,12 @@ try {
   await expectText(page, '意图覆盖', 'knowledge intent coverage visible')
   await expectText(page, '命中解释', 'knowledge hit reason visible')
   await expectText(page, '排序依据', 'knowledge ranking reason visible')
-  await page.screenshot({ path: path.join(artifactDir, '06-knowledge.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '07-knowledge.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/orders`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '订单管理', 'orders page visible')
   await expectText(page, '订单详情', 'order detail visible')
-  await page.screenshot({ path: path.join(artifactDir, '07-orders.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '08-orders.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/service-tickets`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '人工工单', 'service ticket page visible')
@@ -111,7 +125,7 @@ try {
   await expectText(page, 'SLA 风险', 'service ticket SLA risk visible')
   await expectText(page, '售后处理时间线', 'service ticket timeline visible')
   await expectText(page, '下一步动作', 'service ticket next action visible')
-  await page.screenshot({ path: path.join(artifactDir, '08-service-tickets.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '09-service-tickets.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/logs`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '日志诊断中心', 'logs page visible')
@@ -122,7 +136,7 @@ try {
   await expectText(page, '处置建议', 'logs action items visible')
   await expectText(page, '诊断总览', 'logs diagnostic summary visible')
   await expectText(page, 'AI 调用日志', 'ai logs tab visible')
-  await page.screenshot({ path: path.join(artifactDir, '09-logs.png'), fullPage: true })
+  await page.screenshot({ path: path.join(artifactDir, '10-logs.png'), fullPage: true })
 } catch (error) {
   record('browser smoke exception', false, error.message)
 } finally {

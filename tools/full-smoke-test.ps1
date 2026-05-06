@@ -317,6 +317,12 @@ try {
     $diagnosticsOk = $diagnostics.ai.sampleSize -ge 1 -and $diagnostics.riskSignals.Count -ge 1 -and $diagnostics.actionItems.Count -ge 1
     Add-Result "log diagnostics health summary" $diagnosticsOk "health=$($diagnostics.ai.healthLevel), trend=$($diagnostics.ai.trendLabel), risks=$($diagnostics.riskSignals.Count)"
 
+    $operationInsights = Api-Get "/operation-insights"
+    Add-Result "operation insights feature matrix" ($operationInsights.newFeatures.Count -ge 12) "newFeatures=$($operationInsights.newFeatures.Count)"
+    Add-Result "operation insights intent radar" ($operationInsights.intentInsights.Count -ge 1) "intentInsights=$($operationInsights.intentInsights.Count)"
+    Add-Result "operation insights action items" ($operationInsights.actionItems.Count -ge 4) "actionItems=$($operationInsights.actionItems.Count)"
+    Add-Result "operation insights AI quality" ($operationInsights.aiInsights.Count -ge 4) "aiInsights=$($operationInsights.aiInsights.Count)"
+
     Api-Delete "/chat-sessions/$($created.sessionId)" | Out-Null
     $created.sessionId = $null
     $created.ticketId = $null

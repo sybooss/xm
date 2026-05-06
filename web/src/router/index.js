@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 const LoginView = () => import('../views/LoginView.vue')
 const ShowcaseView = () => import('../views/ShowcaseView.vue')
 const DashboardView = () => import('../views/DashboardView.vue')
+const OperationCenterView = () => import('../views/OperationCenterView.vue')
 const ChatWorkbenchView = () => import('../views/ChatWorkbenchView.vue')
 const KnowledgeDocView = () => import('../views/KnowledgeDocView.vue')
 const OrderView = () => import('../views/OrderView.vue')
@@ -16,6 +17,7 @@ const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { title: '登录', public: true } },
   { path: '/showcase', name: 'showcase', component: ShowcaseView, meta: { title: '答辩展示中心', adminOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { title: '系统总览', adminOnly: true } },
+  { path: '/operations', name: 'operations', component: OperationCenterView, meta: { title: '运营指挥中心', adminOnly: true } },
   { path: '/chat', name: 'chat', component: ChatWorkbenchView, meta: { title: '咨询工作台' } },
   { path: '/knowledge', name: 'knowledge', component: KnowledgeDocView, meta: { title: '知识库', adminOnly: true } },
   { path: '/orders', name: 'orders', component: OrderView, meta: { title: '订单管理', adminOnly: true } },
