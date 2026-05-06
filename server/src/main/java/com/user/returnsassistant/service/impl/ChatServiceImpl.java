@@ -23,6 +23,7 @@ import java.util.*;
 @Service
 public class ChatServiceImpl implements ChatService {
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final Set<String> SUPPORTED_CHANNELS = Set.of("WEB", "APP", "MINI_PROGRAM", "ADMIN_TEST");
 
     @Autowired
     private ChatSessionMapper sessionMapper;
@@ -69,7 +70,7 @@ public class ChatServiceImpl implements ChatService {
             }
         }
         session.setStatus("ACTIVE");
-        session.setChannel(session.getChannel() == null ? "WEB" : session.getChannel());
+        session.setChannel(normalizeChannel(session.getChannel()));
         sessionMapper.insert(session);
         return session;
     }
@@ -86,6 +87,7 @@ public class ChatServiceImpl implements ChatService {
         data.put("sessionNo", session.getSessionNo());
         data.put("userId", session.getUserId());
         data.put("title", session.getTitle());
+        data.put("channel", session.getChannel());
         data.put("status", session.getStatus());
         data.put("currentIntent", session.getCurrentIntent());
         data.put("summary", session.getSummary());
@@ -114,6 +116,7 @@ public class ChatServiceImpl implements ChatService {
         if (session.getStatus() == null) {
             session.setStatus(old.getStatus());
         }
+        session.setChannel(normalizeChannel(session.getChannel() == null ? old.getChannel() : session.getChannel()));
         sessionMapper.update(session);
     }
 
@@ -559,6 +562,14 @@ public class ChatServiceImpl implements ChatService {
 
     private boolean hasText(String text) {
         return text != null && !text.isBlank();
+    }
+
+    private String normalizeChannel(String channel) {
+        String value = channel == null || channel.isBlank() ? "WEB" : channel.trim().toUpperCase(Locale.ROOT);
+        if (!SUPPORTED_CHANNELS.contains(value)) {
+            throw new BusinessException("不支持的会话渠道：" + channel);
+        }
+        return value;
     }
 
     private List<String> suggestedQuestions(String intentCode) {

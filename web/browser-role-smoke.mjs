@@ -27,6 +27,7 @@ try {
   await page.locator('.login-form .login-button').click()
   await expectText(page, '咨询工作台', 'customer lands on chat')
   await expectText(page, '客户', 'customer role tag visible')
+  await expectText(page, '渠道筛选', 'customer channel filter visible')
 
   const adminMenuTexts = ['答辩展示', '系统总览', '运营指挥', '知识库', '订单管理', '人工工单', '日志中心', 'AI 测试']
   for (const text of adminMenuTexts) {

@@ -64,11 +64,25 @@
 
 ### V2.1 多渠道真实接入
 
-计划：
+日期：2026-05-06
 
-- 将当前渠道统计从聚合展示升级为会话创建、筛选和页面筛选能力。
-- 扩展 `chat_session.channel` 支持 `WEB`、`APP`、`MINI_PROGRAM`、`ADMIN_TEST`。
-- 在运营指挥中心展示渠道趋势和渠道专属问题。
+本轮完成：
+
+- 扩展 `chat_session.channel`，支持 `WEB`、`APP`、`MINI_PROGRAM`、`ADMIN_TEST` 四类渠道。
+- 新增数据库迁移脚本 `sql/migration-20260506-expand-chat-session-channel.sql`，同步更新 `sql/schema.sql` 约束。
+- 后端会话查询支持 `channel` 筛选，`POST /chat-sessions` 创建会话时校验渠道合法性。
+- `GET /system/enums` 新增 `chatChannels` 枚举，前端可从统一枚举扩展。
+- 咨询工作台支持选择渠道创建会话，并支持按“全部渠道 / 网页 / App / 小程序 / 测试台”筛选。
+- 运营指挥中心的多渠道会话分布现在可以统计真实渠道样本，不再只是预留展示。
+- 全链路脚本新增 `APP` 渠道会话创建与筛选断言，浏览器脚本新增渠道控件断言。
+
+验收要求：
+
+- 数据库：在已有库执行 `sql/migration-20260506-expand-chat-session-channel.sql`
+- 后端：`mvn -q -DskipTests package`
+- 前端：`npm run build`
+- 全链路：`tools/full-smoke-test.ps1`
+- 浏览器：`npm run test:browser`、`npm run test:browser:roles`
 
 ### V2.2 SLA 自动提醒与报告导出
 

@@ -116,6 +116,12 @@ public class SystemController {
                         Map.of("code", "NORMAL", "name", "普通"),
                         Map.of("code", "HIGH", "name", "高"),
                         Map.of("code", "URGENT", "name", "紧急")
+                ),
+                "chatChannels", List.of(
+                        Map.of("code", "WEB", "name", "网页"),
+                        Map.of("code", "APP", "name", "App"),
+                        Map.of("code", "MINI_PROGRAM", "name", "小程序"),
+                        Map.of("code", "ADMIN_TEST", "name", "管理员测试")
                 )
         ));
     }

@@ -33,7 +33,7 @@ export const useChatStore = defineStore('chat', () => {
     const data = await createSession({
       title: payload.title || '前端咨询会话',
       orderNo: payload.orderNo || undefined,
-      channel: 'WEB'
+      channel: payload.channel || 'WEB'
     })
     currentSession.value = data
     await loadSession(data.id)

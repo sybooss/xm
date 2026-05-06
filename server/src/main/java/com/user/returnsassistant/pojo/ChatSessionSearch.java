@@ -8,4 +8,5 @@ import lombok.EqualsAndHashCode;
 public class ChatSessionSearch extends BaseSearch {
     private Long userId;
     private String status;
+    private String channel;
 }

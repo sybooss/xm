@@ -6,8 +6,23 @@
         <el-button type="primary" :icon="Plus" circle @click="newSession" />
       </div>
       <div class="session-create">
+        <el-select v-model="selectedChannel" class="channel-select" placeholder="渠道">
+          <el-option
+            v-for="channel in channelOptions"
+            :key="channel.code"
+            :label="channel.name"
+            :value="channel.code"
+          />
+        </el-select>
         <el-input v-model="orderNo" placeholder="订单号" clearable />
         <el-button :icon="Search" @click="newSession">绑定</el-button>
+      </div>
+      <div class="channel-filter">
+        <div class="channel-filter-title">
+          <span>渠道筛选</span>
+          <small>网页 / App / 小程序 / 测试台</small>
+        </div>
+        <el-segmented v-model="channelFilter" :options="channelFilterOptions" @change="loadSessionsByChannel" />
       </div>
       <div v-if="chatStore.sessions.length" class="session-list">
         <div
@@ -19,7 +34,7 @@
         >
           <button class="session-main" type="button">
             <span class="session-title">{{ session.title || session.sessionNo }}</span>
-            <span class="session-meta">{{ session.currentIntent || '未识别意图' }}</span>
+            <span class="session-meta">{{ channelName(session.channel) }} · {{ session.currentIntent || '未识别意图' }}</span>
           </button>
           <el-button class="delete-session" :icon="Delete" text circle @click.stop="deleteChatSession(session)" />
         </div>
@@ -264,6 +279,8 @@ const chatStore = useChatStore()
 const authStore = useAuthStore()
 const systemStore = useSystemStore()
 const orderNo = ref('DD202604290001')
+const selectedChannel = ref('WEB')
+const channelFilter = ref('ALL')
 const draft = ref('这个订单能不能退货？')
 const useAi = ref(true)
 const messageScrollRef = ref(null)
@@ -271,6 +288,16 @@ const showOrderPanel = ref(false)
 const selectedModel = ref('')
 
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
+const channelOptions = [
+  { code: 'WEB', name: '网页' },
+  { code: 'APP', name: 'App' },
+  { code: 'MINI_PROGRAM', name: '小程序' },
+  { code: 'ADMIN_TEST', name: '测试台' }
+]
+const channelFilterOptions = [
+  { label: '全部渠道', value: 'ALL' },
+  ...channelOptions.map(item => ({ label: item.name, value: item.code }))
+]
 const lastSourceType = computed(() => chatStore.insight?.assistantMessage?.sourceType || (chatStore.sending ? 'THINKING' : 'FALLBACK'))
 const businessTools = computed(() => {
   const tools = chatStore.insight?.businessTools?.tools
@@ -330,7 +357,12 @@ watch(
 )
 
 async function newSession() {
-  await chatStore.startSession({ orderNo: orderNo.value, title: '前端咨询会话' })
+  await chatStore.startSession({
+    orderNo: orderNo.value,
+    channel: selectedChannel.value,
+    title: `${channelName(selectedChannel.value)}咨询会话`
+  })
+  channelFilter.value = 'ALL'
   await scrollBottom()
 }
 
@@ -387,6 +419,18 @@ function selectOrderFromPanel(row) {
   scrollBottom()
 }
 
+async function loadSessionsByChannel() {
+  const params = channelFilter.value === 'ALL' ? {} : { channel: channelFilter.value }
+  await chatStore.loadSessions(params)
+  if (chatStore.sessions.length && !chatStore.sessions.some(item => item.id === chatStore.currentSessionId)) {
+    await selectSession(chatStore.sessions[0].id)
+  }
+}
+
+function channelName(code) {
+  return channelOptions.find(item => item.code === code)?.name || '网页'
+}
+
 async function changeModel(modelName) {
   if (!modelName) return
   try {
@@ -427,7 +471,7 @@ onMounted(async () => {
   if (authStore.isAdmin) {
     systemStore.loadStatus().catch(() => {})
   }
-  await chatStore.loadSessions()
+  await loadSessionsByChannel()
   if (chatStore.sessions.length) {
     await selectSession(chatStore.sessions[0].id)
   }
@@ -466,6 +510,42 @@ onMounted(async () => {
   gap: 8px;
   padding: 12px;
   border-bottom: 1px solid var(--line-soft);
+}
+
+.channel-select {
+  width: 96px;
+  flex: 0 0 auto;
+}
+
+.channel-filter {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.channel-filter-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #1d1d1f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.channel-filter-title small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-filter :deep(.el-segmented) {
+  width: 100%;
 }
 
 .session-list {

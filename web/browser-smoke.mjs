@@ -82,6 +82,9 @@ try {
 
   await page.goto(`${baseUrl}/chat`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '咨询工作台', 'chat page visible')
+  await expectText(page, '渠道筛选', 'chat channel filter visible')
+  await expectText(page, 'App', 'chat app channel option visible')
+  await expectText(page, '小程序', 'chat mini program channel option visible')
   await page.locator('textarea[placeholder*="输入售后问题"]').fill('这个订单能不能退货？')
   await page.getByRole('button', { name: /发送/ }).click()
   await page.getByText(/AI 增强|本地兜底/, { exact: false }).first().waitFor({ timeout: 120000 })

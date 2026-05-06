@@ -241,10 +241,14 @@ try {
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"
         orderNo = "DD202604290001"
-        channel = "WEB"
+        channel = "APP"
     }
     $created.sessionId = $session.id
-    Add-Result "chat session create" ($null -ne $created.sessionId) "id=$($created.sessionId)"
+    Add-Result "chat session create" ($null -ne $created.sessionId -and $session.channel -eq "APP") "id=$($created.sessionId), channel=$($session.channel)"
+
+    $appSessions = Api-Get "/chat-sessions?page=1&pageSize=10&channel=APP"
+    $hasAppSession = $null -ne ($appSessions.rows | Where-Object { $_.id -eq $created.sessionId } | Select-Object -First 1)
+    Add-Result "chat session channel filter" $hasAppSession "channel=APP,total=$($appSessions.total)"
 
     $sessionDetail = Api-Get "/chat-sessions/$($created.sessionId)"
     Add-Result "chat session detail" ($sessionDetail.id -eq $created.sessionId) "sessionNo=$($sessionDetail.sessionNo)"
