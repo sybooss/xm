@@ -299,6 +299,10 @@ try {
                          (@($requestedEvidence.processLogs | Where-Object { $_.action -eq "REQUEST_MORE_EVIDENCE" }).Count -ge 1)
     Add-Result "real after-sale admin request evidence" $requestEvidenceOk "status=$($requestedEvidence.status),logs=$(@($requestedEvidence.processLogs).Count)"
 
+    $slaWaitingTasks = Api-Get "/admin/sla/tasks?page=1&pageSize=10&riskType=WAITING_CUSTOMER"
+    $slaHasWaitingTask = $null -ne ($slaWaitingTasks.rows | Where-Object { $_.id -eq $created.realAfterSaleId } | Select-Object -First 1)
+    Add-Result "real after-sale SLA waiting-customer queue" $slaHasWaitingTask "total=$($slaWaitingTasks.total)"
+
     $script:authToken = $customerToken
     $evidence = Api-Post "/customer/after-sales/$($created.realAfterSaleId)/evidence" @{
         evidenceType = "LOGISTICS_NO"

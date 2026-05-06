@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.SlaTaskMapper">
+    <sql id="BaseFrom">
+        from after_sale_application a
+        left join demo_order o on a.order_id=o.id
+        left join user_account u on a.user_id=u.id
+    </sql>
+
+    <sql id="SearchWhere">
+        where a.status not in ('COMPLETED', 'CANCELLED', 'REJECTED')
+        <if test="s.status != null and s.status != ''">and a.status=#{s.status}</if>
+        <if test="s.priority != null and s.priority != ''">and a.priority=#{s.priority}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (
+                a.application_no like concat('%',#{s.keyword},'%')
+                or o.order_no like concat('%',#{s.keyword},'%')
+                or o.product_name like concat('%',#{s.keyword},'%')
+                or a.reason_text like concat('%',#{s.keyword},'%')
+            )
+        </if>
+        <if test="s.riskType != null and s.riskType != ''">
+            <choose>
+                <when test="s.riskType == 'OVERDUE'">and a.sla_deadline &lt; now()</when>
+                <when test="s.riskType == 'DUE_SOON'">and a.sla_deadline between now() and date_add(now(), interval 24 hour)</when>
+                <when test="s.riskType == 'HIGH_PRIORITY'">and a.priority in ('HIGH', 'URGENT')</when>
+                <when test="s.riskType == 'WAITING_CUSTOMER'">and a.status='NEED_MORE_EVIDENCE'</when>
+            </choose>
+        </if>
+    </sql>
+
+    <select id="count" resultType="long">
+        select count(*)
+        <include refid="BaseFrom"/>
+        <include refid="SearchWhere"/>
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.SlaTask">
+        select a.id,
+               a.application_no,
+               a.order_id,
+               o.order_no,
+               o.product_name,
+               a.user_id,
+               u.display_name as user_display_name,
+               a.service_type,
+               a.status,
+               a.priority,
+               a.risk_level,
+               a.refund_amount,
+               a.sla_deadline,
+               a.created_at,
+               a.updated_at
+        <include refid="BaseFrom"/>
+        <include refid="SearchWhere"/>
+        order by
+            case when a.sla_deadline &lt; now() then 0 else 1 end,
+            case a.priority when 'URGENT' then 0 when 'HIGH' then 1 when 'NORMAL' then 2 else 3 end,
+            a.sla_deadline asc,
+            a.updated_at desc
+        limit #{s.offset}, #{s.limit}
+    </select>
+</mapper>

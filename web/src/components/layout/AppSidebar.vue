@@ -35,6 +35,7 @@ const menus = [
   { path: '/operations', label: '运营指挥', icon: Operation, adminOnly: true },
   { path: '/feature-closures', label: '特色闭环', icon: Connection, adminOnly: true },
   { path: '/admin/after-sales/review', label: '售后审核', icon: View, adminOnly: true },
+  { path: '/admin/sla', label: 'SLA 中心', icon: DataAnalysis, adminOnly: true },
   { path: '/customer/after-sales', label: '我的售后', icon: Files, customerOnly: true },
   { path: '/chat', label: '在线咨询', icon: ChatDotRound },
   { path: '/knowledge', label: '知识库', icon: Collection, adminOnly: true },

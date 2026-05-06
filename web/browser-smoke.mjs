@@ -168,6 +168,14 @@ try {
   await page.getByRole('button', { name: '要求补材料' }).click()
   await expectText(page, '已要求顾客补充材料', 'admin after-sale request evidence toast')
   await expectText(page, '待补材料', 'admin after-sale need evidence status visible')
+  await page.goto(`${baseUrl}/admin/sla`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, 'SLA 中心', 'admin SLA center page visible')
+  await page.getByPlaceholder('售后单号、订单号或商品名').fill(reviewOrderNo)
+  await page.getByRole('button', { name: '查询' }).first().click()
+  await expectText(page, reviewOrderNo, 'admin SLA seeded task visible')
+  await expectText(page, '待顾客补材料', 'admin SLA waiting customer risk visible')
+  await page.getByRole('button', { name: '处理' }).first().click()
+  await expectText(page, '审核处理台', 'admin SLA task jumps to review desk')
   await apiPost(`/customer/after-sales/${seededReviewApplicationId}/evidence`, {
     evidenceType: 'LOGISTICS_NO',
     content: 'BROWSER-EVIDENCE-' + Date.now()

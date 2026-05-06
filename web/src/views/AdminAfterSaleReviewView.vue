@@ -148,6 +148,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Close, Refresh, Search } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
@@ -160,6 +161,7 @@ import {
 } from '../api/adminAfterSaleApi'
 
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: '', priority: '' })
+const route = useRoute()
 const applications = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -255,7 +257,10 @@ function money(value) {
   return `￥${Number(value).toFixed(2)}`
 }
 
-onMounted(loadApplications)
+onMounted(() => {
+  query.keyword = route.query.keyword || ''
+  loadApplications()
+})
 </script>
 
 <style scoped>
