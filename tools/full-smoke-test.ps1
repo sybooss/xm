@@ -11,6 +11,7 @@ $created = @{
     docId = $null
     orderId = $null
     afterSaleId = $null
+    realAfterSaleId = $null
     sessionId = $null
     ticketId = $null
 }
@@ -108,6 +109,8 @@ try {
 
     $auth = Api-Post "/auth/login" @{ username = "admin"; password = "123456" }
     $script:authToken = $auth.token
+    $adminToken = $auth.token
+    $adminUserId = $auth.userId
     Add-Result "auth login" ($auth.role -eq "ADMIN" -and $null -ne $auth.token) "user=$($auth.username), role=$($auth.role)"
 
     $status = Api-Get "/system/status"
@@ -142,7 +145,11 @@ try {
     Add-Result "auth register duplicate rejected" ($duplicate.code -eq 0 -and $duplicate.msg -eq $accountExistsMessage) $duplicate.msg
 
     $registeredLogin = Api-Post "/auth/login" @{ username = $registerUsername; password = $registerPassword }
+    $customerToken = $registeredLogin.token
+    $customerUserId = $registeredLogin.userId
     Add-Result "auth registered customer login" ($registeredLogin.username -eq $registerUsername -and $registeredLogin.role -eq "CUSTOMER") "role=$($registeredLogin.role)"
+
+    $script:authToken = $adminToken
 
     $ai = Api-Post "/ai-tests" @{ prompt = "Reply exactly: AI smoke test success." }
     $aiTestOk = if ($aiEnabled) { $ai.status -eq "SUCCESS" -and $ai.used -eq $true } else { $ai.status -eq "SKIPPED" -and $ai.used -eq $false }
@@ -243,6 +250,59 @@ try {
     $orderAfterSales = Api-Get "/orders/$($created.orderId)/after-sale-records"
     $orderAfterSaleCount = @($orderAfterSales).Count
     Add-Result "order after-sale subresource" ($orderAfterSaleCount -ge 1) "count=$orderAfterSaleCount"
+
+    $realOrderNo = "REAL$stamp"
+    Api-Post "/orders" @{
+        orderNo = $realOrderNo
+        userId = $customerUserId
+        productName = "Real Flow Test Product $stamp"
+        skuName = "Blue Standard"
+        orderAmount = 268.80
+        payStatus = "PAID"
+        orderStatus = "SIGNED"
+        logisticsStatus = "DELIVERED"
+        afterSaleStatus = "NONE"
+        paidAt = "2026-04-23T10:00:00"
+        shippedAt = "2026-04-24T10:00:00"
+        signedAt = "2026-04-25T10:00:00"
+    } | Out-Null
+    $realOrder = Api-Get "/orders/no/$realOrderNo"
+    $realOrderId = $realOrder.id
+    Add-Result "real after-sale order create" ($realOrder.userId -eq $customerUserId) "id=$realOrderId,user=$($realOrder.userId)"
+
+    $script:authToken = $customerToken
+    $realApplication = Api-Post "/customer/after-sales" @{
+        orderId = $realOrderId
+        serviceType = "RETURN"
+        reasonCode = "QUALITY_PROBLEM"
+        reasonText = "Auto real flow return reason"
+        refundAmount = 188.80
+    }
+    $created.realAfterSaleId = $realApplication.id
+    $customerAfterSales = Api-Get "/customer/after-sales?page=1&pageSize=10&keyword=$($realApplication.applicationNo)"
+    $customerAfterSaleDetail = Api-Get "/customer/after-sales/$($created.realAfterSaleId)"
+    $customerFlowOk = $realApplication.status -eq "SUBMITTED" -and
+                      $customerAfterSales.total -ge 1 -and
+                      @($customerAfterSaleDetail.processLogs).Count -eq 1 -and
+                      $customerAfterSaleDetail.processLogs[0].action -eq "SUBMIT"
+    Add-Result "real after-sale customer submit/timeline" $customerFlowOk "id=$($created.realAfterSaleId),status=$($realApplication.status),logs=$(@($customerAfterSaleDetail.processLogs).Count)"
+
+    $script:authToken = $adminToken
+    $adminAfterSales = Api-Get "/admin/after-sales?page=1&pageSize=10&status=SUBMITTED&keyword=$($realApplication.applicationNo)"
+    Add-Result "real after-sale admin queue" ($adminAfterSales.total -ge 1) "total=$($adminAfterSales.total)"
+
+    $approvedApplication = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/approve" @{
+        remark = "Auto admin approved real after-sale flow"
+        approvedAmount = 188.80
+        assignedTo = $adminUserId
+    }
+    $approvedDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $approvedLogActions = @($approvedDetail.processLogs | ForEach-Object { $_.action })
+    $approveFlowOk = $approvedApplication.status -eq "WAIT_BUYER_SEND" -and
+                     $approvedDetail.approvedAmount -eq 188.80 -and
+                     $approvedLogActions -contains "APPROVE" -and
+                     @($approvedDetail.processLogs).Count -ge 2
+    Add-Result "real after-sale admin approve/state-log" $approveFlowOk "status=$($approvedApplication.status),logs=$(@($approvedDetail.processLogs).Count)"
 
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"
@@ -364,6 +424,10 @@ try {
     $created.orderId = $null
     Add-Result "order delete" $true "deleted"
 
+    Api-Delete "/orders/$realOrderId" | Out-Null
+    $created.realAfterSaleId = $null
+    Add-Result "real after-sale order cascade delete" $true "deleted"
+
     Api-Delete "/knowledge-docs/$($created.docId)" | Out-Null
     $created.docId = $null
     Add-Result "knowledge doc delete" $true "deleted"
@@ -384,6 +448,9 @@ finally {
     } catch {}
     try {
         if ($created.afterSaleId) { Api-Delete "/after-sale-records/$($created.afterSaleId)" | Out-Null }
+    } catch {}
+    try {
+        if ($realOrderId) { Api-Delete "/orders/$realOrderId" | Out-Null }
     } catch {}
     try {
         if ($created.orderId) { Api-Delete "/orders/$($created.orderId)" | Out-Null }

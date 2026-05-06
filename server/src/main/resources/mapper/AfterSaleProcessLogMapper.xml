@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.AfterSaleProcessLogMapper">
+    <select id="listByApplicationId" resultType="com.user.returnsassistant.pojo.AfterSaleProcessLog">
+        select *
+        from after_sale_process_log
+        where application_id=#{applicationId}
+        order by created_at asc, id asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into after_sale_process_log(
+            application_id, operator_id, operator_name, operator_role, action, from_status, to_status, remark
+        )
+        values(
+            #{applicationId}, #{operatorId}, #{operatorName}, #{operatorRole}, #{action}, #{fromStatus}, #{toStatus}, #{remark}
+        )
+    </insert>
+</mapper>

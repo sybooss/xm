@@ -10,8 +10,8 @@
 
 | 版本 | 状态 | 完成日期 | 主要交付 | 验证情况 | 审视结论 |
 | --- | --- | --- | --- | --- | --- |
-| V0.1 | 进行中 | 2026-05-06 | 建立 goal、补全版本化计划表、新增进度和审视机制 | 文档检查、`git status --short` | 第一轮代码改造应从售后主对象、状态机和处理日志开始 |
-| V1.0 | 未开始 | - | 售后申请主对象、状态机、顾客/管理员基础接口 | - | - |
+| V0.1 | 已完成 | 2026-05-06 | 建立 goal、补全版本化计划表、新增进度和审视机制 | UTF-8 文档检查、`git status --short`、提交并推送 `3cadb30` | 第一轮代码改造应从售后主对象、状态机和处理日志开始 |
+| V1.0 | 已完成 | 2026-05-06 | 售后申请主对象、状态机、顾客/管理员基础接口 | 后端编译、schema/seed 执行、全链路冒烟、前端构建、浏览器测试均通过 | 新业务主流程已从旧演示 CRUD 中分离，下一步应补顾客端售后中心页面 |
 | V1.1 | 未开始 | - | 顾客端售后中心和申请向导 | - | - |
 | V1.2 | 未开始 | - | 管理员审核工作台和处理详情 | - | - |
 | V2.0 | 未开始 | - | 凭证、补充材料和证据链 | - | - |
@@ -54,6 +54,19 @@
 | P0 | 管理员审核/驳回接口 | 管理端需要从看板转向处理台 | V1.0 |
 | P1 | 顾客端售后中心页面 | 双端差异需要在界面上可见 | V1.1 |
 | P1 | 管理员审核队列页面 | 管理员每天要看到待办任务 | V1.2 |
+
+## V1.0 审视记录
+
+- 完成日期：2026-05-06
+- 本版改动文件：新增 `AfterSaleApplication`、`AfterSaleProcessLog` 等 POJO，新增 `AfterSaleApplicationMapper`、`AfterSaleProcessLogMapper` 和 XML，新增 `AfterSaleApplicationService` 及实现，新增 `/customer/after-sales` 与 `/admin/after-sales` REST 控制器，更新 `sql/schema.sql`、`sql/seed.sql`、`tools/full-smoke-test.ps1`。
+- 验证命令和结果：`mvn -q -DskipTests package` 通过；`sql/schema.sql` 和 `sql/seed.sql` 已执行并确认新表可访问；`powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\full-smoke-test.ps1` 通过且 `FAILED_COUNT=0`；`npm run build` 通过；`npm run test:browser` 通过且 `FAILED_COUNT=0`。
+- 业务价值：系统新增真实售后申请主对象 `after_sale_application` 和处理日志 `after_sale_process_log`，顾客可以提交售后申请，管理员可以在审核队列中通过或驳回，状态变更会留下处理时间线。
+- 双端真实度审视：接口层已经区分顾客端 `/customer/after-sales` 和管理员端 `/admin/after-sales`，但页面层仍未形成顾客售后中心和管理员审核工作台，双端差异还没有在 UI 中完全体现。
+- 状态机和权限审视：V1.0 已限制顾客只能提交自己的订单售后，管理员才能审核；审核动作只允许从 `SUBMITTED`、`UNDER_REVIEW` 流转。后续还需要补充取消、要求补充材料、确认完成、仓库收货、退款等动作。
+- AI 辅助边界审视：本版没有让 AI 参与关键状态修改，符合“AI 只做辅助层”的边界。后续接入 AI 摘要和回复草稿时必须继续保持人工确认。
+- 遗留问题：顾客端还没有售后中心页面；管理员端还没有审核队列页面；旧 `after_sale_record` 仍作为演示 CRUD 保留，后续需要决定是兼容展示还是逐步迁移；状态机只覆盖提交、通过、驳回三个动作。
+- 下一轮优化：进入 V1.1，新增顾客端“我的售后中心”和申请/详情入口，让顾客不依赖聊天也能查看订单售后状态和处理日志。
+- Git 提交：`feat: add real after-sale application workflow`。
 
 ## 5. 每版审视模板
 

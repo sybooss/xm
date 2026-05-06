@@ -66,6 +66,57 @@ CREATE TABLE IF NOT EXISTS after_sale_record (
   INDEX idx_after_sale_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS after_sale_application (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  application_no VARCHAR(40) NOT NULL,
+  order_id BIGINT NOT NULL,
+  user_id BIGINT NULL,
+  service_type VARCHAR(30) NOT NULL,
+  reason_code VARCHAR(50) NOT NULL DEFAULT 'OTHER',
+  reason_text VARCHAR(500) NOT NULL,
+  status VARCHAR(30) NOT NULL,
+  refund_amount DECIMAL(10,2) NULL,
+  approved_amount DECIMAL(10,2) NULL,
+  priority VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
+  sla_deadline DATETIME NULL,
+  assigned_to BIGINT NULL,
+  ai_summary TEXT NULL,
+  risk_level VARCHAR(20) NOT NULL DEFAULT 'LOW',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  closed_at DATETIME NULL,
+  CONSTRAINT uk_after_sale_application_no UNIQUE (application_no),
+  CONSTRAINT fk_after_sale_application_order FOREIGN KEY (order_id) REFERENCES demo_order(id) ON DELETE CASCADE,
+  CONSTRAINT fk_after_sale_application_user FOREIGN KEY (user_id) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT fk_after_sale_application_assignee FOREIGN KEY (assigned_to) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT ck_after_sale_application_type CHECK (service_type IN ('RETURN', 'EXCHANGE', 'REFUND', 'COMPLAINT')),
+  CONSTRAINT ck_after_sale_application_status CHECK (status IN ('SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'APPROVED', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'REFUNDING', 'EXCHANGING', 'REJECTED', 'COMPLETED', 'CANCELLED')),
+  CONSTRAINT ck_after_sale_application_priority CHECK (priority IN ('LOW', 'NORMAL', 'HIGH', 'URGENT')),
+  CONSTRAINT ck_after_sale_application_risk CHECK (risk_level IN ('LOW', 'MEDIUM', 'HIGH')),
+  INDEX idx_after_sale_application_user (user_id, status),
+  INDEX idx_after_sale_application_order (order_id),
+  INDEX idx_after_sale_application_status (status, priority, updated_at),
+  INDEX idx_after_sale_application_sla (sla_deadline, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS after_sale_process_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  application_id BIGINT NOT NULL,
+  operator_id BIGINT NULL,
+  operator_name VARCHAR(80) NULL,
+  operator_role VARCHAR(20) NOT NULL,
+  action VARCHAR(40) NOT NULL,
+  from_status VARCHAR(30) NULL,
+  to_status VARCHAR(30) NULL,
+  remark VARCHAR(500) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
+  CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  INDEX idx_after_sale_process_log_application (application_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS knowledge_category (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   parent_id BIGINT NOT NULL DEFAULT 0,

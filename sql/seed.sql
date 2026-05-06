@@ -70,3 +70,20 @@ VALUES
 ('DD202604290002', 1, '智能手表', '黑色 运动版', 399.00, 'PAID', 'SIGNED', 'DELIVERED', 'NONE', '2026-04-10 10:00:00', '2026-04-10 18:00:00', '2026-04-12 14:30:00'),
 ('DD202604290003', 1, '机械键盘', '青轴 RGB', 299.00, 'REFUNDING', 'COMPLETED', 'DELIVERED', 'REFUNDING', '2026-04-20 10:00:00', '2026-04-20 18:00:00', '2026-04-22 14:30:00'),
 ('DD202604290004', 1, '移动电源', '20000mAh', 129.00, 'PAID', 'SHIPPED', 'ABNORMAL', 'NONE', '2026-04-27 10:00:00', '2026-04-27 18:00:00', NULL);
+
+INSERT INTO after_sale_application(application_no, order_id, user_id, service_type, reason_code, reason_text, status, refund_amount, approved_amount, priority, sla_deadline, assigned_to, ai_summary, risk_level, created_at, updated_at)
+SELECT 'ASA202605060001', o.id, o.user_id, 'RETURN', 'QUALITY_PROBLEM', '耳机左耳无声音，申请退货退款。', 'SUBMITTED', 199.00, NULL, 'NORMAL',
+       DATE_ADD(NOW(), INTERVAL 48 HOUR), NULL, '用户反馈左耳无声，需要人工审核照片或检测凭证。', 'LOW', NOW(), NOW()
+FROM demo_order o
+WHERE o.order_no='DD202604290001'
+  AND NOT EXISTS (SELECT 1 FROM after_sale_application a WHERE a.application_no='ASA202605060001');
+
+INSERT INTO after_sale_process_log(application_id, operator_id, operator_name, operator_role, action, from_status, to_status, remark)
+SELECT a.id, u.id, u.display_name, 'CUSTOMER', 'SUBMIT', NULL, 'SUBMITTED', '顾客提交退货退款申请。'
+FROM after_sale_application a
+LEFT JOIN user_account u ON a.user_id=u.id
+WHERE a.application_no='ASA202605060001'
+  AND NOT EXISTS (
+      SELECT 1 FROM after_sale_process_log l
+      WHERE l.application_id=a.id AND l.action='SUBMIT'
+  );

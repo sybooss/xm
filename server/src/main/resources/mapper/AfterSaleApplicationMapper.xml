@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.AfterSaleApplicationMapper">
+    <sql id="BaseSelect">
+        select a.*,
+               o.order_no,
+               o.product_name,
+               o.sku_name,
+               u.display_name as user_display_name,
+               assignee.display_name as assigned_to_name
+        from after_sale_application a
+        left join demo_order o on a.order_id=o.id
+        left join user_account u on a.user_id=u.id
+        left join user_account assignee on a.assigned_to=assignee.id
+    </sql>
+
+    <sql id="SearchWhere">
+        where 1=1
+        <if test="s.userId != null">and a.user_id=#{s.userId}</if>
+        <if test="s.orderId != null">and a.order_id=#{s.orderId}</if>
+        <if test="s.status != null and s.status != ''">and a.status=#{s.status}</if>
+        <if test="s.serviceType != null and s.serviceType != ''">and a.service_type=#{s.serviceType}</if>
+        <if test="s.priority != null and s.priority != ''">and a.priority=#{s.priority}</if>
+        <if test="s.assignedTo != null">and a.assigned_to=#{s.assignedTo}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (
+                a.application_no like concat('%',#{s.keyword},'%')
+                or o.order_no like concat('%',#{s.keyword},'%')
+                or o.product_name like concat('%',#{s.keyword},'%')
+                or a.reason_text like concat('%',#{s.keyword},'%')
+            )
+        </if>
+    </sql>
+
+    <select id="count" resultType="long">
+        select count(*)
+        from after_sale_application a
+        left join demo_order o on a.order_id=o.id
+        <include refid="SearchWhere"/>
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.AfterSaleApplication">
+        <include refid="BaseSelect"/>
+        <include refid="SearchWhere"/>
+        order by a.updated_at desc, a.id desc
+        limit #{s.offset}, #{s.limit}
+    </select>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.AfterSaleApplication">
+        <include refid="BaseSelect"/>
+        where a.id=#{id}
+    </select>
+
+    <select id="countActiveByOrderId" resultType="int">
+        select count(*)
+        from after_sale_application
+        where order_id=#{orderId}
+          and status not in ('REJECTED', 'COMPLETED', 'CANCELLED')
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into after_sale_application(
+            application_no, order_id, user_id, service_type, reason_code, reason_text, status,
+            refund_amount, approved_amount, priority, sla_deadline, assigned_to, ai_summary, risk_level, closed_at
+        )
+        values(
+            #{applicationNo}, #{orderId}, #{userId}, #{serviceType}, #{reasonCode}, #{reasonText}, #{status},
+            #{refundAmount}, #{approvedAmount}, #{priority}, #{slaDeadline}, #{assignedTo}, #{aiSummary}, #{riskLevel}, #{closedAt}
+        )
+    </insert>
+
+    <update id="updateDecision">
+        update after_sale_application
+        set status=#{status},
+            approved_amount=#{approvedAmount},
+            assigned_to=#{assignedTo},
+            closed_at=#{closedAt}
+        where id=#{id}
+    </update>
+</mapper>
