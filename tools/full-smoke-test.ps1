@@ -14,6 +14,8 @@ $created = @{
     realAfterSaleId = $null
     realAfterSaleTicketId = $null
     realAfterSaleTicketSessionId = $null
+    reviewOrderId = $null
+    reviewAfterSaleId = $null
     sessionId = $null
     ticketId = $null
 }
@@ -380,6 +382,61 @@ try {
                       (@($discardDraftDetail.processLogs | Where-Object { $_.action -eq "DISCARD_REPLY_DRAFT" }).Count -ge 1)
     Add-Result "real after-sale AI copilot draft discard/log" $discardDraftOk "status=$($discardedDraft.status)"
 
+    $reviewOrderNo = "REVIEWFLOW$stamp"
+    Api-Post "/orders" @{
+        orderNo = $reviewOrderNo
+        userId = $customerUserId
+        productName = "Review Flow Product $stamp"
+        skuName = "Green Standard"
+        orderAmount = 99.80
+        payStatus = "PAID"
+        orderStatus = "COMPLETED"
+        logisticsStatus = "DELIVERED"
+        afterSaleStatus = "NONE"
+        paidAt = "2026-04-23T10:00:00"
+        shippedAt = "2026-04-24T10:00:00"
+        signedAt = "2026-04-25T10:00:00"
+    } | Out-Null
+    $reviewOrder = Api-Get "/orders/no/$reviewOrderNo"
+    $created.reviewOrderId = $reviewOrder.id
+
+    $script:authToken = $customerToken
+    $reviewApplication = Api-Post "/customer/after-sales" @{
+        orderId = $created.reviewOrderId
+        serviceType = "REFUND"
+        reasonCode = "QUALITY_PROBLEM"
+        reasonText = "Auto completed review flow reason"
+        refundAmount = 99.80
+    }
+    $created.reviewAfterSaleId = $reviewApplication.id
+    $script:authToken = $adminToken
+    $reviewApproved = Api-Post "/admin/after-sales/$($created.reviewAfterSaleId)/approve" @{
+        remark = "Auto admin approved reviewable after-sale flow"
+        approvedAmount = 99.80
+        assignedTo = $adminUserId
+    }
+    $reviewCompleted = Api-Post "/admin/after-sales/$($created.reviewAfterSaleId)/complete" @{
+        remark = "Auto admin completed reviewable after-sale flow"
+    }
+    Add-Result "real after-sale admin complete for review" ($reviewCompleted.status -eq "COMPLETED") "status=$($reviewCompleted.status)"
+    $script:authToken = $customerToken
+    $review = Api-Post "/customer/after-sales/$($created.reviewAfterSaleId)/reviews" @{
+        rating = 5
+        tags = "响应快,处理清楚"
+        comment = "Auto customer review for completed after-sale"
+    }
+    $reviewDetail = Api-Get "/customer/after-sales/$($created.reviewAfterSaleId)/reviews"
+    $reviewOk = $review.rating -eq 5 -and $reviewDetail.comment -like "*Auto customer review*"
+    Add-Result "real after-sale customer review submit/get" $reviewOk "rating=$($review.rating),tags=$($review.tags)"
+
+    $script:authToken = $adminToken
+    $profile = Api-Get "/admin/customers/$customerUserId/profile"
+    $profileOk = $profile.customer.id -eq $customerUserId -and
+                 $profile.reviewCount -ge 1 -and
+                 $profile.averageRating -ge 5 -and
+                 @($profile.reviews).Count -ge 1
+    Add-Result "admin customer profile aggregates reviews" $profileOk "reviews=$($profile.reviewCount),avg=$($profile.averageRating),risk=$($profile.riskLevel)"
+
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"
         orderNo = "DD202604290001"
@@ -509,6 +566,11 @@ try {
     $created.realAfterSaleId = $null
     Add-Result "real after-sale order cascade delete" $true "deleted"
 
+    Api-Delete "/orders/$($created.reviewOrderId)" | Out-Null
+    $created.reviewOrderId = $null
+    $created.reviewAfterSaleId = $null
+    Add-Result "real after-sale review order cascade delete" $true "deleted"
+
     Api-Delete "/knowledge-docs/$($created.docId)" | Out-Null
     $created.docId = $null
     Add-Result "knowledge doc delete" $true "deleted"
@@ -535,6 +597,9 @@ finally {
     } catch {}
     try {
         if ($created.afterSaleId) { Api-Delete "/after-sale-records/$($created.afterSaleId)" | Out-Null }
+    } catch {}
+    try {
+        if ($created.reviewOrderId) { Api-Delete "/orders/$($created.reviewOrderId)" | Out-Null }
     } catch {}
     try {
         if ($realOrderId) { Api-Delete "/orders/$realOrderId" | Out-Null }

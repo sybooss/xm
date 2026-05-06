@@ -50,6 +50,13 @@ public class AdminAfterSaleController {
         return Result.success(afterSaleApplicationService.reject(id, actionRequest, admin));
     }
 
+    @PostMapping("/{id}/complete")
+    @OperatorAnno
+    public Result complete(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
+        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        return Result.success(afterSaleApplicationService.complete(id, actionRequest, admin));
+    }
+
     @PostMapping("/{id}/request-evidence")
     @OperatorAnno
     public Result requestEvidence(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {

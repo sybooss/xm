@@ -80,6 +80,7 @@ const label = computed(() => {
     GENERATE_REPLY_DRAFT: '生成草稿',
     USE_REPLY_DRAFT: '采纳草稿',
     DISCARD_REPLY_DRAFT: '废弃草稿',
+    SUBMIT_REVIEW: '提交评价',
     AI: 'AI',
     TEMPLATE: '模板',
     MANUAL: '人工',
@@ -104,7 +105,7 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', 'CREATE_TICKET', 'USE_REPLY_DRAFT', 'AI', 'USED', '已验证'].includes(normalized.value)) return 'success'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', 'CREATE_TICKET', 'USE_REPLY_DRAFT', 'SUBMIT_REVIEW', 'AI', 'USED', '已验证'].includes(normalized.value)) return 'success'
   if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED', 'DISCARD_REPLY_DRAFT', 'DISCARDED', '已超时'].includes(normalized.value)) return 'danger'
   if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID'].includes(normalized.value)) return 'info'
   if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'TEMPLATE', 'MANUAL', 'DRAFT', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'

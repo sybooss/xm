@@ -84,7 +84,9 @@
         </div>
         <div class="panel-body">
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="顾客">{{ selected.userDisplayName || selected.userId }}</el-descriptions-item>
+            <el-descriptions-item label="顾客">
+              <el-button link type="primary" @click="openCustomerProfile">{{ selected.userDisplayName || selected.userId }}</el-button>
+            </el-descriptions-item>
             <el-descriptions-item label="售后类型"><StatusTag :value="selected.serviceType" /></el-descriptions-item>
             <el-descriptions-item label="申请金额">{{ money(selected.refundAmount) }}</el-descriptions-item>
             <el-descriptions-item label="风险等级"><StatusTag :value="selected.riskLevel" /></el-descriptions-item>
@@ -153,6 +155,7 @@
               <div class="decision-actions">
                 <el-button type="primary" :icon="Check" :disabled="!canReview" :loading="saving" @click="approveSelected">审核通过</el-button>
                 <el-button type="warning" :disabled="!canReview" :loading="saving" @click="requestEvidenceSelected">要求补材料</el-button>
+                <el-button type="success" :icon="Check" :disabled="!canComplete" :loading="saving" @click="completeSelected">确认完成</el-button>
                 <el-button type="danger" :icon="Close" :disabled="!canReview" :loading="saving" @click="rejectSelected">驳回申请</el-button>
               </div>
             </el-form>
@@ -191,12 +194,13 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Close, Promotion, Refresh, Search, Ticket } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   approveAfterSale,
+  completeAfterSale,
   createAfterSaleTicket,
   discardReplyDraft,
   generateReplyDraft,
@@ -210,6 +214,7 @@ import {
 
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: '', priority: '' })
 const route = useRoute()
+const router = useRouter()
 const applications = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -225,6 +230,7 @@ const pendingCount = computed(() => applications.value.filter(item => ['SUBMITTE
 const moreEvidenceCount = computed(() => applications.value.filter(item => item.status === 'NEED_MORE_EVIDENCE').length)
 const highPriorityCount = computed(() => applications.value.filter(item => ['HIGH', 'URGENT'].includes(item.priority)).length)
 const canReview = computed(() => selected.value && ['SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE'].includes(selected.value.status))
+const canComplete = computed(() => selected.value && !['SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'REJECTED', 'COMPLETED', 'CANCELLED'].includes(selected.value.status))
 
 async function reload() {
   await loadApplications()
@@ -253,6 +259,13 @@ async function selectApplication(row) {
   selected.value = await getAdminAfterSale(row.id)
   await loadReplyDrafts()
   hydrateDecisionForm()
+}
+
+function openCustomerProfile() {
+  if (!selected.value?.userId) {
+    return
+  }
+  router.push({ path: '/admin/customers/profile', query: { userId: selected.value.userId } })
 }
 
 async function approveSelected() {
@@ -292,6 +305,20 @@ async function requestEvidenceSelected() {
   try {
     selected.value = await requestAfterSaleEvidence(selected.value.id, { ...decisionForm })
     ElMessage.success('已要求顾客补充材料')
+    hydrateDecisionForm()
+    await loadApplications()
+  } finally {
+    saving.value = false
+  }
+}
+
+async function completeSelected() {
+  saving.value = true
+  try {
+    selected.value = await completeAfterSale(selected.value.id, {
+      remark: decisionForm.remark || '售后处理已完成，顾客可进行服务评价。'
+    })
+    ElMessage.success('售后处理已确认完成')
     hydrateDecisionForm()
     await loadApplications()
   } finally {

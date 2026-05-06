@@ -121,6 +121,7 @@
         <div class="detail-actions">
           <StatusTag :value="selectedAfterSale.status" />
           <el-button type="primary" @click="openEvidenceDialog">补充凭证</el-button>
+          <el-button v-if="canReviewSelected" type="success" @click="openReviewDialog">评价服务</el-button>
           <el-button @click="goChat">在线咨询</el-button>
         </div>
       </div>
@@ -163,6 +164,14 @@
           </div>
           <p>{{ evidence.content }}</p>
         </div>
+      </div>
+      <div v-if="selectedReview" class="review-box">
+        <h4>我的评价</h4>
+        <div class="review-summary">
+          <el-rate :model-value="selectedReview.rating" disabled />
+          <span>{{ selectedReview.tags || '未填写标签' }}</span>
+        </div>
+        <p>{{ selectedReview.comment || '暂无文字评价' }}</p>
       </div>
     </section>
 
@@ -219,6 +228,24 @@
         <el-button type="primary" :loading="evidenceSubmitting" @click="submitEvidence">提交凭证</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="reviewDialogVisible" title="评价服务" width="560px" destroy-on-close>
+      <el-form :model="reviewForm" label-width="92px">
+        <el-form-item label="服务评分">
+          <el-rate v-model="reviewForm.rating" />
+        </el-form-item>
+        <el-form-item label="评价标签">
+          <el-input v-model="reviewForm.tags" maxlength="100" placeholder="例如：响应快、处理清楚、还需跟进" />
+        </el-form-item>
+        <el-form-item label="评价内容">
+          <el-input v-model="reviewForm.comment" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="写下这次售后处理体验。" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="reviewDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="reviewSubmitting" @click="submitReview">提交评价</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -232,7 +259,9 @@ import { pageOrders } from '../api/orderApi'
 import {
   addCustomerAfterSaleEvidence,
   createCustomerAfterSale,
+  createCustomerAfterSaleReview,
   getCustomerAfterSale,
+  getCustomerAfterSaleReview,
   pageCustomerAfterSales
 } from '../api/customerAfterSaleApi'
 
@@ -250,14 +279,19 @@ const orderLoading = ref(false)
 const afterSaleLoading = ref(false)
 const submitting = ref(false)
 const evidenceSubmitting = ref(false)
+const reviewSubmitting = ref(false)
 const applyDialogVisible = ref(false)
 const evidenceDialogVisible = ref(false)
+const reviewDialogVisible = ref(false)
 const applyForm = reactive(defaultApplyForm())
 const evidenceForm = reactive(defaultEvidenceForm())
+const reviewForm = reactive(defaultReviewForm())
+const selectedReview = ref(null)
 
 const activeAfterSaleCount = computed(() => afterSales.value.filter(item => !['REJECTED', 'COMPLETED', 'CANCELLED'].includes(item.status)).length)
 const needCustomerActionCount = computed(() => afterSales.value.filter(item => ['NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND'].includes(item.status)).length)
 const completedAfterSaleCount = computed(() => afterSales.value.filter(item => item.status === 'COMPLETED').length)
+const canReviewSelected = computed(() => selectedAfterSale.value?.status === 'COMPLETED' && !selectedReview.value)
 
 async function reloadAll() {
   await Promise.all([loadOrders(), loadAfterSales()])
@@ -297,6 +331,7 @@ function selectOrder(row) {
 
 async function selectAfterSale(row) {
   selectedAfterSale.value = await getCustomerAfterSale(row.id)
+  selectedReview.value = await getCustomerAfterSaleReview(row.id)
 }
 
 function openApplyDialog(order) {
@@ -311,6 +346,11 @@ function openApplyDialog(order) {
 function openEvidenceDialog() {
   Object.assign(evidenceForm, defaultEvidenceForm())
   evidenceDialogVisible.value = true
+}
+
+function openReviewDialog() {
+  Object.assign(reviewForm, defaultReviewForm())
+  reviewDialogVisible.value = true
 }
 
 async function submitApplication() {
@@ -346,6 +386,23 @@ async function submitEvidence() {
     selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
   } finally {
     evidenceSubmitting.value = false
+  }
+}
+
+async function submitReview() {
+  if (!selectedAfterSale.value) return
+  if (!reviewForm.rating) {
+    ElMessage.warning('请选择服务评分')
+    return
+  }
+  reviewSubmitting.value = true
+  try {
+    selectedReview.value = await createCustomerAfterSaleReview(selectedAfterSale.value.id, { ...reviewForm })
+    ElMessage.success('评价已提交')
+    reviewDialogVisible.value = false
+    selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
+  } finally {
+    reviewSubmitting.value = false
   }
 }
 
@@ -391,6 +448,14 @@ function defaultEvidenceForm() {
   return {
     evidenceType: 'TEXT',
     content: ''
+  }
+}
+
+function defaultReviewForm() {
+  return {
+    rating: 5,
+    tags: '响应快',
+    comment: ''
   }
 }
 
@@ -465,6 +530,36 @@ onMounted(reloadAll)
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: #fff;
+}
+
+.review-box {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.review-box h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.review-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-summary span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.review-box p {
+  margin: 8px 0 0;
+  color: var(--text);
+  line-height: 1.6;
 }
 
 .evidence-list h4 {

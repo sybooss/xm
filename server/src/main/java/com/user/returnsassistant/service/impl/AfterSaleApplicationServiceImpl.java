@@ -161,6 +161,28 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
 
     @Transactional
     @Override
+    public AfterSaleApplication complete(Long id, AfterSaleActionRequest request, UserAccount admin) {
+        AfterSaleApplication application = getById(id);
+        if (TERMINAL_STATUSES.contains(application.getStatus())) {
+            throw new BusinessException("当前售后申请已经结束");
+        }
+        if (REVIEWABLE_STATUSES.contains(application.getStatus())) {
+            throw new BusinessException("请先完成审核或补材料流程，再确认完成");
+        }
+        AfterSaleApplication update = new AfterSaleApplication();
+        update.setId(id);
+        update.setStatus("COMPLETED");
+        update.setApprovedAmount(application.getApprovedAmount());
+        update.setAssignedTo(application.getAssignedTo());
+        update.setClosedAt(LocalDateTime.now());
+        applicationMapper.updateDecision(update);
+        writeLog(id, admin, "CONFIRM", application.getStatus(), "COMPLETED", cleanRemark(request, "管理员确认售后处理完成，顾客可进行服务评价。"));
+        orderMapper.updateAfterSaleStatus(application.getOrderId(), "FINISHED");
+        return getById(id);
+    }
+
+    @Transactional
+    @Override
     public AfterSaleApplication requestEvidence(Long id, AfterSaleActionRequest request, UserAccount admin) {
         AfterSaleApplication application = getById(id);
         ensureReviewable(application);

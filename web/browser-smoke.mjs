@@ -14,6 +14,7 @@ let seededCustomerOrderId = null
 let seededReviewOrderId = null
 let seededReviewApplicationId = null
 let seededReviewTicketSessionId = null
+let demoCustomerToken = ''
 
 function record(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail })
@@ -151,14 +152,15 @@ try {
   const reviewOrder = await apiGet(`/orders/no/${reviewOrderNo}`)
   seededReviewOrderId = reviewOrder?.id
   const demoCustomerAuth = await apiPost('/auth/login', { username: 'demo_customer', password: '123456' }, '')
+  demoCustomerToken = demoCustomerAuth.token
   await apiPost('/customer/after-sales', {
     orderId: seededReviewOrderId,
     serviceType: 'RETURN',
     reasonCode: 'QUALITY_PROBLEM',
     reasonText: '浏览器自动化为管理员审核台创建待审核售后申请。',
     refundAmount: 188.80
-  }, demoCustomerAuth.token)
-  const reviewApplicationPage = await apiGet(`/customer/after-sales?page=1&pageSize=1&keyword=${reviewOrderNo}`, demoCustomerAuth.token)
+  }, demoCustomerToken)
+  const reviewApplicationPage = await apiGet(`/customer/after-sales?page=1&pageSize=1&keyword=${reviewOrderNo}`, demoCustomerToken)
   seededReviewApplicationId = reviewApplicationPage.rows?.[0]?.id
   await page.goto(`${baseUrl}/admin/after-sales/review`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '售后审核工作台', 'admin after-sale review page visible')
@@ -180,7 +182,7 @@ try {
   await apiPost(`/customer/after-sales/${seededReviewApplicationId}/evidence`, {
     evidenceType: 'LOGISTICS_NO',
     content: 'BROWSER-EVIDENCE-' + Date.now()
-  }, demoCustomerAuth.token)
+  }, demoCustomerToken)
   await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '凭证材料', 'admin after-sale evidence list visible')
   await expectText(page, 'BROWSER-EVIDENCE-', 'admin after-sale evidence content visible')
@@ -202,8 +204,38 @@ try {
   await page.getByRole('button', { name: '审核通过' }).click()
   await expectText(page, '售后申请已审核通过', 'admin after-sale approve toast')
   await expectText(page, '待买家寄回', 'admin after-sale approved status visible')
+  await page.getByRole('button', { name: '确认完成' }).click()
+  await expectText(page, '售后处理已确认完成', 'admin after-sale complete toast')
+  await expectText(page, '已完成', 'admin after-sale completed status visible')
   record('admin after-sale review approve flow', true, 'admin approved a seeded after-sale application')
   await page.screenshot({ path: path.join(artifactDir, '00-admin-after-sale-review.png'), fullPage: true })
+
+  await page.locator('header').getByRole('button', { name: /退出/ }).click()
+  await expectText(page, '管理员登录', 'admin logout before customer review')
+  await page.getByRole('button', { name: '客户' }).click()
+  await page.locator('.login-form .login-button').click()
+  await expectText(page, '我的售后', 'demo customer back to after-sales for review')
+  await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, reviewOrderNo, 'customer completed after-sale visible')
+  await page.getByText(reviewOrderNo, { exact: false }).first().click()
+  await page.getByRole('button', { name: '评价服务' }).click()
+  await expectText(page, '评价服务', 'customer review dialog visible')
+  await page.getByPlaceholder('例如：响应快、处理清楚、还需跟进').fill('响应快,处理清楚')
+  await page.locator('textarea[placeholder*="售后处理体验"]').fill('浏览器自动化评价：处理过程清楚，客服响应及时。')
+  await page.getByRole('button', { name: '提交评价' }).click()
+  await expectText(page, '评价已提交', 'customer review submit toast')
+  await expectText(page, '我的评价', 'customer review summary visible')
+
+  await page.locator('header').getByRole('button', { name: /退出/ }).click()
+  await expectText(page, '管理员登录', 'customer logout before profile')
+  await page.getByRole('button', { name: '管理员' }).click()
+  await page.locator('.login-form .login-button').click()
+  await expectText(page, '答辩展示中心', 'admin login before customer profile')
+  await page.goto(`${baseUrl}/admin/customers/profile?userId=${demoCustomerAuth.userId}`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '客户画像', 'admin customer profile page visible')
+  await expectText(page, '服务评价', 'admin customer profile reviews visible')
+  await expectText(page, '浏览器自动化评价', 'admin customer profile review content visible')
+  await expectText(page, '风险等级', 'admin customer profile risk visible')
   await page.goto(`${baseUrl}/showcase`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '闭环特色功能', 'showcase feature roadmap visible')
   await expectText(page, '演示流程', 'showcase demo flow visible')

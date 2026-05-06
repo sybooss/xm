@@ -15,6 +15,10 @@ public interface ServiceTicketMapper {
 
     List<ServiceTicket> listBySessionId(Long sessionId);
 
+    List<ServiceTicket> listByUserId(@Param("userId") Long userId, @Param("limit") Integer limit);
+
+    long countByUserId(@Param("userId") Long userId);
+
     ServiceTicket getOpenBySessionId(Long sessionId);
 
     void insert(ServiceTicket ticket);

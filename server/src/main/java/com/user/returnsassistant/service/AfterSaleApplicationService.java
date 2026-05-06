@@ -21,6 +21,8 @@ public interface AfterSaleApplicationService {
 
     AfterSaleApplication reject(Long id, AfterSaleActionRequest request, UserAccount admin);
 
+    AfterSaleApplication complete(Long id, AfterSaleActionRequest request, UserAccount admin);
+
     AfterSaleApplication requestEvidence(Long id, AfterSaleActionRequest request, UserAccount admin);
 
     AfterSaleEvidence addEvidence(Long id, AfterSaleEvidenceRequest request, UserAccount customer);

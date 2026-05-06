@@ -58,6 +58,22 @@
         order by t.created_at desc, t.id desc
     </select>
 
+    <select id="listByUserId" resultType="com.user.returnsassistant.pojo.ServiceTicket">
+        select t.*, s.session_no, o.order_no
+        from service_ticket t
+        left join chat_session s on t.session_id=s.id
+        left join demo_order o on t.order_id=o.id
+        where t.user_id=#{userId} and t.deleted=0
+        order by t.created_at desc, t.id desc
+        limit #{limit}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        select count(*)
+        from service_ticket
+        where user_id=#{userId} and deleted=0
+    </select>
+
     <select id="getOpenBySessionId" resultType="com.user.returnsassistant.pojo.ServiceTicket">
         select t.*, s.session_no, o.order_no
         from service_ticket t
