@@ -65,6 +65,16 @@ try {
   await expectText(page, '版本里程碑面板', 'operations version milestones visible')
   await page.screenshot({ path: path.join(artifactDir, '02-operations.png'), fullPage: true })
 
+  await page.goto(`${baseUrl}/feature-closures`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '特色闭环中心', 'feature closure page visible')
+  await expectText(page, '10+ 新增特色功能', 'feature closure 10 plus visible')
+  await expectText(page, 'SLA 自动预警台', 'feature closure SLA visible')
+  await expectText(page, '证据链完整度检查器', 'feature closure evidence visible')
+  await expectText(page, 'RAG 命中复盘板', 'feature closure RAG visible')
+  await expectText(page, '答辩演示编排器', 'feature closure demo builder visible')
+  await expectText(page, '参考项目落点', 'feature closure references visible')
+  await page.screenshot({ path: path.join(artifactDir, '03-feature-closures.png'), fullPage: true })
+
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '系统总览', 'dashboard page visible')
   await expectText(page, 'gpt-4o-mini', 'dashboard model visible')

@@ -103,9 +103,48 @@
 - 全链路：`tools/full-smoke-test.ps1`
 - 浏览器：`npm run test:browser`
 
-### V2.3 SLA 自动提醒
+### V2.3 特色闭环中心与 14 个新增特色功能
 
-计划：
+日期：2026-05-06
 
-- 为高优先级工单增加 SLA 阈值、自动提醒和处置建议。
-- 在运营指挥中心展示临近超时和已超时的工单队列。
+本轮完成：
+
+- 后端新增 `GET /feature-closures`，专门用于承载“新加 10 多个特色功能”的闭环验收，不再把旧功能简单计数。
+- 前端新增 `/feature-closures` 特色闭环中心，侧边栏新增“特色闭环”入口。
+- 页面采用 Apple-like 浅色玻璃质感、强留白、清晰层级和低圆角信息卡，展示指标、闭环功能、演示路线和参考项目落点。
+- 每个新增特色功能都绑定：`code`、业务信号、诊断判断、下一步动作、页面入口、接口证据、借鉴来源、闭环分和 `closedLoop=true`。
+- 全链路脚本新增接口断言，验证闭环功能数量不少于 14、全部闭环、演示路线和参考项目完整。
+- 浏览器脚本新增 `/feature-closures` 页面断言，覆盖关键特色功能标题和参考项目落点。
+
+本轮新加 14 个特色功能：
+
+| 序号 | 功能 code | 新增特色功能 | 闭环落点 |
+| ---: | --- | --- | --- |
+| 1 | `SLA_GUARD` | SLA 自动预警台 | 基于工单状态和优先级识别待处理风险，跳转人工工单处置 |
+| 2 | `SENTIMENT_RADAR` | 客户情绪温度计 | 基于投诉转人工意图识别负向情绪，回到咨询工作台触发样本 |
+| 3 | `PRIORITY_ROUTER` | 智能优先级路由器 | 聚合 HIGH / URGENT 工单，辅助客服主管分派 |
+| 4 | `COMPENSATION_ADVISOR` | 赔付方案推荐器 | 联动订单与售后记录，形成退款/补偿处置建议 |
+| 5 | `KNOWLEDGE_GAP_MINER` | 知识缺口采矿器 | 检查知识库意图覆盖，反向推动 FAQ 补齐 |
+| 6 | `ANSWER_QA_SCORECARD` | 回复质检评分卡 | 合并 AI 成功率、RAG 命中和流程轨迹形成质量解释 |
+| 7 | `REFUND_TIMELINE` | 退款进度预测器 | 结合售后状态和多轮上下文解释退款进度 |
+| 8 | `LOGISTICS_ESCALATION` | 物流异常处置流 | 识别物流异常订单，建议安抚与承运商同步 |
+| 9 | `REPEAT_COMPLAINT_GUARD` | 重复投诉拦截器 | 按订单聚合工单，识别重复投诉和升级处理风险 |
+| 10 | `EVIDENCE_CHAIN_CHECKER` | 证据链完整度检查器 | 对接会话证据报告，检查对话、知识、AI、工单、轨迹是否齐全 |
+| 11 | `FALLBACK_DRILL` | AI 兜底演练面板 | 展示 AI 失败/跳过时本地业务规则仍可用 |
+| 12 | `CHANNEL_ORCHESTRATOR` | 多渠道触达编排器 | 统一 Web、App、小程序、测试台会话渠道闭环 |
+| 13 | `RAG_REVIEW_BOARD` | RAG 命中复盘板 | 回看知识命中、排序依据和检索日志 |
+| 14 | `DEMO_SCRIPT_BUILDER` | 答辩演示编排器 | 串联登录、咨询、转人工、导出证据和运营复盘演示路线 |
+
+参考项目与落地：
+
+- LangChain4j RAG / Tools：借鉴 RAG、Tools、模型可替换；本项目落地为 Spring Boot 业务服务包裹 LangChain4j 增强层，并保留本地兜底。
+- Spring Petclinic LangChain4j：借鉴自然语言调用业务工具；本项目落地为订单、知识、工单等工具调用必须经过业务服务。
+- LILISHOP：借鉴电商订单、售后、后台运营完整度；本项目落地为订单、售后、工单、知识和运营闭环。
+
+验收要求：
+
+- 后端：`mvn -q -DskipTests package`
+- 前端：`npm run build`
+- 全链路：`tools/full-smoke-test.ps1`
+- 浏览器：`npm run test:browser`
+- 角色权限：`npm run test:browser:roles`

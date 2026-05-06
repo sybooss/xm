@@ -29,13 +29,13 @@ try {
   await expectText(page, '客户', 'customer role tag visible')
   await expectText(page, '渠道筛选', 'customer channel filter visible')
 
-  const adminMenuTexts = ['答辩展示', '系统总览', '运营指挥', '知识库', '订单管理', '人工工单', '日志中心', 'AI 测试']
+  const adminMenuTexts = ['答辩展示', '系统总览', '运营指挥', '特色闭环', '知识库', '订单管理', '人工工单', '日志中心', 'AI 测试']
   for (const text of adminMenuTexts) {
     const visible = await page.getByRole('menuitem', { name: text }).count()
     record(`customer menu hides ${text}`, visible === 0, `count=${visible}`)
   }
 
-  for (const path of ['/dashboard', '/operations', '/orders', '/service-tickets', '/logs', '/ai-test', '/knowledge', '/showcase']) {
+  for (const path of ['/dashboard', '/operations', '/feature-closures', '/orders', '/service-tickets', '/logs', '/ai-test', '/knowledge', '/showcase']) {
     await page.goto(`${baseUrl}${path}`, { waitUntil: 'networkidle', timeout: 60000 })
     await expectChatRedirect(page, path)
   }

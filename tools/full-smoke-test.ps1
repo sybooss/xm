@@ -341,6 +341,16 @@ try {
     Add-Result "operation insights action items" ($operationInsights.actionItems.Count -ge 4) "actionItems=$($operationInsights.actionItems.Count)"
     Add-Result "operation insights AI quality" ($operationInsights.aiInsights.Count -ge 4) "aiInsights=$($operationInsights.aiInsights.Count)"
 
+    $featureClosures = Api-Get "/feature-closures"
+    $closureCodes = @($featureClosures.closures | ForEach-Object { $_.code })
+    $allClosed = (@($featureClosures.closures | Where-Object { $_.closedLoop -ne $true }).Count -eq 0)
+    Add-Result "feature closure count" ($featureClosures.closures.Count -ge 14) "closures=$($featureClosures.closures.Count)"
+    Add-Result "feature closure all closed" $allClosed "unclosed=$(@($featureClosures.closures | Where-Object { $_.closedLoop -ne $true }).Count)"
+    Add-Result "feature closure SLA guard" ($closureCodes -contains "SLA_GUARD") "codes=$($closureCodes.Count)"
+    Add-Result "feature closure evidence checker" ($closureCodes -contains "EVIDENCE_CHAIN_CHECKER") "codes=$($closureCodes.Count)"
+    Add-Result "feature closure RAG review" ($closureCodes -contains "RAG_REVIEW_BOARD") "codes=$($closureCodes.Count)"
+    Add-Result "feature closure demo references" ($featureClosures.demoSteps.Count -ge 6 -and $featureClosures.references.Count -ge 3) "steps=$($featureClosures.demoSteps.Count), refs=$($featureClosures.references.Count)"
+
     Api-Delete "/chat-sessions/$($created.sessionId)" | Out-Null
     $created.sessionId = $null
     $created.ticketId = $null
