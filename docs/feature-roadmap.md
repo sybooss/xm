@@ -84,9 +84,28 @@
 - 全链路：`tools/full-smoke-test.ps1`
 - 浏览器：`npm run test:browser`、`npm run test:browser:roles`
 
-### V2.2 SLA 自动提醒与报告导出
+### V2.2 会话证据报告导出
+
+日期：2026-05-06
+
+本轮完成：
+
+- 后端新增 `GET /chat-sessions/{id}/evidence-report`，返回 `text/markdown` 证据报告。
+- 报告聚合会话基础信息、订单上下文、完整对话、意图识别、知识命中、AI 调用、人工工单和处理轨迹。
+- 前端咨询工作台新增“导出证据”按钮，可下载当前会话 Markdown 文件。
+- 全链路脚本新增证据报告导出断言，验证报告包含知识命中、AI 调用、人工工单和处理轨迹章节。
+- 浏览器脚本新增“导出证据”按钮可见性断言。
+
+验收要求：
+
+- 后端：`mvn -q -DskipTests package`
+- 前端：`npm run build`
+- 全链路：`tools/full-smoke-test.ps1`
+- 浏览器：`npm run test:browser`
+
+### V2.3 SLA 自动提醒
 
 计划：
 
 - 为高优先级工单增加 SLA 阈值、自动提醒和处置建议。
-- 将会话、工单、知识命中和日志证据导出为答辩附件。
+- 在运营指挥中心展示临近超时和已超时的工单队列。

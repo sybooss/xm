@@ -21,4 +21,6 @@ public interface ChatService {
     Map<String, Object> sendMessage(Long id, ChatMessageRequest request);
 
     List<ProcessTrace> listTraces(Long id);
+
+    String buildEvidenceReport(Long id);
 }

@@ -9,6 +9,18 @@ export const updateSession = (id, data) => request.put(`/chat-sessions/${id}`, d
 export const deleteSession = id => request.delete(`/chat-sessions/${id}`)
 export const listMessages = id => request.get(`/chat-sessions/${id}/messages`)
 export const sendMessage = (id, data) => request.post(`/chat-sessions/${id}/messages`, data)
+export async function downloadEvidenceReport(id) {
+  const token = localStorage.getItem('returns_assistant_token')
+  const response = await fetch(`${apiBase}/chat-sessions/${id}/evidence-report`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  })
+  if (!response.ok) {
+    throw new Error(`证据报告导出失败：HTTP ${response.status}`)
+  }
+  return response.blob()
+}
 export async function sendMessageStream(id, data, handlers = {}) {
   const token = localStorage.getItem('returns_assistant_token')
   const response = await fetch(`${apiBase}/chat-sessions/${id}/message-stream`, {

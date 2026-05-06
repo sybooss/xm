@@ -86,6 +86,12 @@ function Api-Delete($path) {
     return $response.data
 }
 
+function Api-Get-Text($path) {
+    $headers = Auth-Headers
+    $response = Invoke-WebRequest -Uri "$base$path" -Method Get -Headers $headers -TimeoutSec 60 -UseBasicParsing
+    return $response.Content
+}
+
 function Auth-Headers() {
     if ($script:authToken) {
         return @{ Authorization = "Bearer $script:authToken" }
@@ -320,6 +326,14 @@ try {
     $diagnostics = Api-Get "/log-diagnostics"
     $diagnosticsOk = $diagnostics.ai.sampleSize -ge 1 -and $diagnostics.riskSignals.Count -ge 1 -and $diagnostics.actionItems.Count -ge 1
     Add-Result "log diagnostics health summary" $diagnosticsOk "health=$($diagnostics.ai.healthLevel), trend=$($diagnostics.ai.trendLabel), risks=$($diagnostics.riskSignals.Count)"
+
+    $evidenceReport = Api-Get-Text "/chat-sessions/$($created.sessionId)/evidence-report"
+    $evidenceOk = $evidenceReport.Contains($sessionDetail.sessionNo) -and
+                  $evidenceReport.Contains("RETURN_APPLY") -and
+                  $evidenceReport.Contains("SUCCESS") -and
+                  $evidenceReport.Contains("BUSINESS_TOOL_CALLS") -and
+                  $evidenceReport.Contains($ticketChat.ticket.ticketNo)
+    Add-Result "chat evidence report export" $evidenceOk "length=$($evidenceReport.Length)"
 
     $operationInsights = Api-Get "/operation-insights"
     Add-Result "operation insights feature matrix" ($operationInsights.newFeatures.Count -ge 12) "newFeatures=$($operationInsights.newFeatures.Count)"

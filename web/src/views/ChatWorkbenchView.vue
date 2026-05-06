@@ -61,7 +61,12 @@
         </div>
         <div class="header-actions">
           <el-button v-if="showOrderPanel" :icon="ArrowLeft" @click="backToChat">返回聊天</el-button>
-          <StatusTag v-else :value="lastSourceType" />
+          <template v-else>
+            <el-button :icon="DocumentChecked" :disabled="!chatStore.currentSessionId" @click="exportEvidenceReport">
+              导出证据
+            </el-button>
+            <StatusTag :value="lastSourceType" />
+          </template>
         </div>
       </div>
 
@@ -263,7 +268,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
-import { ArrowLeft, Delete, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowLeft, Delete, DocumentChecked, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import CustomerOrderPanel from '../components/chat/CustomerOrderPanel.vue'
 import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
@@ -273,6 +278,7 @@ import StatusTag from '../components/common/StatusTag.vue'
 import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { useSystemStore } from '../stores/systemStore'
+import { downloadEvidenceReport } from '../api/chatApi'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -419,6 +425,27 @@ function selectOrderFromPanel(row) {
   scrollBottom()
 }
 
+async function exportEvidenceReport() {
+  if (!chatStore.currentSessionId) {
+    ElMessage.warning('请先选择会话')
+    return
+  }
+  try {
+    const blob = await downloadEvidenceReport(chatStore.currentSessionId)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `session-${chatStore.currentSessionId}-evidence.md`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    ElMessage.success('证据报告已导出')
+  } catch (error) {
+    ElMessage.error(error.message || '证据报告导出失败')
+  }
+}
+
 async function loadSessionsByChannel() {
   const params = channelFilter.value === 'ALL' ? {} : { channel: channelFilter.value }
   await chatStore.loadSessions(params)
@@ -447,9 +474,6 @@ async function logout() {
 }
 
 function fallbackQuestions(intentCode) {
-  if (!intentCode) {
-    return []
-  }
   const presets = {
     RETURN_APPLY: ['退货后多久能退款？', '退货需要自己承担运费吗？', '退货需要哪些照片？'],
     EXCHANGE_APPLY: ['换货需要多久？', '换货可以改成退货吗？', '需要上传什么凭证？'],

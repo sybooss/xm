@@ -14,6 +14,7 @@ import com.user.returnsassistant.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -114,6 +115,15 @@ public class ChatSessionController {
     public Result listTraces(@PathVariable Long id, HttpServletRequest request) {
         ensureSessionAccess(id, request);
         return Result.success(chatService.listTraces(id));
+    }
+
+    @GetMapping(value = "/{id}/evidence-report", produces = "text/markdown; charset=UTF-8")
+    public ResponseEntity<String> evidenceReport(@PathVariable Long id, HttpServletRequest request) {
+        ensureSessionAccess(id, request);
+        String markdown = chatService.buildEvidenceReport(id);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=session-" + id + "-evidence.md")
+                .body(markdown);
     }
 
     private UserAccount ensureSessionAccess(Long id, HttpServletRequest request) {

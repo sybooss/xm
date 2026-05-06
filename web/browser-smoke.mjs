@@ -90,6 +90,7 @@ try {
   await page.getByText(/AI 增强|本地兜底/, { exact: false }).first().waitFor({ timeout: 120000 })
   await expectText(page, 'RETURN_APPLY', 'chat intent visible')
   await expectText(page, 'AI 决策摘要', 'chat decision summary visible')
+  await expectText(page, '导出证据', 'chat evidence export visible')
   await expectText(page, '业务工具', 'chat business tools visible')
   await expectText(page, '建议追问', 'chat suggested questions visible')
   await expectText(page, '回答过程', 'chat process flow visible')

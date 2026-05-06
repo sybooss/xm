@@ -271,6 +271,46 @@ public class ChatServiceImpl implements ChatService {
         return processTraceMapper.listBySessionId(id);
     }
 
+    @Override
+    public String buildEvidenceReport(Long id) {
+        ChatSession session = requireSession(id);
+        DemoOrder order = session.getOrderId() == null ? null : orderMapper.getById(session.getOrderId());
+        List<ChatMessage> messages = messageMapper.listBySessionId(id);
+        List<IntentRecord> intents = intentRecordMapper.listBySessionId(id);
+        List<RetrievalLog> retrievalLogs = retrievalLogMapper.listBySessionId(id);
+        List<AiCallLog> aiLogs = aiCallLogMapper.listBySessionId(id);
+        List<ServiceTicket> tickets = ticketService.listBySessionId(id);
+        List<ProcessTrace> traces = processTraceMapper.listBySessionId(id);
+
+        StringBuilder md = new StringBuilder();
+        md.append("# 售后会话证据报告\n\n");
+        md.append("- 会话编号：").append(text(session.getSessionNo())).append("\n");
+        md.append("- 会话标题：").append(text(session.getTitle())).append("\n");
+        md.append("- 渠道：").append(text(session.getChannel())).append("\n");
+        md.append("- 当前意图：").append(text(session.getCurrentIntent())).append("\n");
+        md.append("- 状态：").append(text(session.getStatus())).append("\n");
+        md.append("- 生成时间：").append(LocalDateTime.now()).append("\n\n");
+
+        md.append("## 订单上下文\n\n");
+        if (order == null) {
+            md.append("未绑定订单。\n\n");
+        } else {
+            md.append("- 订单号：").append(text(order.getOrderNo())).append("\n");
+            md.append("- 商品：").append(text(order.getProductName())).append("\n");
+            md.append("- 订单状态：").append(text(order.getOrderStatus())).append("\n");
+            md.append("- 物流状态：").append(text(order.getLogisticsStatus())).append("\n");
+            md.append("- 售后状态：").append(text(order.getAfterSaleStatus())).append("\n\n");
+        }
+
+        appendMessages(md, messages);
+        appendIntents(md, intents);
+        appendRetrievalLogs(md, retrievalLogs);
+        appendAiLogs(md, aiLogs);
+        appendTickets(md, tickets);
+        appendTraces(md, traces);
+        return md.toString();
+    }
+
     private ChatSession requireSession(Long id) {
         ChatSession session = sessionMapper.getById(id);
         if (session == null) {
@@ -570,6 +610,120 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException("不支持的会话渠道：" + channel);
         }
         return value;
+    }
+
+    private void appendMessages(StringBuilder md, List<ChatMessage> messages) {
+        md.append("## 对话记录\n\n");
+        if (messages.isEmpty()) {
+            md.append("暂无消息。\n\n");
+            return;
+        }
+        for (ChatMessage message : messages) {
+            md.append("### ").append(text(message.getRole())).append(" #").append(message.getSeqNo()).append("\n\n");
+            md.append(text(message.getContent())).append("\n\n");
+        }
+    }
+
+    private void appendIntents(StringBuilder md, List<IntentRecord> intents) {
+        md.append("## 意图识别证据\n\n");
+        if (intents.isEmpty()) {
+            md.append("暂无意图记录。\n\n");
+            return;
+        }
+        md.append("| 意图 | 名称 | 置信度 | 方法 | 时间 |\n");
+        md.append("| --- | --- | --- | --- | --- |\n");
+        for (IntentRecord item : intents) {
+            md.append("| ").append(text(item.getIntentCode()))
+                    .append(" | ").append(text(item.getIntentName()))
+                    .append(" | ").append(item.getConfidence() == null ? "-" : item.getConfidence())
+                    .append(" | ").append(text(item.getMethod()))
+                    .append(" | ").append(item.getCreatedAt())
+                    .append(" |\n");
+        }
+        md.append("\n");
+    }
+
+    private void appendRetrievalLogs(StringBuilder md, List<RetrievalLog> logs) {
+        md.append("## 知识命中证据\n\n");
+        if (logs.isEmpty()) {
+            md.append("暂无知识命中。\n\n");
+            return;
+        }
+        md.append("| 排名 | 文档 | 分数 | 命中原因 |\n");
+        md.append("| --- | --- | --- | --- |\n");
+        for (RetrievalLog item : logs) {
+            md.append("| ").append(item.getRankNo())
+                    .append(" | ").append(text(item.getDocTitleSnapshot()))
+                    .append(" | ").append(item.getScore() == null ? "-" : item.getScore())
+                    .append(" | ").append(text(item.getHitReason()))
+                    .append(" |\n");
+        }
+        md.append("\n");
+    }
+
+    private void appendAiLogs(StringBuilder md, List<AiCallLog> logs) {
+        md.append("## AI 调用证据\n\n");
+        if (logs.isEmpty()) {
+            md.append("暂无 AI 调用日志。\n\n");
+            return;
+        }
+        md.append("| 状态 | 模型 | 耗时 | 错误 |\n");
+        md.append("| --- | --- | --- | --- |\n");
+        for (AiCallLog item : logs) {
+            md.append("| ").append(text(item.getStatus()))
+                    .append(" | ").append(text(item.getModelName()))
+                    .append(" | ").append(item.getLatencyMs() == null ? "-" : item.getLatencyMs() + " ms")
+                    .append(" | ").append(text(item.getErrorMessage()))
+                    .append(" |\n");
+        }
+        md.append("\n");
+    }
+
+    private void appendTickets(StringBuilder md, List<ServiceTicket> tickets) {
+        md.append("## 人工工单证据\n\n");
+        if (tickets.isEmpty()) {
+            md.append("暂无人工工单。\n\n");
+            return;
+        }
+        md.append("| 工单号 | 优先级 | 状态 | 问题 | 建议动作 |\n");
+        md.append("| --- | --- | --- | --- | --- |\n");
+        for (ServiceTicket item : tickets) {
+            md.append("| ").append(text(item.getTicketNo()))
+                    .append(" | ").append(text(item.getPriority()))
+                    .append(" | ").append(text(item.getStatus()))
+                    .append(" | ").append(text(item.getCustomerIssue()))
+                    .append(" | ").append(text(item.getSuggestedAction()))
+                    .append(" |\n");
+        }
+        md.append("\n");
+    }
+
+    private void appendTraces(StringBuilder md, List<ProcessTrace> traces) {
+        md.append("## 处理轨迹证据\n\n");
+        if (traces.isEmpty()) {
+            md.append("暂无处理轨迹。\n\n");
+            return;
+        }
+        md.append("| 步骤 | 状态 | 时间 |\n");
+        md.append("| --- | --- | --- |\n");
+        for (ProcessTrace item : traces) {
+            md.append("| ").append(text(item.getStepName()))
+                    .append(" | ").append(text(item.getStepStatus()))
+                    .append(" | ").append(item.getCreatedAt())
+                    .append(" |\n");
+        }
+        md.append("\n");
+    }
+
+    private String text(Object value) {
+        if (value == null) {
+            return "-";
+        }
+        return String.valueOf(value)
+                .replace("|", "\\|")
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
+                .trim();
     }
 
     private List<String> suggestedQuestions(String intentCode) {
