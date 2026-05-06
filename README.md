@@ -395,6 +395,8 @@ mvn -q -DskipTests package
 - 前端项目文档：[docs/frontend-project-doc.md](docs/frontend-project-doc.md)
 - LangChain4j 接入说明：[docs/langchain4j-real-model-integration.md](docs/langchain4j-real-model-integration.md)
 - 高分增强功能设计：[docs/high-score-feature-enhancement-design.md](docs/high-score-feature-enhancement-design.md)
+- 真实业务骨架改造方案：[docs/real-business-skeleton-refactor-plan.md](docs/real-business-skeleton-refactor-plan.md)
+- 真实双端系统改造进度：[docs/real-business-skeleton-refactor-progress.md](docs/real-business-skeleton-refactor-progress.md)
 - Agent 协作规则：[AGENTS.md](AGENTS.md)
 - 演示脚本：[docs/demo-script.md](docs/demo-script.md)
 - 测试用例：[docs/test-cases.md](docs/test-cases.md)
