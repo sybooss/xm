@@ -9,6 +9,9 @@ await fs.mkdir(artifactDir, { recursive: true })
 const results = []
 const consoleErrors = []
 const pageErrors = []
+let adminToken = ''
+let seededCustomerOrderId = null
+let seededReviewOrderId = null
 
 function record(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail })
@@ -17,6 +20,46 @@ function record(name, ok, detail = '') {
 async function expectText(page, text, name) {
   await page.getByText(text, { exact: false }).first().waitFor({ timeout: 20000 })
   record(name, true, text)
+}
+
+async function apiPost(pathname, body, token = adminToken) {
+  const response = await fetch(`http://localhost:8081${pathname}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(body)
+  })
+  const result = await response.json()
+  if (result.code !== 1) {
+    throw new Error(`${pathname} failed: ${result.msg}`)
+  }
+  return result.data
+}
+
+async function apiGet(pathname, token = adminToken) {
+  const response = await fetch(`http://localhost:8081${pathname}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+  const result = await response.json()
+  if (result.code !== 1) {
+    throw new Error(`${pathname} failed: ${result.msg}`)
+  }
+  return result.data
+}
+
+async function apiDelete(pathname, token = adminToken) {
+  const response = await fetch(`http://localhost:8081${pathname}`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+  const result = await response.json()
+  if (result.code !== 1) {
+    throw new Error(`${pathname} failed: ${result.msg}`)
+  }
+  return result.data
 }
 
 const browser = await chromium.launch({ headless: true })
@@ -30,6 +73,9 @@ page.on('console', message => {
 page.on('pageerror', error => pageErrors.push(error.message))
 
 try {
+  const adminAuth = await apiPost('/auth/login', { username: 'admin', password: '123456' }, '')
+  adminToken = adminAuth.token
+
   await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '管理员登录', 'home redirects to login')
   await page.getByRole('button', { name: '注册' }).click()
@@ -48,6 +94,27 @@ try {
   await page.getByRole('button', { name: '客户' }).click()
   await page.locator('.login-form .login-button').click()
   await expectText(page, '我的售后', 'demo customer redirects to customer after-sales')
+  const demoCustomer = await page.evaluate(() => JSON.parse(localStorage.getItem('returns_assistant_user') || '{}'))
+  const orderNoForUiApply = 'BROWSER' + Date.now()
+  await apiPost('/orders', {
+    orderNo: orderNoForUiApply,
+    userId: demoCustomer.userId,
+    productName: '浏览器售后测试商品' + Date.now(),
+    skuName: '标准版',
+    orderAmount: 168.80,
+    payStatus: 'PAID',
+    orderStatus: 'SIGNED',
+    logisticsStatus: 'DELIVERED',
+    afterSaleStatus: 'NONE',
+    paidAt: '2026-04-23T10:00:00',
+    shippedAt: '2026-04-24T10:00:00',
+    signedAt: '2026-04-25T10:00:00'
+  })
+  const seededOrder = await apiGet(`/orders/no/${orderNoForUiApply}`)
+  seededCustomerOrderId = seededOrder?.id
+  await page.getByPlaceholder('订单号或商品名').fill(orderNoForUiApply)
+  await page.getByRole('button', { name: '查询' }).first().click()
+  await expectText(page, orderNoForUiApply, 'customer seeded order visible')
   await page.getByRole('button', { name: '申请' }).nth(1).click()
   await expectText(page, '申请售后', 'customer after-sale apply dialog visible')
   await page.locator('textarea[placeholder*="请说明问题"]').fill('浏览器自动化提交售后申请：商品存在质量问题，需要退货退款。')
@@ -62,6 +129,45 @@ try {
   await page.locator('.login-form .login-button').click()
   await expectText(page, '答辩展示中心', 'login redirects to showcase')
   await expectText(page, '退换货客服', 'layout brand visible')
+  const demoCustomerPage = await apiGet('/orders?page=1&pageSize=1')
+  const demoCustomerId = demoCustomerPage.rows?.[0]?.userId || 1
+  const reviewOrderNo = 'REVIEW' + Date.now()
+  await apiPost('/orders', {
+    orderNo: reviewOrderNo,
+    userId: demoCustomerId,
+    productName: '审核工作台测试商品' + Date.now(),
+    skuName: '标准版',
+    orderAmount: 288.80,
+    payStatus: 'PAID',
+    orderStatus: 'SIGNED',
+    logisticsStatus: 'DELIVERED',
+    afterSaleStatus: 'NONE',
+    paidAt: '2026-04-23T10:00:00',
+    shippedAt: '2026-04-24T10:00:00',
+    signedAt: '2026-04-25T10:00:00'
+  })
+  const reviewOrder = await apiGet(`/orders/no/${reviewOrderNo}`)
+  seededReviewOrderId = reviewOrder?.id
+  const demoCustomerAuth = await apiPost('/auth/login', { username: 'demo_customer', password: '123456' }, '')
+  await apiPost('/customer/after-sales', {
+    orderId: seededReviewOrderId,
+    serviceType: 'RETURN',
+    reasonCode: 'QUALITY_PROBLEM',
+    reasonText: '浏览器自动化为管理员审核台创建待审核售后申请。',
+    refundAmount: 188.80
+  }, demoCustomerAuth.token)
+  await page.goto(`${baseUrl}/admin/after-sales/review`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '售后审核工作台', 'admin after-sale review page visible')
+  await page.getByPlaceholder('售后单号、订单号或商品名').fill(reviewOrderNo)
+  await page.getByRole('button', { name: '查询' }).first().click()
+  await expectText(page, reviewOrderNo, 'admin after-sale review seeded order visible')
+  await expectText(page, '审核处理台', 'admin after-sale review detail visible')
+  await page.getByRole('button', { name: '审核通过' }).click()
+  await expectText(page, '售后申请已审核通过', 'admin after-sale approve toast')
+  await expectText(page, '待买家寄回', 'admin after-sale approved status visible')
+  record('admin after-sale review approve flow', true, 'admin approved a seeded after-sale application')
+  await page.screenshot({ path: path.join(artifactDir, '00-admin-after-sale-review.png'), fullPage: true })
+  await page.goto(`${baseUrl}/showcase`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '闭环特色功能', 'showcase feature roadmap visible')
   await expectText(page, '演示流程', 'showcase demo flow visible')
   await expectText(page, '版本路线图', 'showcase version roadmap visible')
@@ -170,6 +276,16 @@ try {
 } catch (error) {
   record('browser smoke exception', false, error.message)
 } finally {
+  if (seededCustomerOrderId) {
+    await apiDelete(`/orders/${seededCustomerOrderId}`).catch(error => {
+      record('browser seeded order cleanup', false, error.message)
+    })
+  }
+  if (seededReviewOrderId) {
+    await apiDelete(`/orders/${seededReviewOrderId}`).catch(error => {
+      record('browser review order cleanup', false, error.message)
+    })
+  }
   await browser.close()
 }
 
