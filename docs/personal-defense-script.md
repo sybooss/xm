@@ -118,15 +118,18 @@ LangChain4j 在系统中只作为 AI 增强层，不替代 Spring Boot 业务逻
 核心代码位置：
 
 - `server/src/main/java/com/user/returnsassistant/config/AuthInterceptor.java`
+- `server/src/main/java/com/user/returnsassistant/service/AuthService.java`
 - `server/src/main/java/com/user/returnsassistant/service/impl/AuthServiceImpl.java`
 - `web/src/router/index.js`
 - `web/browser-role-smoke.mjs`
 
 讲解要点：
 
-系统支持管理员和客户两个角色。客户注册后默认只能进入咨询工作台，不能访问后台管理页。后端对管理操作使用 `@OperatorAnno` 做管理员校验，前端路由也用 `adminOnly` 限制菜单和访问。
+系统支持管理员和客户两个角色。客户注册后默认只能进入咨询工作台，不能访问后台管理页。后端保留 `@OperatorAnno` 作为 `AuthInterceptor` 识别管理员接口的标记，由 `AuthService.requireAdmin` 做校验；没有额外引入 AOP，也没有把操作日志审计作为本轮实现。订单、会话、售后和工单这类数据权限，则通过 `AuthService.isAdmin`、`ensureSelfOrAdmin` 和各 Controller 的资源归属判断共同保证。
 
 验证证据是 `npm.cmd run test:browser:roles`，该脚本确认客户看不到“答辩展示、系统总览、知识库、订单管理、人工工单、日志中心、AI 测试”等后台菜单，并且直接访问对应路由会被重定向回 `/chat`。
+
+后端代码风格也做了规范化收口：标准列表页不再在 XML 中手写分页 `limit`，而是统一走 `PageHelper.startPage(...) + PageResult`；Controller 负责接收参数和简单权限入口，复杂规则下沉到 Service，再由 Mapper/XML 访问数据库，更贴近 `Controller -> Service -> Mapper/XML -> POJO` 的分层结构。
 
 ## 8. 核心模块七：答辩展示中心
 
@@ -165,7 +168,7 @@ LangChain4j 在系统中只作为 AI 增强层，不替代 Spring Boot 业务逻
 
 系统前端用 Vue 3，后端用 Spring Boot，数据库是 MySQL，AI 增强层使用 LangChain4j。用户在咨询工作台输入问题后，后端会先做多轮上下文解析和意图识别，再查询订单状态、检索知识库规则，生成本地业务判断，然后再调用模型做自然语言增强。如果模型失败或没有配置 key，系统仍然可以用本地规则兜底，所以答辩现场不会因为网络或模型问题导致核心流程不可用。
 
-我的重点工作包括聊天主链路、多轮追问、RAG 知识依据、LangChain4j 工具调用、本地兜底、自动工单和日志追踪。比如用户先问“这个订单能不能退货”，再问“那多久到账”，系统能承接上文识别为退款进度；如果用户说商家一直不处理，系统会自动生成工单，并记录 AI 摘要和处理建议。
+我的重点工作包括聊天主链路、多轮追问、RAG 知识依据、LangChain4j 工具调用、本地兜底、自动工单、日志追踪，以及后端分层和分页规范化。比如用户先问“这个订单能不能退货”，再问“那多久到账”，系统能承接上文识别为退款进度；如果用户说商家一直不处理，系统会自动生成工单，并记录 AI 摘要和处理建议。
 
 为了方便答辩，我还做了答辩展示中心，把 8 个已实现亮点、演示顺序和验证入口集中起来。验证方面，我跑过后端打包、前端构建、全链路接口烟测、浏览器主流程烟测和角色权限烟测，结果都是通过。
 
@@ -173,7 +176,7 @@ LangChain4j 在系统中只作为 AI 增强层，不替代 Spring Boot 业务逻
 
 如果老师问“你主要做了什么”，可以回答：
 
-我主要负责把智能客服从单点问答扩展成完整售后业务闭环，包括聊天主流程、多轮上下文、RAG 知识依据、AI 增强与本地兜底、人工工单、日志追踪和答辩展示入口。我的重点不是只调通模型，而是让模型在 Spring Boot 业务规则之后增强回复，同时保证没有模型时系统也能稳定演示。
+我主要负责把智能客服从单点问答扩展成完整售后业务闭环，包括聊天主流程、多轮上下文、RAG 知识依据、AI 增强与本地兜底、人工工单、日志追踪、答辩展示入口，以及后端分页和权限辅助方法的规范化。我的重点不是只调通模型，而是让模型在 Spring Boot 业务规则之后增强回复，同时保证没有模型时系统也能稳定演示。
 
 如果老师问“难点是什么”，可以回答：
 
