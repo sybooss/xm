@@ -39,35 +39,35 @@ public class AdminAfterSaleController {
     @PostMapping("/{id}/approve")
     @OperatorAnno
     public Result approve(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.approve(id, actionRequest, admin));
     }
 
     @PostMapping("/{id}/reject")
     @OperatorAnno
     public Result reject(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.reject(id, actionRequest, admin));
     }
 
     @PostMapping("/{id}/complete")
     @OperatorAnno
     public Result complete(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.complete(id, actionRequest, admin));
     }
 
     @PostMapping("/{id}/request-evidence")
     @OperatorAnno
     public Result requestEvidence(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.requestEvidence(id, actionRequest, admin));
     }
 
     @PostMapping("/{id}/tickets")
     @OperatorAnno
     public Result createTicket(@PathVariable Long id, @RequestBody AfterSaleActionRequest actionRequest, HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(afterSaleApplicationService.createTicket(id, actionRequest, admin));
     }
 }

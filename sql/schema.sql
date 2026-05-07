@@ -239,6 +239,24 @@ CREATE TABLE IF NOT EXISTS chat_session (
   INDEX idx_session_status (status, updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+SET @chat_session_channel_check_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.check_constraints
+  WHERE constraint_schema = DATABASE()
+    AND constraint_name = 'ck_session_channel'
+);
+SET @chat_session_channel_drop_sql = IF(
+  @chat_session_channel_check_exists > 0,
+  'ALTER TABLE chat_session DROP CHECK ck_session_channel',
+  'SELECT 1'
+);
+PREPARE chat_session_channel_drop_stmt FROM @chat_session_channel_drop_sql;
+EXECUTE chat_session_channel_drop_stmt;
+DEALLOCATE PREPARE chat_session_channel_drop_stmt;
+
+ALTER TABLE chat_session
+  ADD CONSTRAINT ck_session_channel CHECK (channel IN ('WEB', 'APP', 'MINI_PROGRAM', 'ADMIN_TEST'));
+
 CREATE TABLE IF NOT EXISTS chat_message (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   session_id BIGINT NOT NULL,

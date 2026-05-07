@@ -14,8 +14,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Objects;
-
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
@@ -29,7 +27,7 @@ public class OrderController {
     @GetMapping
     public Result page(OrderSearch search, HttpServletRequest request) {
         UserAccount user = authService.requireUser(request.getHeader("Authorization"));
-        if (!"ADMIN".equals(user.getRole())) {
+        if (!authService.isAdmin(user)) {
             search.setUserId(user.getId());
         }
         return Result.success(orderService.page(search));
@@ -45,14 +43,16 @@ public class OrderController {
     @GetMapping("/{id}")
     public Result getById(@PathVariable Long id, HttpServletRequest request) {
         DemoOrder order = orderService.getById(id);
-        ensureOrderOwner(order, authService.requireUser(request.getHeader("Authorization")));
+        authService.ensureSelfOrAdmin(authService.requireUser(request.getHeader("Authorization")),
+                order.getUserId(), "只能查看自己的订单");
         return Result.success(order);
     }
 
     @GetMapping("/no/{orderNo}")
     public Result getByOrderNo(@PathVariable String orderNo, HttpServletRequest request) {
         DemoOrder order = orderService.getByOrderNo(orderNo);
-        ensureOrderOwner(order, authService.requireUser(request.getHeader("Authorization")));
+        authService.ensureSelfOrAdmin(authService.requireUser(request.getHeader("Authorization")),
+                order.getUserId(), "只能查看自己的订单");
         return Result.success(order);
     }
 
@@ -73,7 +73,8 @@ public class OrderController {
     @GetMapping("/{id}/after-sale-records")
     public Result listAfterSales(@PathVariable Long id, HttpServletRequest request) {
         DemoOrder order = orderService.getById(id);
-        ensureOrderOwner(order, authService.requireUser(request.getHeader("Authorization")));
+        authService.ensureSelfOrAdmin(authService.requireUser(request.getHeader("Authorization")),
+                order.getUserId(), "只能查看自己的订单");
         return Result.success(afterSaleRecordService.listByOrderId(id));
     }
 
@@ -81,9 +82,7 @@ public class OrderController {
     public Result applyAfterSale(@PathVariable Long id, @RequestBody AfterSaleRecord record, HttpServletRequest request) {
         UserAccount user = authService.requireUser(request.getHeader("Authorization"));
         DemoOrder order = orderService.getById(id);
-        if (!"ADMIN".equals(user.getRole()) && !Objects.equals(order.getUserId(), user.getId())) {
-            throw new BusinessException("只能为自己的订单申请售后");
-        }
+        authService.ensureSelfOrAdmin(user, order.getUserId(), "只能为自己的订单申请售后");
         if (afterSaleRecordService.listByOrderId(id).stream().anyMatch(this::isActiveAfterSale)) {
             throw new BusinessException("该订单已有进行中的售后申请，请勿重复提交");
         }
@@ -103,12 +102,4 @@ public class OrderController {
         return !"REJECTED".equals(record.getStatus()) && !"FINISHED".equals(record.getStatus());
     }
 
-    private void ensureOrderOwner(DemoOrder order, UserAccount user) {
-        if ("ADMIN".equals(user.getRole())) {
-            return;
-        }
-        if (!Objects.equals(order.getUserId(), user.getId())) {
-            throw new BusinessException("只能查看自己的订单");
-        }
-    }
 }

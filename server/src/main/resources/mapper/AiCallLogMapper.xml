@@ -17,7 +17,6 @@
         where 1=1
         <if test="status != null and status != ''">and status=#{status}</if>
         order by created_at desc, id desc
-        limit #{offset}, #{limit}
     </select>
 
     <select id="listBySessionId" resultType="com.user.returnsassistant.pojo.AiCallLog">

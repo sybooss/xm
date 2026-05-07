@@ -34,7 +34,7 @@ public class AdminReplyDraftController {
     public Result generate(@PathVariable Long applicationId,
                            @RequestBody(required = false) ReplyDraftActionRequest actionRequest,
                            HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(replyDraftService.generate(applicationId, actionRequest, admin));
     }
 
@@ -44,7 +44,7 @@ public class AdminReplyDraftController {
                       @PathVariable Long draftId,
                       @RequestBody(required = false) ReplyDraftActionRequest actionRequest,
                       HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(replyDraftService.use(applicationId, draftId, actionRequest, admin));
     }
 
@@ -54,7 +54,7 @@ public class AdminReplyDraftController {
                           @PathVariable Long draftId,
                           @RequestBody(required = false) ReplyDraftActionRequest actionRequest,
                           HttpServletRequest request) {
-        UserAccount admin = authService.requireUser(request.getHeader("Authorization"));
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
         return Result.success(replyDraftService.discard(applicationId, draftId, actionRequest, admin));
     }
 }

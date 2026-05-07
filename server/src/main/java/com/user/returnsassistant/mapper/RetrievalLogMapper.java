@@ -12,5 +12,5 @@ public interface RetrievalLogMapper {
 
     long count(@Param("keyword") String keyword);
 
-    List<RetrievalLog> page(@Param("keyword") String keyword, @Param("offset") Integer offset, @Param("limit") Integer limit);
+    List<RetrievalLog> page(@Param("keyword") String keyword);
 }

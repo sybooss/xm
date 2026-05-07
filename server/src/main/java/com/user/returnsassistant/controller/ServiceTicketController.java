@@ -1,7 +1,6 @@
 package com.user.returnsassistant.controller;
 
 import com.user.returnsassistant.anno.OperatorAnno;
-import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.ServiceTicketSearch;
@@ -78,13 +77,12 @@ public class ServiceTicketController {
 
     private void ensureSessionAccess(Long sessionId, HttpServletRequest request) {
         UserAccount user = authService.requireUser(request.getHeader("Authorization"));
-        if ("ADMIN".equals(user.getRole())) {
+        if (authService.isAdmin(user)) {
             return;
         }
         Map<String, Object> detail = chatService.getDetail(sessionId);
         Object owner = detail.get("userId");
-        if (!(owner instanceof Number number) || number.longValue() != user.getId()) {
-            throw new BusinessException("只能操作自己的会话工单");
-        }
+        Long ownerId = owner instanceof Number number ? number.longValue() : null;
+        authService.ensureSelfOrAdmin(user, ownerId, "只能操作自己的会话工单");
     }
 }

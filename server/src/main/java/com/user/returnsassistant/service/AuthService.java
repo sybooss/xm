@@ -17,4 +17,8 @@ public interface AuthService {
     UserAccount requireCustomer(String token);
 
     void logout(String token);
+
+    boolean isAdmin(UserAccount user);
+
+    void ensureSelfOrAdmin(UserAccount user, Long ownerId, String message);
 }

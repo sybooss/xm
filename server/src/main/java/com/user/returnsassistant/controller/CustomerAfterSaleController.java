@@ -5,7 +5,6 @@ import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
 import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.UserAccount;
-import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
 import com.user.returnsassistant.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,9 +41,7 @@ public class CustomerAfterSaleController {
     public Result getById(@PathVariable Long id, HttpServletRequest request) {
         UserAccount user = authService.requireCustomer(request.getHeader("Authorization"));
         var application = afterSaleApplicationService.getById(id);
-        if (!application.getUserId().equals(user.getId())) {
-            throw new BusinessException("只能查看自己的售后申请");
-        }
+        authService.ensureSelfOrAdmin(user, application.getUserId(), "只能查看自己的售后申请");
         return Result.success(application);
     }
 

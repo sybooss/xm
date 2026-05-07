@@ -30,7 +30,6 @@
              or o.order_no like concat('%',#{s.keyword},'%'))
         </if>
         order by s.updated_at desc, s.id desc
-        limit #{s.offset}, #{s.limit}
     </select>
 
     <select id="getById" resultType="com.user.returnsassistant.pojo.ChatSession">

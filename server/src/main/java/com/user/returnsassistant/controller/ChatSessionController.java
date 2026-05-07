@@ -20,7 +20,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -36,7 +35,7 @@ public class ChatSessionController {
     @GetMapping
     public Result page(ChatSessionSearch search, HttpServletRequest request) {
         UserAccount user = requireRequestUser(request);
-        if (!"ADMIN".equals(user.getRole())) {
+        if (!authService.isAdmin(user)) {
             search.setUserId(user.getId());
         }
         return Result.success(chatService.page(search));
@@ -45,7 +44,7 @@ public class ChatSessionController {
     @PostMapping
     public Result save(@RequestBody ChatSession session, HttpServletRequest request) {
         UserAccount user = requireRequestUser(request);
-        if (!"ADMIN".equals(user.getRole())) {
+        if (!authService.isAdmin(user)) {
             session.setUserId(user.getId());
         } else if (session.getUserId() == null) {
             session.setUserId(user.getId());
@@ -128,25 +127,22 @@ public class ChatSessionController {
 
     private UserAccount ensureSessionAccess(Long id, HttpServletRequest request) {
         UserAccount user = requireRequestUser(request);
-        if ("ADMIN".equals(user.getRole())) {
+        if (authService.isAdmin(user)) {
             return user;
         }
         Map<String, Object> detail = chatService.getDetail(id);
         Object owner = detail.get("userId");
-        if (!(owner instanceof Number number) || number.longValue() != user.getId()) {
-            throw new BusinessException("只能操作自己的会话");
-        }
+        Long ownerId = owner instanceof Number number ? number.longValue() : null;
+        authService.ensureSelfOrAdmin(user, ownerId, "只能操作自己的会话");
         return user;
     }
 
     private void ensureOrderAccess(String orderNo, UserAccount user) {
-        if ("ADMIN".equals(user.getRole()) || orderNo == null || orderNo.isBlank()) {
+        if (authService.isAdmin(user) || orderNo == null || orderNo.isBlank()) {
             return;
         }
         DemoOrder order = orderService.getByOrderNo(orderNo);
-        if (!Objects.equals(order.getUserId(), user.getId())) {
-            throw new BusinessException("只能咨询自己的订单");
-        }
+        authService.ensureSelfOrAdmin(user, order.getUserId(), "只能咨询自己的订单");
     }
 
     private UserAccount requireRequestUser(HttpServletRequest request) {

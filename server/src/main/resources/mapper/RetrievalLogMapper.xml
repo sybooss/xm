@@ -25,6 +25,5 @@
           and (query_text like concat('%',#{keyword},'%') or doc_title_snapshot like concat('%',#{keyword},'%'))
         </if>
         order by created_at desc, id desc
-        limit #{offset}, #{limit}
     </select>
 </mapper>

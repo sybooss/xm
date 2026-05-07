@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -127,6 +128,21 @@ public class AuthServiceImpl implements AuthService {
             }
         } catch (IllegalArgumentException ignored) {
             // Expired or malformed tokens are already unusable.
+        }
+    }
+
+    @Override
+    public boolean isAdmin(UserAccount user) {
+        return user != null && "ADMIN".equals(user.getRole());
+    }
+
+    @Override
+    public void ensureSelfOrAdmin(UserAccount user, Long ownerId, String message) {
+        if (isAdmin(user)) {
+            return;
+        }
+        if (!Objects.equals(ownerId, user == null ? null : user.getId())) {
+            throw new BusinessException(message);
         }
     }
 

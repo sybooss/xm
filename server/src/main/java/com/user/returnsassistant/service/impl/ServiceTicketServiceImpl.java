@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.ChatSessionMapper;
 import com.user.returnsassistant.mapper.DemoOrderMapper;
@@ -24,7 +26,9 @@ public class ServiceTicketServiceImpl implements ServiceTicketService {
 
     @Override
     public PageResult<ServiceTicket> page(ServiceTicketSearch search) {
-        return new PageResult<>(ticketMapper.count(search), ticketMapper.page(search));
+        PageHelper.startPage(search.getPage(), search.getPageSize());
+        Page<ServiceTicket> page = (Page<ServiceTicket>) ticketMapper.page(search);
+        return new PageResult<>(page.getTotal(), page.getResult());
     }
 
     @Override

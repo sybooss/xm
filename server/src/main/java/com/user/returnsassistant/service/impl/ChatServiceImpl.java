@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.user.returnsassistant.exception.BusinessException;
@@ -52,7 +54,9 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public PageResult<ChatSession> page(ChatSessionSearch search) {
-        return new PageResult<>(sessionMapper.count(search), sessionMapper.page(search));
+        PageHelper.startPage(search.getPage(), search.getPageSize());
+        Page<ChatSession> page = (Page<ChatSession>) sessionMapper.page(search);
+        return new PageResult<>(page.getTotal(), page.getResult());
     }
 
     @Override

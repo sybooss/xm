@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.user.returnsassistant.mapper.SlaTaskMapper;
 import com.user.returnsassistant.pojo.PageResult;
 import com.user.returnsassistant.pojo.SlaTask;
@@ -19,12 +21,14 @@ public class SlaTaskServiceImpl implements SlaTaskService {
 
     @Override
     public PageResult<SlaTask> page(SlaTaskSearch search) {
-        List<SlaTask> rows = slaTaskMapper.page(search);
+        PageHelper.startPage(search.getPage(), search.getPageSize());
+        Page<SlaTask> page = (Page<SlaTask>) slaTaskMapper.page(search);
+        List<SlaTask> rows = page.getResult();
         LocalDateTime now = LocalDateTime.now();
         for (SlaTask task : rows) {
             enrich(task, now);
         }
-        return new PageResult<>(slaTaskMapper.count(search), rows);
+        return new PageResult<>(page.getTotal(), rows);
     }
 
     private void enrich(SlaTask task, LocalDateTime now) {

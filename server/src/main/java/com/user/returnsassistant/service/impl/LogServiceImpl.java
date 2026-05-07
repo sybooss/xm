@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.user.returnsassistant.mapper.AiCallLogMapper;
 import com.user.returnsassistant.mapper.ProcessTraceMapper;
 import com.user.returnsassistant.mapper.RetrievalLogMapper;
@@ -36,20 +38,26 @@ public class LogServiceImpl implements LogService {
     public PageResult<AiCallLog> pageAiLogs(Integer page, Integer pageSize, String status) {
         int currentPage = page == null || page < 1 ? 1 : page;
         int size = pageSize == null || pageSize < 1 ? 10 : pageSize;
-        return new PageResult<>(aiCallLogMapper.count(status), aiCallLogMapper.page(status, (currentPage - 1) * size, size));
+        PageHelper.startPage(currentPage, size);
+        Page<AiCallLog> result = (Page<AiCallLog>) aiCallLogMapper.page(status);
+        return new PageResult<>(result.getTotal(), result.getResult());
     }
 
     @Override
     public PageResult<RetrievalLog> pageRetrievalLogs(Integer page, Integer pageSize, String keyword) {
         int currentPage = page == null || page < 1 ? 1 : page;
         int size = pageSize == null || pageSize < 1 ? 10 : pageSize;
-        return new PageResult<>(retrievalLogMapper.count(keyword), retrievalLogMapper.page(keyword, (currentPage - 1) * size, size));
+        PageHelper.startPage(currentPage, size);
+        Page<RetrievalLog> result = (Page<RetrievalLog>) retrievalLogMapper.page(keyword);
+        return new PageResult<>(result.getTotal(), result.getResult());
     }
 
     @Override
     public LogDiagnostics getDiagnostics() {
-        List<AiCallLog> aiLogs = aiCallLogMapper.page(null, 0, DIAGNOSTIC_SAMPLE_SIZE);
-        List<RetrievalLog> retrievalLogs = retrievalLogMapper.page(null, 0, DIAGNOSTIC_SAMPLE_SIZE);
+        PageHelper.startPage(1, DIAGNOSTIC_SAMPLE_SIZE);
+        List<AiCallLog> aiLogs = aiCallLogMapper.page(null);
+        PageHelper.startPage(1, DIAGNOSTIC_SAMPLE_SIZE);
+        List<RetrievalLog> retrievalLogs = retrievalLogMapper.page(null);
         List<ProcessTrace> traces = processTraceMapper.listRecent(100);
 
         LogDiagnostics diagnostics = new LogDiagnostics();

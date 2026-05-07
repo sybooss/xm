@@ -36,7 +36,6 @@
             and (order_no like concat('%',#{s.keyword},'%') or product_name like concat('%',#{s.keyword},'%'))
         </if>
         order by updated_at desc, id desc
-        limit #{s.offset}, #{s.limit}
     </select>
 
     <select id="getById" resultType="com.user.returnsassistant.pojo.DemoOrder">

@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.KnowledgeDocMapper;
 import com.user.returnsassistant.pojo.KnowledgeDoc;
@@ -18,7 +20,9 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
 
     @Override
     public PageResult<KnowledgeDoc> page(KnowledgeDocSearch search) {
-        return new PageResult<>(docMapper.count(search), docMapper.page(search));
+        PageHelper.startPage(search.getPage(), search.getPageSize());
+        Page<KnowledgeDoc> page = (Page<KnowledgeDoc>) docMapper.page(search);
+        return new PageResult<>(page.getTotal(), page.getResult());
     }
 
     @Override

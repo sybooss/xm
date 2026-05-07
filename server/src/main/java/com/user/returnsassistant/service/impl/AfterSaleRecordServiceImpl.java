@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.AfterSaleRecordMapper;
 import com.user.returnsassistant.mapper.DemoOrderMapper;
@@ -25,7 +27,9 @@ public class AfterSaleRecordServiceImpl implements AfterSaleRecordService {
 
     @Override
     public PageResult<AfterSaleRecord> page(AfterSaleRecordSearch search) {
-        return new PageResult<>(recordMapper.count(search), recordMapper.page(search));
+        PageHelper.startPage(search.getPage(), search.getPageSize());
+        Page<AfterSaleRecord> page = (Page<AfterSaleRecord>) recordMapper.page(search);
+        return new PageResult<>(page.getTotal(), page.getResult());
     }
 
     @Override

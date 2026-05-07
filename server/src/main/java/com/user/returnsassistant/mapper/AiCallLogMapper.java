@@ -10,7 +10,7 @@ public interface AiCallLogMapper {
 
     long count(@Param("status") String status);
 
-    List<AiCallLog> page(@Param("status") String status, @Param("offset") Integer offset, @Param("limit") Integer limit);
+    List<AiCallLog> page(@Param("status") String status);
 
     List<AiCallLog> listBySessionId(Long sessionId);
 }

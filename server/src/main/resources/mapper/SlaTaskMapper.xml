@@ -58,6 +58,5 @@
             case a.priority when 'URGENT' then 0 when 'HIGH' then 1 when 'NORMAL' then 2 else 3 end,
             a.sla_deadline asc,
             a.updated_at desc
-        limit #{s.offset}, #{s.limit}
     </select>
 </mapper>

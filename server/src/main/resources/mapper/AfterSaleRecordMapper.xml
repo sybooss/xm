@@ -18,7 +18,6 @@
         <if test="s.status != null and s.status != ''">and r.status=#{s.status}</if>
         <if test="s.serviceType != null and s.serviceType != ''">and r.service_type=#{s.serviceType}</if>
         order by r.created_at desc, r.id desc
-        limit #{s.offset}, #{s.limit}
     </select>
 
     <select id="getById" resultType="com.user.returnsassistant.pojo.AfterSaleRecord">

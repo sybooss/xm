@@ -73,7 +73,6 @@
         <include refid="BaseSelect"/>
         <include refid="SearchWhere"/>
         order by a.updated_at desc, a.id desc
-        limit #{s.offset}, #{s.limit}
     </select>
 
     <select id="getById" resultType="com.user.returnsassistant.pojo.AfterSaleApplication">

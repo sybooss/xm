@@ -38,7 +38,6 @@
              or o.order_no like concat('%',#{s.keyword},'%'))
         </if>
         order by t.created_at desc, t.id desc
-        limit #{s.offset}, #{s.limit}
     </select>
 
     <select id="getById" resultType="com.user.returnsassistant.pojo.ServiceTicket">

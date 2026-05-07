@@ -33,7 +33,6 @@
              or d.keywords like concat('%',#{s.keyword},'%'))
         </if>
         order by d.priority desc, d.updated_at desc, d.id desc
-        limit #{s.offset}, #{s.limit}
     </select>
 
     <select id="getById" resultType="com.user.returnsassistant.pojo.KnowledgeDoc">

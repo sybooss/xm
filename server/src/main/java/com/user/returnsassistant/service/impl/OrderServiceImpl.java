@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.AfterSaleRecordMapper;
 import com.user.returnsassistant.mapper.DemoOrderMapper;
@@ -19,7 +21,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public PageResult<DemoOrder> page(OrderSearch search) {
-        return new PageResult<>(orderMapper.count(search), orderMapper.page(search));
+        PageHelper.startPage(search.getPage(), search.getPageSize());
+        Page<DemoOrder> page = (Page<DemoOrder>) orderMapper.page(search);
+        return new PageResult<>(page.getTotal(), page.getResult());
     }
 
     @Override
