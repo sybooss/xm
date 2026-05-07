@@ -15,15 +15,17 @@ Vue 页面
   -> web/src/api/request.js 自动加 Authorization: Bearer <JWT>
   -> Spring Controller 接收 query/path/body/header
   -> ServiceImpl 做权限、校验、状态流转、AI 或兜底逻辑
+  -> 标准列表页在 ServiceImpl 调用 PageHelper.startPage
   -> Mapper 接口调用 MyBatis XML
-  -> MySQL 表返回数据
+  -> MyBatis XML 负责动态条件、关联查询和排序
+  -> MySQL 表返回数据，PageHelper 生成分页总数和当前页 rows
   -> Service 组装对象或 PageResult
   -> Controller 用 Result.success(data) 包成 JSON
   -> Axios 响应拦截器取 result.data
   -> Vue 把数据写回 ref/reactive，表格、详情、时间线自动刷新
 ```
 
-统一响应在 `server/src/main/java/com/user/returnsassistant/pojo/Result.java`，字段是 `code`、`msg`、`data`。成功时后端返回 `Result.success(data)`，失败时返回 `Result.error(msg)`。分页对象在 `PageResult.java`，字段是 `total` 和 `rows`。
+统一响应在 `server/src/main/java/com/user/returnsassistant/pojo/Result.java`，字段是 `code`、`msg`、`data`。成功时后端返回 `Result.success(data)`，失败时返回 `Result.error(msg)`。分页对象在 `PageResult.java`，字段是 `total` 和 `rows`。订单、售后、知识库、工单、日志等标准列表页统一在 Service 层调用 `PageHelper.startPage(page, pageSize)`，Mapper XML 只保留查询条件和排序，避免把分页 `limit` 分散写在各个 XML 中。
 
 前端统一请求封装在 `web/src/api/request.js`。这里创建了 Axios 实例，`baseURL` 默认是 `/api`，请求拦截器从 `localStorage` 读取 `returns_assistant_token`，然后写入请求头 `Authorization: Bearer <JWT>`。响应拦截器判断后端返回的 `code`，如果 `code === 1` 就直接返回 `result.data`，所以页面里拿到的就是业务数据，不需要每个页面重复判断 `code/msg/data`。
 
@@ -92,6 +94,8 @@ app:
 
 后续接口鉴权时，Controller 或拦截器把 `Authorization` 传给 `authService.requireUser/requireAdmin/requireCustomer`。Service 先用 `normalize(token)` 去掉 `Bearer ` 前缀，再调用 `JwtTokenProvider.parseToken` 校验签名、签发者、过期时间和必要字段。解析出 `sub` 后，Service 还会再调用 `UserAccountMapper.getById(userId)` 查询数据库，确认账号仍然存在且 `status = 1`，这样即使 JWT 没过期，账号被停用后也不能继续访问。
 
+管理员接口使用 `@OperatorAnno` 标记，`AuthInterceptor` 只负责识别这个标记并调用 `authService.requireAdmin(...)`，不引入 AOP，也不把它扩展成操作日志审计。顾客和管理员的数据边界放在 Controller/Service 中处理，例如 `OrderController`、`ChatSessionController`、`CustomerAfterSaleController` 会结合当前用户调用 `authService.isAdmin(user)` 或 `authService.ensureSelfOrAdmin(user, ownerId, message)`，保证顾客只能访问自己的订单、会话、售后和工单相关数据。
+
 退出登录时，`logout(token)` 会解析 JWT 的 `jti` 和过期时间，把 `jti` 放入 `revokedJwtIds` 黑名单。之后同一个 token 再访问接口时，`parseRequired` 会发现这个 `jti` 还没过期，就返回“登录已退出，请重新登录”。`cleanupRevokedJwtIds()` 会清理已经过期的黑名单记录。
 
 `LoginResponse` 里仍然包含 `token`、`userId`、`username`、`displayName`、`role`、`expiresAt`，所以前端登录存储逻辑不用大改，只是 token 内容从原来的普通随机串变成了标准 JWT。
@@ -150,14 +154,15 @@ pageOrders(params) -> GET /orders
 
 Controller 会根据 token 拿当前用户。如果是顾客，后端会把 `search.userId` 限制成当前顾客 ID，这样顾客只能看到自己的订单；管理员则可以看全部订单。
 
-Service 是 `OrderServiceImpl.page(OrderSearch search)`，它调用：
+Service 是 `OrderServiceImpl.page(OrderSearch search)`，它先调用 PageHelper：
 
 ```text
-DemoOrderMapper.count(search)
+PageHelper.startPage(search.getPage(), search.getPageSize())
 DemoOrderMapper.page(search)
+new PageResult<>(page.getTotal(), page.getResult())
 ```
 
-XML 是 `DemoOrderMapper.xml`，分页 SQL 从 `demo_order` 表查询。`keyword` 会匹配订单号或商品名，查询后 `order by updated_at desc, id desc limit #{s.offset}, #{s.limit}`。返回结果被组装成 `PageResult<DemoOrder>`。
+XML 是 `DemoOrderMapper.xml`，查询从 `demo_order` 表读取数据。`keyword` 会匹配订单号或商品名，XML 只保留 `where` 动态条件和 `order by updated_at desc, id desc`，分页总数和当前页截取由 PageHelper 处理。返回结果被组装成 `PageResult<DemoOrder>`。
 
 前端拿到数据后执行：
 
@@ -170,7 +175,7 @@ orderTotal.value = data.total || 0
 
 老师问订单查询怎么做，我可以这样回答：
 
-> 顾客订单查询是从 `CustomerAfterSaleCenterView.vue` 的订单搜索区域开始的。页面用 `orderQuery.keyword` 保存输入的订单号或商品名，点击查询后调用 `loadOrders()`，再通过 `orderApi.pageOrders` 请求 `/orders`。后端 `OrderController.page` 接收 `OrderSearch`，如果当前用户是顾客，就把 `userId` 限制为当前登录用户，避免查到别人的订单。Service 调用 `DemoOrderMapper.count` 和 `DemoOrderMapper.page`，XML 里从 `demo_order` 表分页查询。返回的 `PageResult` 里有 `rows` 和 `total`，前端把它们写到 `orders` 和 `orderTotal`，Element Plus 表格就自动刷新。
+> 顾客订单查询是从 `CustomerAfterSaleCenterView.vue` 的订单搜索区域开始的。页面用 `orderQuery.keyword` 保存输入的订单号或商品名，点击查询后调用 `loadOrders()`，再通过 `orderApi.pageOrders` 请求 `/orders`。后端 `OrderController.page` 接收 `OrderSearch`，如果当前用户是顾客，就把 `userId` 限制为当前登录用户，避免查到别人的订单。Service 先调用 `PageHelper.startPage`，再调用 `DemoOrderMapper.page`，XML 从 `demo_order` 表按动态条件查询并排序。返回的 `PageResult` 里有 `rows` 和 `total`，前端把它们写到 `orders` 和 `orderTotal`，Element Plus 表格就自动刷新。
 
 ### 3.2 顾客提交售后申请
 
@@ -253,7 +258,7 @@ const selectedAfterSale = ref(null)
 pageCustomerAfterSales(params) -> GET /customer/after-sales
 ```
 
-后端 `CustomerAfterSaleController.page` 会从 token 中取当前顾客，并强制设置 `search.userId = customer.getId()`，然后调用 `AfterSaleApplicationServiceImpl.page(search)`。
+后端 `CustomerAfterSaleController.page` 会从 token 中取当前顾客，并强制设置 `search.userId = customer.getId()`，然后调用 `AfterSaleApplicationServiceImpl.page(search)`。Service 中先执行 `PageHelper.startPage(search.getPage(), search.getPageSize())`，再调用 Mapper 查询列表，最后用 `page.getTotal()` 和 `page.getResult()` 组装 `PageResult`。
 
 Mapper XML 是 `AfterSaleApplicationMapper.xml`。它的 `BaseSelect` 从 `after_sale_application a` 查询，并关联：
 
@@ -264,7 +269,7 @@ left join user_account assignee on a.assigned_to=assignee.id
 left join service_ticket t on a.ticket_id=t.id
 ```
 
-`SearchWhere` 支持 `userId`、`orderId`、`status`、`serviceType`、`priority`、`assignedTo`、`keyword` 等条件。分页返回 `applicationNo`、订单号、商品名、顾客名、处理人、工单号等展示字段。
+`SearchWhere` 支持 `userId`、`orderId`、`status`、`serviceType`、`priority`、`assignedTo`、`keyword` 等条件。XML 的 `page` 查询保留关联字段和 `order by a.updated_at desc, a.id desc`，不再手写分页 `limit`。分页返回 `applicationNo`、订单号、商品名、顾客名、处理人、工单号等展示字段。
 
 点击某一条售后记录时，前端触发 `selectAfterSale(row)`，调用：
 
@@ -537,6 +542,8 @@ pageSlaTasks(params) -> GET /admin/sla/tasks
 
 Controller 是 `SlaTaskController.tasks(SlaTaskSearch search)`。Service 是 `SlaTaskServiceImpl.page(search)`。Mapper 是 `SlaTaskMapper`，XML 是 `SlaTaskMapper.xml`。
 
+SLA 任务列表同样由 Service 先调用 `PageHelper.startPage(search.getPage(), search.getPageSize())`，再调用 XML 查询。查出的每条记录会在 Service 里补充 `remainingHours` 和 `riskLabel`，所以页面看到的不只是数据库原始字段，还有后端计算出的风险提示。
+
 XML 的 `BaseFrom` 从 `after_sale_application a` 查询，并关联 `demo_order`、`user_account`。`SearchWhere` 有一个关键条件：
 
 ```sql
@@ -622,7 +629,7 @@ getSession(id) -> GET /chat-sessions/{id}
 deleteSession(id) -> DELETE /chat-sessions/{id}
 ```
 
-后端 Controller 是 `ChatSessionController`。创建会话时接收 `@RequestBody ChatSession session`，根据 token 补充当前用户，Service 是 `ChatServiceImpl.save(session)`。
+后端 Controller 是 `ChatSessionController`。创建会话时接收 `@RequestBody ChatSession session`，根据 token 补充当前用户，Service 是 `ChatServiceImpl.save(session)`。会话列表走 `ChatServiceImpl.page(search)`，它也使用 `PageHelper.startPage(search.getPage(), search.getPageSize())`，再调用 `ChatSessionMapper.page(search)` 查询会话、订单和用户关联信息。
 
 `ChatServiceImpl.save` 会生成 `sessionNo`，没有标题就设置默认标题，有订单号时调用 `DemoOrderMapper.getByOrderNo` 绑定订单 ID。然后 `ChatSessionMapper.insert(session)` 插入 `chat_session`。
 
@@ -761,7 +768,7 @@ searchKnowledgeDocs(params) -> GET /knowledge-docs/search
 
 文档 Controller 是 `KnowledgeDocController`，Service 是 `KnowledgeDocServiceImpl`，Mapper XML 是 `KnowledgeDocMapper.xml`，操作 `knowledge_doc` 表。
 
-分页查询 `KnowledgeDocMapper.xml` 支持：
+分页查询由 `KnowledgeDocServiceImpl.page(search)` 发起，Service 先调用 PageHelper，再调用 `KnowledgeDocMapper.page(search)`。`KnowledgeDocMapper.xml` 支持：
 
 ```text
 categoryId
@@ -771,7 +778,7 @@ status
 keyword
 ```
 
-并且 `left join knowledge_category c on d.category_id=c.id`，所以返回时能带上分类名。删除不是物理删除，而是 `softDelete`，把 `deleted=1`。
+并且 `left join knowledge_category c on d.category_id=c.id`，所以返回时能带上分类名。XML 负责动态条件和排序，`PageResult` 的 `total/rows` 由 Service 层根据 PageHelper 结果组装。删除不是物理删除，而是 `softDelete`，把 `deleted=1`。
 
 搜索接口 `GET /knowledge-docs/search` 调用 `KnowledgeDocServiceImpl.search(query, intentCode, limit)`。如果没传意图，Service 会用 `inferIntent(query)` 根据关键词推断意图；然后 XML 的 `search` 方法在启用状态的文档中按 `intentCode`、问题、答案、内容、关键词匹配，并按 `priority desc, updated_at desc` 排序。Service 的 `enrichHits` 会给每个命中文档补充 `score`、`rankNo`、`hitReason`、`contentPreview`。
 
@@ -819,9 +826,9 @@ createOrderAfterSale(id, data) -> POST /orders/{id}/after-sale-records
 
 Controller 是 `OrderController`，Service 是 `OrderServiceImpl`，Mapper 是 `DemoOrderMapper`，XML 是 `DemoOrderMapper.xml`。
 
-分页 SQL 从 `demo_order` 查询，支持 `userId`、`orderStatus`、`logisticsStatus`、`afterSaleStatus`、`keyword`。新增订单调用 `insert`，更新订单调用 `update`，删除调用 `delete`。
+列表查询从 `demo_order` 表读取数据，支持 `userId`、`orderStatus`、`logisticsStatus`、`afterSaleStatus`、`keyword`。分页由 `OrderServiceImpl.page` 中的 PageHelper 统一处理，XML 只保留条件和排序。新增订单调用 `insert`，更新订单调用 `update`，删除调用 `delete`。
 
-如果顾客访问订单接口，`OrderController` 会根据 token 限制 `userId`；管理员能增删改查。这个权限边界保证顾客端订单列表和管理员端订单管理复用同一个接口，但展示范围不同。
+如果顾客访问订单接口，`OrderController` 会根据 token 限制 `userId`；查看详情、按订单号查询、查看订单售后记录和发起订单售后时，会通过 `authService.ensureSelfOrAdmin(...)` 校验订单归属。管理员能增删改查。这个权限边界保证顾客端订单列表和管理员端订单管理复用同一个接口，但展示范围不同。
 
 ### 前端返回绑定
 
@@ -829,7 +836,7 @@ Controller 是 `OrderController`，Service 是 `OrderServiceImpl`，Mapper 是 `
 
 老师问订单管理怎么做，我可以这样回答：
 
-> 订单管理前端用 `query` 收集订单号、商品名、订单状态和售后状态，然后调用 `/orders`。后端 `OrderController` 接收 `OrderSearch`，顾客身份会自动加上自己的 `userId`，管理员不限制。Service 调用 `DemoOrderMapper`，XML 从 `demo_order` 表分页查。新增、编辑、删除订单分别走 POST、PUT、DELETE，最后前端重新加载列表。订单详情里还能查这个订单关联的旧售后记录，方便兼容原始功能。
+> 订单管理前端用 `query` 收集订单号、商品名、订单状态和售后状态，然后调用 `/orders`。后端 `OrderController` 接收 `OrderSearch`，顾客身份会自动加上自己的 `userId`，管理员不限制。Service 用 `PageHelper.startPage` 控制分页，再调用 `DemoOrderMapper`，XML 从 `demo_order` 表按条件查询和排序。新增、编辑、删除订单分别走 POST、PUT、DELETE，最后前端重新加载列表。订单详情里还能查这个订单关联的旧售后记录，方便兼容原始功能。
 
 ## 10. 工单管理
 
@@ -860,7 +867,7 @@ createSessionTicket(sessionId, data) -> POST /chat-sessions/{sessionId}/service-
 
 ### 后端 Service 和 Mapper
 
-Controller 是 `ServiceTicketController`。分页查询走 `ServiceTicketServiceImpl.page(search)`，更新状态走 `ServiceTicketServiceImpl.update(id, ticket)`。
+Controller 是 `ServiceTicketController`。分页查询走 `ServiceTicketServiceImpl.page(search)`，Service 先调用 PageHelper，再调用 `ServiceTicketMapper.page(search)`；更新状态走 `ServiceTicketServiceImpl.update(id, ticket)`。
 
 Mapper XML 是 `ServiceTicketMapper.xml`。分页查询从 `service_ticket t` 查询，并关联：
 
@@ -870,7 +877,7 @@ left join demo_order o on t.order_id=o.id
 where t.deleted=0
 ```
 
-查询条件支持 `sessionId`、`orderId`、`status`、`priority`、`intentCode`、`keyword`。删除是软删除，`delete` 方法执行 `update service_ticket set deleted=1 where id=#{id}`。
+查询条件支持 `sessionId`、`orderId`、`status`、`priority`、`intentCode`、`keyword`。XML 保留关联查询、动态条件和排序，分页结果由 PageHelper 生成。删除是软删除，`delete` 方法执行 `update service_ticket set deleted=1 where id=#{id}`。
 
 工单也可以从聊天或售后创建。聊天创建走 `createFromSession`，售后创建走 `AfterSaleApplicationServiceImpl.createTicket`。这让工单既可以服务聊天转人工，也可以服务售后审核升级。
 
@@ -984,6 +991,8 @@ Controller 是 `LogController`。Service 是 `LogServiceImpl`。
 | 日志诊断 | `getDiagnostics` | AI 日志、检索日志、处理轨迹综合分析 |
 | 处理轨迹 | `ChatServiceImpl.listTraces` | `ProcessTraceMapper` / `process_trace` |
 
+AI 调用日志和知识检索日志的分页也在 `LogServiceImpl` 中统一处理。Service 会对 `page/pageSize` 做默认值保护，然后调用 `PageHelper.startPage(currentPage, size)`，再分别调用 `AiCallLogMapper.page(status)` 和 `RetrievalLogMapper.page(keyword)`。XML 只负责按状态或关键词过滤并排序，不再传入 offset/limit 参数。
+
 `LogServiceImpl.getDiagnostics()` 会计算 AI 成功数、失败数、跳过数、平均耗时、token 总数、主要模型、成功率趋势、知识库平均命中分数、热门命中文档、最近处理轨迹进度、风险信号和行动建议。
 
 ### 前端返回绑定
@@ -1096,6 +1105,8 @@ Mapper Interface: 定义数据库访问方法
 Mapper XML: 写 SQL 和动态查询条件
 ```
 
+标准分页的职责现在放在 Service 层：`OrderServiceImpl`、`AfterSaleApplicationServiceImpl`、`KnowledgeDocServiceImpl`、`ServiceTicketServiceImpl`、`ChatServiceImpl`、`LogServiceImpl` 等都会先调用 `PageHelper.startPage(...)`，再调用 Mapper 的列表查询。Mapper XML 不再把主分页 `limit #{offset}, #{limit}` 写死在 SQL 里，而是专注于 `BaseSelect`、`SearchWhere`、关联表和排序。这样既保留 MyBatis XML 的可读性，又让分页入口和 `PageResult(total, rows)` 组装逻辑更统一。
+
 几个代表性模块如下：
 
 | 功能 | Controller | ServiceImpl | Mapper XML |
@@ -1111,11 +1122,11 @@ Mapper XML: 写 SQL 和动态查询条件
 | SLA | `SlaTaskController` | `SlaTaskServiceImpl` | `SlaTaskMapper.xml` |
 | 日志 | `LogController` | `LogServiceImpl` | `AiCallLogMapper.xml`、`RetrievalLogMapper.xml` |
 
-我在 Service 层保留业务规则，而不是把规则写在前端。比如 JWT 解析后还要回查用户状态、售后金额不能超过订单金额、终态不能补凭证、顾客只能访问自己的订单、管理员才能审核，这些都在 Java 后端校验。前端只负责交互和展示。
+我在 Service 层保留业务规则，而不是把规则写在前端。比如 JWT 解析后还要回查用户状态、售后金额不能超过订单金额、终态不能补凭证、顾客只能访问自己的订单、管理员才能审核，这些都在 Java 后端校验。通用的“本人或管理员”判断收口到 `AuthService.isAdmin` 和 `AuthService.ensureSelfOrAdmin`，Controller 只负责在资源入口处调用它们。前端只负责交互和展示。
 
 老师问为什么这样分层，我可以这样回答：
 
-> 我按 Spring Boot 常见分层写。Controller 只负责接请求和返回 JSON；Service 放业务规则，比如 JWT 鉴权、权限判断、状态机、金额校验、日志写入；Mapper 接口只定义数据库方法；SQL 写在 MyBatis XML 中。这样老师问一个接口时，我可以从前端页面一路讲到数据库表，也能说明为什么业务规则不放在前端。
+> 我按 Spring Boot 常见分层写。Controller 只负责接请求和返回 JSON；Service 放业务规则，比如 JWT 鉴权、权限判断、状态机、金额校验、日志写入和 PageHelper 分页入口；Mapper 接口只定义数据库方法；SQL 写在 MyBatis XML 中，主要负责动态条件、关联查询和排序。这样老师问一个接口时，我可以从前端页面一路讲到数据库表，也能说明为什么业务规则不放在前端。
 
 ## 18. 一条完整例子：顾客申请售后从页面到数据库再返回页面
 
@@ -1174,7 +1185,7 @@ sql/schema.sql
 
 ### Q1：为什么说这是双端系统？
 
-因为路由和权限明确区分顾客端和管理员端。顾客端 `/customer/after-sales` 只能查看自己的订单和售后，管理员端 `/admin/after-sales/review`、`/admin/sla`、`/service-tickets`、`/knowledge` 等可以处理全部业务。前端 `router.beforeEach` 会根据 Pinia 里的用户角色做页面跳转，后端 `authService.requireCustomer/requireAdmin` 会解析 JWT 并回查数据库做真实权限限制。
+因为路由和权限明确区分顾客端和管理员端。顾客端 `/customer/after-sales` 只能查看自己的订单和售后，管理员端 `/admin/after-sales/review`、`/admin/sla`、`/service-tickets`、`/knowledge` 等可以处理全部业务。前端 `router.beforeEach` 会根据 Pinia 里的用户角色做页面跳转，后端 `authService.requireCustomer/requireAdmin` 会解析 JWT 并回查数据库做真实权限限制。对于复用同一个接口的资源，例如订单和会话，后端还会用 `isAdmin` 或 `ensureSelfOrAdmin` 做资源归属校验。
 
 ### Q2：前端参数是怎么传给后端的？
 
@@ -1186,11 +1197,11 @@ sql/schema.sql
 
 ### Q4：Service 层具体做什么？
 
-Service 层负责业务规则。比如售后申请会校验订单归属、支付状态、金额、重复申请；审核会校验状态能不能流转；补凭证会校验是否终态；聊天会做意图识别、知识库检索和 AI 兜底；工单会处理优先级和状态。Service 还负责写日志和同步相关表。
+Service 层负责业务规则。比如售后申请会校验订单归属、支付状态、金额、重复申请；审核会校验状态能不能流转；补凭证会校验是否终态；聊天会做意图识别、知识库检索和 AI 兜底；工单会处理优先级和状态。Service 还负责写日志、同步相关表，以及在标准列表页统一调用 PageHelper 生成分页结果。
 
 ### Q5：MyBatis XML 有什么作用？
 
-Mapper XML 写真实 SQL。比如 `AfterSaleApplicationMapper.xml` 的 `BaseSelect` 会关联订单、顾客、处理人、工单；`SearchWhere` 根据用户 ID、状态、类型、优先级、关键词动态拼条件。分页用 `limit #{s.offset}, #{s.limit}`。这样接口返回的数据不是假数据，而是数据库查询结果。
+Mapper XML 写真实 SQL。比如 `AfterSaleApplicationMapper.xml` 的 `BaseSelect` 会关联订单、顾客、处理人、工单；`SearchWhere` 根据用户 ID、状态、类型、优先级、关键词动态拼条件。现在主列表分页不再在 XML 里手写 `limit`，而是由 Service 层的 PageHelper 自动生成分页 SQL 和总数统计。这样接口返回的数据不是假数据，而是数据库查询结果。
 
 ### Q6：JSON 返回给前端后怎么显示？
 
