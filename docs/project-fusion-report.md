@@ -65,7 +65,7 @@
 
 - 后端编译：`mvn -q -DskipTests package`，通过。
 - 前端构建：`npm run build`，通过，仅有 Vite 大 chunk 提醒。
-- 全链路冒烟：`tools/full-smoke-test.ps1`，通过，当前 AI 安全模式为 `AI_ENABLED=false`，脚本按配置验证本地兜底链路。
+- 全链路冒烟：`tools/full-smoke-test.ps1`，通过。当前默认 `AI_ENABLED=true`，配置真实模型密钥时验证 AI 增强链路；未配置密钥或模型异常时仍验证本地兜底链路。
 - 浏览器冒烟：`npm run test:browser`，通过，覆盖登录、聊天、工单、知识库、订单、日志等页面。
 - 客户专项冒烟：验证客户只能查看自己的订单、不能查询他人订单、不能重复提交进行中的售后申请、聊天回复能提示“无需重复提交”。
 - 工作区检查：只包含本次融合相关源码、测试脚本和报告文件。

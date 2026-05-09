@@ -33,7 +33,7 @@ app:
     jwt-secret: ${APP_AUTH_JWT_SECRET:returns-assistant-dev-jwt-secret-change-me-2026}
     jwt-issuer: ${APP_AUTH_JWT_ISSUER:returns-assistant}
   ai:
-    enabled: ${AI_ENABLED:false}
+    enabled: ${AI_ENABLED:true}
     provider: openai-compatible
     model-name: ${OPENAI_MODEL:gpt-4o-mini}
     model-options: ${OPENAI_MODEL_OPTIONS:gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini}

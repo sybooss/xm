@@ -348,7 +348,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-program.ps1 -
 
 ## 9. Docker 演示部署
 
-容器化演示环境包含 MySQL、Spring Boot 后端和 Nginx 前端，不需要把真实密钥写入仓库。默认 `AI_ENABLED=false`，系统会使用本地规则兜底，适合无模型环境稳定演示。
+容器化演示环境包含 MySQL、Spring Boot 后端和 Nginx 前端，不需要把真实密钥写入仓库。默认 `AI_ENABLED=true`，如果同时配置了 `OPENAI_API_KEY` 和 `OPENAI_BASE_URL`，系统会优先使用 LangChain4j 调用真实模型；如果没有配置密钥或模型调用失败，聊天主链路仍会使用本地规则兜底。
 
 ```powershell
 docker compose --project-name returns-assistant up -d --build
@@ -379,7 +379,7 @@ mysql -uroot -p1234 -e "SHOW DATABASES;"
 
 ### 10.2 AI 状态是 `SKIPPED`
 
-一般是没有设置 `AI_ENABLED=true` 或 `OPENAI_API_KEY`。检查：
+一般是没有设置 `OPENAI_API_KEY`，或者运行环境显式把 `AI_ENABLED` 改成了 `false`。检查：
 
 ```powershell
 Get-Content .env

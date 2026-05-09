@@ -23,7 +23,7 @@ public class SystemController {
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private AiService aiService;
-    @Value("${app.ai.enabled:false}")
+    @Value("${app.ai.enabled:true}")
     private boolean aiEnabled;
     @Value("${app.ai.provider:openai-compatible}")
     private String aiProvider;

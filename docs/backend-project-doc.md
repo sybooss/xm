@@ -276,7 +276,7 @@ LangChain4j 在本系统中只负责 AI 增强层：
 ```yaml
 app:
   ai:
-    enabled: ${AI_ENABLED:false}
+    enabled: ${AI_ENABLED:true}
     provider: openai-compatible
     model-name: ${OPENAI_MODEL:gpt-4o-mini}
     fallback-enabled: true

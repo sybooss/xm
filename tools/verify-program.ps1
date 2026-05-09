@@ -171,7 +171,7 @@ try {
         Invoke-Step "docker compose up health" {
             Push-Location $root
             try {
-                $env:AI_ENABLED = if ($env:AI_ENABLED) { $env:AI_ENABLED } else { "false" }
+                $env:AI_ENABLED = if ($env:AI_ENABLED) { $env:AI_ENABLED } else { "true" }
                 $env:WEB_PORT = if ($env:WEB_PORT) { $env:WEB_PORT } else { "5180" }
                 Invoke-DockerCompose @("up", "-d", "--no-build")
                 $deadline = (Get-Date).AddMinutes(5)

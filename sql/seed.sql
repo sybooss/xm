@@ -1,4 +1,5 @@
 USE test3;
+SET NAMES utf8mb4;
 
 INSERT IGNORE INTO user_account(username, display_name, role, phone, status)
 VALUES

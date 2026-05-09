@@ -68,7 +68,7 @@
 ```yaml
 app:
   ai:
-    enabled: ${AI_ENABLED:false}
+    enabled: ${AI_ENABLED:true}
     provider: openai-compatible
     model-name: ${OPENAI_MODEL:gpt-4o-mini}
     fallback-enabled: true

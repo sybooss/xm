@@ -15,7 +15,7 @@ import java.util.Set;
 
 @Service
 public class AiServiceImpl implements AiService {
-    @Value("${app.ai.enabled:false}")
+    @Value("${app.ai.enabled:true}")
     private boolean aiEnabled;
     @Value("${app.ai.provider:openai-compatible}")
     private String provider;

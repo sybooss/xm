@@ -16,7 +16,7 @@ spring:
 
 app:
   ai:
-    enabled: ${AI_ENABLED:false}
+    enabled: ${AI_ENABLED:true}
     model-options: ${OPENAI_MODEL_OPTIONS:gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini}
 
 langchain4j:
