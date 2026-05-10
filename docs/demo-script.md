@@ -29,4 +29,3 @@
 - 个人答辩讲解稿：`docs/personal-defense-script.md`
 - 个人答辩 Q&A：`docs/personal-defense-qa.md`
 - 正式结项报告：`docs/final-report.docx`
-- 个人答辩 PPT：`docs/personal-defense-slides.pptx`

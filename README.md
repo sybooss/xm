@@ -424,4 +424,3 @@ mvn -q -DskipTests package
 - 正式结项报告：[docs/final-report.docx](docs/final-report.docx)
 - 个人答辩讲解稿：[docs/personal-defense-script.md](docs/personal-defense-script.md)
 - 个人答辩 Q&A：[docs/personal-defense-qa.md](docs/personal-defense-qa.md)
-- 个人答辩 PPT：[docs/personal-defense-slides.pptx](docs/personal-defense-slides.pptx)
