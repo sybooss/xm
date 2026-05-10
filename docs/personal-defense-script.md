@@ -158,9 +158,9 @@ LangChain4j 在系统中只作为 AI 增强层，不替代 Spring Boot 业务逻
 | 浏览器主流程烟测 | `cd web; npm.cmd run test:browser` | `FAILED_COUNT=0` |
 | 浏览器角色权限烟测 | `cd web; npm.cmd run test:browser:roles` | `FAILED_COUNT=0` |
 
-浏览器截图属于运行产物，按项目清理规则不提交到 Git。需要重新留证时，可启动本地后端和前端后执行 `cd web; npm.cmd run test:browser` 重新生成。
+浏览器截图保存在 `output/playwright/`，其中 `01-showcase.png` 是答辩展示中心截图，`09-logs.png` 是日志诊断中心截图。由于 `output/` 是运行产物目录，不提交到 Git，但可以作为本机答辩证据使用。
 
-当前保留的个人答辩材料为本讲解稿和 `docs/personal-defense-qa.md`。讲解内容按“完整链路、RAG 依据、LangChain4j 取舍、工单闭环、前端展示、日志诊断、验证证据、追问回答”组织，适合三到五分钟个人答辩。
+配套个人答辩 PPT 位于 `docs/personal-defense-slides.pptx`，内容按“完整链路、RAG 依据、LangChain4j 取舍、工单闭环、前端展示、日志诊断、验证证据、追问回答”组织，适合三到五分钟个人答辩。
 
 ## 10. 三分钟口头版本
 
