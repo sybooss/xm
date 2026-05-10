@@ -16,9 +16,6 @@
               <el-button :icon="DocumentChecked" size="large" @click="$router.push('/logs')">
                 查看验证证据
               </el-button>
-              <el-button :icon="DataAnalysis" size="large" @click="$router.push('/operations')">
-                运营指挥中心
-              </el-button>
             </div>
           </div>
 
@@ -38,7 +35,7 @@
 
         <section class="panel flow-panel">
           <div class="panel-header">
-            <h3 class="panel-title">演示流程</h3>
+            <h3 class="panel-title">流程</h3>
             <span class="panel-caption">从用户问题到证据留痕，形成能现场跑通的售后闭环。</span>
           </div>
           <div class="closed-loop-flow">
@@ -54,7 +51,6 @@
         <section class="panel roadmap-panel">
           <div class="panel-header">
             <h3 class="panel-title">闭环特色功能</h3>
-            <span class="panel-caption">10+ 个功能都要有页面入口、接口、数据或测试证据，避免只写在报告里。</span>
           </div>
           <div class="feature-board">
             <article v-for="item in featureRoadmap" :key="item.title" class="feature-card" :class="`feature-${item.state}`">
@@ -99,35 +95,6 @@
             </div>
           </div>
         </section>
-
-        <section class="panel side-panel">
-          <div class="panel-header compact">
-            <h3 class="panel-title">关键指标</h3>
-          </div>
-          <div class="metric-list">
-            <div v-for="item in metrics" :key="item.label" class="metric-row">
-              <el-icon><component :is="item.icon" /></el-icon>
-              <span>
-                <small>{{ item.label }}</small>
-                <strong>{{ item.value }}</strong>
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel side-panel">
-          <div class="panel-header compact">
-            <h3 class="panel-title">版本路线图</h3>
-          </div>
-          <div class="version-timeline">
-            <article v-for="item in versionPlan" :key="item.version" class="version-item" :class="{ done: item.done }">
-              <span class="version-dot"></span>
-              <strong>{{ item.version }}</strong>
-              <p>{{ item.detail }}</p>
-              <small>{{ item.date }}</small>
-            </article>
-          </div>
-        </section>
       </aside>
     </div>
   </section>
@@ -140,7 +107,6 @@ import {
   Collection,
   Connection,
   Cpu,
-  DataAnalysis,
   Document,
   DocumentChecked,
   Finished,
@@ -151,8 +117,7 @@ import {
   Search,
   Service,
   Tickets,
-  TrendCharts,
-  Van
+  TrendCharts
 } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { useSystemStore } from '../stores/systemStore'
@@ -240,45 +205,7 @@ const featureRoadmap = [
     state: 'done',
     stateLabel: '已完成',
     icon: TrendCharts
-  },
-  {
-    title: 'Apple-like 展示中心',
-    detail: '重构答辩首页、全局侧栏和顶部栏，提升首屏高级感。',
-    evidence: 'ShowcaseView + 全局样式',
-    state: 'active',
-    stateLabel: '本轮优化',
-    icon: DataAnalysis
-  },
-  {
-    title: '售后运营指挥中心',
-    detail: '新增 12 个运营分析特色功能，聚合意图、工单、渠道、知识、订单和 AI 质量。',
-    evidence: 'GET /operation-insights + /operations',
-    state: 'active',
-    stateLabel: '本轮新增',
-    icon: TrendCharts
-  },
-  {
-    title: '多渠道接入',
-    detail: '后续模拟网页、小程序、App 多入口接入同一售后链路。',
-    evidence: '待新增渠道字段与筛选',
-    state: 'planned',
-    stateLabel: '计划中',
-    icon: Van
   }
-]
-
-const metrics = [
-  { label: '已落地特色', value: '10 项', icon: Finished },
-  { label: '闭环流程节点', value: '6 步', icon: RefreshRight },
-  { label: '验证脚本', value: '4 组', icon: DocumentChecked },
-  { label: '下一版本', value: '数据看板', icon: DataAnalysis }
-]
-
-const versionPlan = [
-  { version: 'V1.0', date: '2026-04-30', detail: '基础闭环、流式客服、工具调用、权限控制。', done: true },
-  { version: 'V1.1', date: '2026-05-06', detail: 'Apple-like 展示中心与 10+ 特色功能路线图。', done: true },
-  { version: 'V1.2', date: '下一轮', detail: '数据分析看板、统计接口和热门问题洞察。', done: false },
-  { version: 'V1.3', date: '后续', detail: '多渠道接入、SLA 自动提醒和导出报告。', done: false }
 ]
 
 function loadStatus() {
@@ -480,8 +407,7 @@ onMounted(loadStatus)
 }
 
 .flow-node p,
-.feature-card p,
-.version-item p {
+.feature-card p {
   margin: 8px 0 0;
   color: #6e6e73;
   font-size: 13px;
@@ -579,8 +505,7 @@ onMounted(loadStatus)
   min-height: 46px;
 }
 
-.status-list,
-.metric-list {
+.status-list {
   display: grid;
   gap: 0;
   padding: 8px 16px 14px;
@@ -610,83 +535,6 @@ onMounted(loadStatus)
   white-space: nowrap;
 }
 
-.metric-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  min-height: 62px;
-  border-bottom: 1px solid rgb(229 229 234 / 72%);
-}
-
-.metric-row:last-child {
-  border-bottom: 0;
-}
-
-.metric-row .el-icon {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  font-size: 18px;
-}
-
-.metric-row small,
-.version-item small {
-  display: block;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.metric-row strong {
-  display: block;
-  margin-top: 3px;
-  color: #1d1d1f;
-  font-size: 20px;
-  line-height: 1.1;
-}
-
-.version-timeline {
-  display: grid;
-  gap: 0;
-  padding: 14px 16px 18px;
-}
-
-.version-item {
-  position: relative;
-  padding: 0 0 22px 24px;
-  border-left: 1px solid rgb(210 210 215 / 82%);
-}
-
-.version-item:last-child {
-  padding-bottom: 0;
-}
-
-.version-dot {
-  position: absolute;
-  top: 2px;
-  left: -7px;
-  width: 13px;
-  height: 13px;
-  border: 3px solid #ffffff;
-  border-radius: 999px;
-  background: #c7c7cc;
-  box-shadow: 0 0 0 1px rgb(210 210 215 / 86%);
-}
-
-.version-item.done .version-dot {
-  background: var(--brand);
-  box-shadow: 0 0 0 1px rgb(0 102 204 / 34%);
-}
-
-.version-item strong {
-  color: #1d1d1f;
-  font-size: 14px;
-}
-
 @media (max-width: 1280px) {
   .showcase-shell,
   .hero-panel {
@@ -694,7 +542,7 @@ onMounted(loadStatus)
   }
 
   .showcase-side {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 

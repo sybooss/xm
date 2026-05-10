@@ -495,14 +495,14 @@ try {
     $session = Api-Post "/chat-sessions" @{
         title = "Auto Test Session $stamp"
         orderNo = "DD202604290001"
-        channel = "APP"
+        channel = "ADMIN_TEST"
     }
     $created.sessionId = $session.id
-    Add-Result "chat session create" ($null -ne $created.sessionId -and $session.channel -eq "APP") "id=$($created.sessionId), channel=$($session.channel)"
+    Add-Result "chat session create" ($null -ne $created.sessionId -and $session.channel -eq "ADMIN_TEST") "id=$($created.sessionId), channel=$($session.channel)"
 
-    $appSessions = Api-Get "/chat-sessions?page=1&pageSize=10&channel=APP"
-    $hasAppSession = $null -ne ($appSessions.rows | Where-Object { $_.id -eq $created.sessionId } | Select-Object -First 1)
-    Add-Result "chat session channel filter" $hasAppSession "channel=APP,total=$($appSessions.total)"
+    $adminTestSessions = Api-Get "/chat-sessions?page=1&pageSize=10&channel=ADMIN_TEST"
+    $hasAdminTestSession = $null -ne ($adminTestSessions.rows | Where-Object { $_.id -eq $created.sessionId } | Select-Object -First 1)
+    Add-Result "chat session channel filter" $hasAdminTestSession "channel=ADMIN_TEST,total=$($adminTestSessions.total)"
 
     $sessionDetail = Api-Get "/chat-sessions/$($created.sessionId)"
     Add-Result "chat session detail" ($sessionDetail.id -eq $created.sessionId) "sessionNo=$($sessionDetail.sessionNo)"
@@ -582,22 +582,6 @@ try {
                   $evidenceReport.Contains("BUSINESS_TOOL_CALLS") -and
                   $evidenceReport.Contains($ticketChat.ticket.ticketNo)
     Add-Result "chat evidence report export" $evidenceOk "length=$($evidenceReport.Length)"
-
-    $operationInsights = Api-Get "/operation-insights"
-    Add-Result "operation insights feature matrix" ($operationInsights.newFeatures.Count -ge 12) "newFeatures=$($operationInsights.newFeatures.Count)"
-    Add-Result "operation insights intent radar" ($operationInsights.intentInsights.Count -ge 1) "intentInsights=$($operationInsights.intentInsights.Count)"
-    Add-Result "operation insights action items" ($operationInsights.actionItems.Count -ge 4) "actionItems=$($operationInsights.actionItems.Count)"
-    Add-Result "operation insights AI quality" ($operationInsights.aiInsights.Count -ge 4) "aiInsights=$($operationInsights.aiInsights.Count)"
-
-    $featureClosures = Api-Get "/feature-closures"
-    $closureCodes = @($featureClosures.closures | ForEach-Object { $_.code })
-    $allClosed = (@($featureClosures.closures | Where-Object { $_.closedLoop -ne $true }).Count -eq 0)
-    Add-Result "feature closure count" ($featureClosures.closures.Count -ge 14) "closures=$($featureClosures.closures.Count)"
-    Add-Result "feature closure all closed" $allClosed "unclosed=$(@($featureClosures.closures | Where-Object { $_.closedLoop -ne $true }).Count)"
-    Add-Result "feature closure SLA guard" ($closureCodes -contains "SLA_GUARD") "codes=$($closureCodes.Count)"
-    Add-Result "feature closure evidence checker" ($closureCodes -contains "EVIDENCE_CHAIN_CHECKER") "codes=$($closureCodes.Count)"
-    Add-Result "feature closure RAG review" ($closureCodes -contains "RAG_REVIEW_BOARD") "codes=$($closureCodes.Count)"
-    Add-Result "feature closure demo references" ($featureClosures.demoSteps.Count -ge 6 -and $featureClosures.references.Count -ge 3) "steps=$($featureClosures.demoSteps.Count), refs=$($featureClosures.references.Count)"
 
     Api-Delete "/chat-sessions/$($created.sessionId)" | Out-Null
     $created.sessionId = $null

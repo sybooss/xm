@@ -25,7 +25,7 @@ import java.util.*;
 @Service
 public class ChatServiceImpl implements ChatService {
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final Set<String> SUPPORTED_CHANNELS = Set.of("WEB", "APP", "MINI_PROGRAM", "ADMIN_TEST");
+    private static final Set<String> SUPPORTED_CHANNELS = Set.of("WEB", "ADMIN_TEST");
 
     @Autowired
     private ChatSessionMapper sessionMapper;

@@ -20,7 +20,7 @@
       <div class="channel-filter">
         <div class="channel-filter-title">
           <span>渠道筛选</span>
-          <small>网页 / App / 小程序 / 测试台</small>
+          <small>网页 / 测试台</small>
         </div>
         <el-segmented v-model="channelFilter" :options="channelFilterOptions" @change="loadSessionsByChannel" />
       </div>
@@ -296,8 +296,6 @@ const selectedModel = ref('')
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
 const channelOptions = [
   { code: 'WEB', name: '网页' },
-  { code: 'APP', name: 'App' },
-  { code: 'MINI_PROGRAM', name: '小程序' },
   { code: 'ADMIN_TEST', name: '测试台' }
 ]
 const channelFilterOptions = [

@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS chat_session (
   CONSTRAINT uk_session_no UNIQUE (session_no),
   CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT fk_session_order FOREIGN KEY (order_id) REFERENCES demo_order(id) ON DELETE SET NULL,
-  CONSTRAINT ck_session_channel CHECK (channel IN ('WEB', 'APP', 'MINI_PROGRAM', 'ADMIN_TEST')),
+  CONSTRAINT ck_session_channel CHECK (channel IN ('WEB', 'ADMIN_TEST')),
   CONSTRAINT ck_session_status CHECK (status IN ('ACTIVE', 'CLOSED')),
   INDEX idx_session_user (user_id),
   INDEX idx_session_order (order_id),
@@ -254,8 +254,12 @@ PREPARE chat_session_channel_drop_stmt FROM @chat_session_channel_drop_sql;
 EXECUTE chat_session_channel_drop_stmt;
 DEALLOCATE PREPARE chat_session_channel_drop_stmt;
 
+UPDATE chat_session
+SET channel = 'WEB'
+WHERE channel IN ('APP', 'MINI_PROGRAM');
+
 ALTER TABLE chat_session
-  ADD CONSTRAINT ck_session_channel CHECK (channel IN ('WEB', 'APP', 'MINI_PROGRAM', 'ADMIN_TEST'));
+  ADD CONSTRAINT ck_session_channel CHECK (channel IN ('WEB', 'ADMIN_TEST'));
 
 CREATE TABLE IF NOT EXISTS chat_message (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
