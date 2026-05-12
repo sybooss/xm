@@ -37,6 +37,9 @@ app:
     provider: openai-compatible
     model-name: ${OPENAI_MODEL:gpt-4o-mini}
     model-options: ${OPENAI_MODEL_OPTIONS:gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini}
+    remote-models-enabled: ${OPENAI_REMOTE_MODELS_ENABLED:true}
+    remote-models-cache-seconds: ${OPENAI_REMOTE_MODELS_CACHE_SECONDS:300}
+    remote-models-timeout-seconds: ${OPENAI_REMOTE_MODELS_TIMEOUT_SECONDS:5}
     fallback-enabled: true
 
 langchain4j:

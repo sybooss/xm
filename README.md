@@ -137,6 +137,9 @@ OPENAI_API_KEY=replace-with-your-key
 OPENAI_BASE_URL=http://127.0.0.1:8080/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_MODEL_OPTIONS=gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini
+OPENAI_REMOTE_MODELS_ENABLED=true
+OPENAI_REMOTE_MODELS_CACHE_SECONDS=300
+OPENAI_REMOTE_MODELS_TIMEOUT_SECONDS=5
 APP_AUTH_ADMIN_PASSWORD=123456
 APP_AUTH_CUSTOMER_PASSWORD=123456
 APP_AUTH_TOKEN_HOURS=8
@@ -145,6 +148,7 @@ APP_AUTH_TOKEN_HOURS=8
 说明：
 
 - 使用本地 sub2api 时，`OPENAI_BASE_URL` 通常是 `http://127.0.0.1:8080/v1`。
+- `OPENAI_REMOTE_MODELS_ENABLED=true` 时，后端会自动请求 sub2api 的 `/v1/models`，把网关里所有模型合并到前端模型下拉框；`OPENAI_MODEL_OPTIONS` 仍作为手工兜底列表保留。
 - 使用官方 OpenAI 时，`OPENAI_BASE_URL` 可改为 `https://api.openai.com/v1`。
 - `OPENAI_API_KEY` 不要提交到 Git；仓库已通过 `.gitignore` 忽略 `.env`。
 - 如果没有配置 AI，系统仍可使用本地规则兜底，但 AI 测试和 AI 增强回复会显示跳过或失败。

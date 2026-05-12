@@ -18,6 +18,9 @@ app:
   ai:
     enabled: ${AI_ENABLED:true}
     model-options: ${OPENAI_MODEL_OPTIONS:gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini}
+    remote-models-enabled: ${OPENAI_REMOTE_MODELS_ENABLED:true}
+    remote-models-cache-seconds: ${OPENAI_REMOTE_MODELS_CACHE_SECONDS:300}
+    remote-models-timeout-seconds: ${OPENAI_REMOTE_MODELS_TIMEOUT_SECONDS:5}
 
 langchain4j:
   open-ai:
@@ -27,7 +30,7 @@ langchain4j:
       model-name: ${OPENAI_MODEL:gpt-4o-mini}
 ```
 
-建议复制根目录 `.env.example` 为 `.env`，再填写本机 MySQL 密码和 OpenAI-compatible API Key。
+建议复制根目录 `.env.example` 为 `.env`，再填写本机 MySQL 密码和 OpenAI-compatible API Key。启用 `OPENAI_REMOTE_MODELS_ENABLED=true` 时，后端会从 `OPENAI_BASE_URL` 对应网关的 `/models` 接口自动合并模型列表；`OPENAI_MODEL_OPTIONS` 只作为手工补充和远程不可用时的兜底。
 
 如果是在旧数据库上启用注册功能，先执行一次迁移：
 

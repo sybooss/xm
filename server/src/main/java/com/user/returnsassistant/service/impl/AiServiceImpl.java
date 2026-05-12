@@ -1,5 +1,7 @@
 package com.user.returnsassistant.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.user.returnsassistant.pojo.AiCallLog;
 import com.user.returnsassistant.service.AiService;
 import dev.langchain4j.model.chat.ChatModel;
@@ -7,6 +9,11 @@ import dev.langchain4j.model.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -15,6 +22,9 @@ import java.util.Set;
 
 @Service
 public class AiServiceImpl implements AiService {
+    private final ObjectMapper objectMapper;
+    private final Object remoteModelsLock = new Object();
+
     @Value("${app.ai.enabled:true}")
     private boolean aiEnabled;
     @Value("${app.ai.provider:openai-compatible}")
@@ -23,6 +33,12 @@ public class AiServiceImpl implements AiService {
     private String modelName;
     @Value("${app.ai.model-options:gpt-4o-mini,gpt-4.1-mini,gpt-4.1,o4-mini}")
     private String modelOptions;
+    @Value("${app.ai.remote-models-enabled:true}")
+    private boolean remoteModelsEnabled;
+    @Value("${app.ai.remote-models-cache-seconds:300}")
+    private Integer remoteModelsCacheSeconds;
+    @Value("${app.ai.remote-models-timeout-seconds:5}")
+    private Integer remoteModelsTimeoutSeconds;
     @Value("${app.ai.fallback-enabled:true}")
     private boolean fallbackEnabled;
     @Value("${langchain4j.open-ai.chat-model.api-key:}")
@@ -42,6 +58,12 @@ public class AiServiceImpl implements AiService {
 
     private volatile ChatModel chatModel;
     private volatile String activeModelName;
+    private volatile List<String> cachedRemoteModelOptions = List.of();
+    private volatile long remoteModelsExpiresAt;
+
+    public AiServiceImpl(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public AiResult generate(String prompt) {
@@ -105,6 +127,7 @@ public class AiServiceImpl implements AiService {
     public List<String> modelOptions() {
         Set<String> options = new LinkedHashSet<>();
         options.add(currentModelName());
+        options.addAll(remoteModelOptions());
         if (hasText(modelOptions)) {
             for (String item : modelOptions.split(",")) {
                 String option = item.trim();
@@ -122,7 +145,7 @@ public class AiServiceImpl implements AiService {
             throw new IllegalArgumentException("模型名不能为空");
         }
         String nextModelName = modelName.trim();
-        if (nextModelName.length() > 80) {
+        if (nextModelName.length() > 200) {
             throw new IllegalArgumentException("模型名过长");
         }
         synchronized (this) {
@@ -151,6 +174,81 @@ public class AiServiceImpl implements AiService {
             }
         }
         return chatModel;
+    }
+
+    private List<String> remoteModelOptions() {
+        if (!remoteModelsEnabled || !hasText(apiKey) || !hasText(baseUrl)) {
+            return List.of();
+        }
+
+        long now = System.currentTimeMillis();
+        if (now < remoteModelsExpiresAt) {
+            return cachedRemoteModelOptions;
+        }
+
+        synchronized (remoteModelsLock) {
+            now = System.currentTimeMillis();
+            if (now < remoteModelsExpiresAt) {
+                return cachedRemoteModelOptions;
+            }
+            try {
+                cachedRemoteModelOptions = fetchRemoteModelOptions();
+            } catch (Exception e) {
+                cachedRemoteModelOptions = List.of();
+            }
+            remoteModelsExpiresAt = now + Math.max(30, safeInt(remoteModelsCacheSeconds, 300)) * 1000L;
+            return cachedRemoteModelOptions;
+        }
+    }
+
+    private List<String> fetchRemoteModelOptions() throws Exception {
+        URI uri = URI.create(normalizeBaseUrl(baseUrl) + "/models");
+        int timeout = Math.max(1, safeInt(remoteModelsTimeoutSeconds, 5));
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(timeout))
+                .build();
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(timeout))
+                .header("Accept", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException("model discovery failed: HTTP " + response.statusCode());
+        }
+
+        JsonNode data = objectMapper.readTree(response.body()).path("data");
+        Set<String> names = new LinkedHashSet<>();
+        if (data.isArray()) {
+            for (JsonNode item : data) {
+                String modelId = item.isTextual() ? item.asText() : textValue(item, "id");
+                if (!hasText(modelId)) {
+                    modelId = textValue(item, "name");
+                }
+                if (hasText(modelId)) {
+                    names.add(modelId.trim());
+                }
+            }
+        }
+        return new ArrayList<>(names);
+    }
+
+    private String normalizeBaseUrl(String url) {
+        String normalized = url.trim();
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private String textValue(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value != null && value.isTextual() ? value.asText() : "";
+    }
+
+    private int safeInt(Integer value, int defaultValue) {
+        return value == null ? defaultValue : value;
     }
 
     private AiResult skipped(long start, String message) {
