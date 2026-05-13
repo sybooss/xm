@@ -684,8 +684,10 @@ try {
     }
     $chatImageOk = $uploadedChatImage.fileUrl -like "/uploads/chat/*" -and
                    $chatImageMessage.userMessage.messageType -eq "IMAGE" -and
-                   $chatImageMessage.userMessage.fileUrl -eq $uploadedChatImage.fileUrl
-    Add-Result "chat image upload/message" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType)"
+                   $chatImageMessage.userMessage.fileUrl -eq $uploadedChatImage.fileUrl -and
+                   $null -ne $chatImageMessage.imageRisk -and
+                   $chatImageMessage.imageRisk.auditStatus -in @("PASS", "NEED_MORE", "RISKY", "MANUAL_REVIEW")
+    Add-Result "chat image upload/message risk scan" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType),risk=$($chatImageMessage.imageRisk.auditStatus)/$($chatImageMessage.imageRisk.aiGeneratedRisk)"
 
     $largeChatImagePath = Join-Path $uploadDir "chat-product-photo-large-$stamp.png"
     $largePngBytes = New-Object byte[] (2 * 1024 * 1024)
@@ -721,16 +723,17 @@ try {
     $messages = Api-Get "/chat-sessions/$($created.sessionId)/messages"
     $messageCount = @($messages).Count
     $chatImageInMessages = $messages | Where-Object { $_.fileUrl -eq $uploadedChatImage.fileUrl -and $_.messageType -eq "IMAGE" } | Select-Object -First 1
-    Add-Result "chat messages list" ($messageCount -ge 8 -and $null -ne $chatImageInMessages) "count=$messageCount,image=$($chatImageInMessages.fileUrl)"
+    Add-Result "chat messages list includes image risk" ($messageCount -ge 8 -and $null -ne $chatImageInMessages -and $null -ne $chatImageInMessages.imageRisk) "count=$messageCount,image=$($chatImageInMessages.fileUrl),risk=$($chatImageInMessages.imageRisk.auditStatus)"
 
     $ticketConversation = Api-Get "/service-tickets/$($created.ticketId)/conversation"
     $chatImageInTicketConversation = $ticketConversation | Where-Object { $_.fileUrl -eq $uploadedChatImage.fileUrl } | Select-Object -First 1
-    Add-Result "service ticket conversation includes chat image" ($null -ne $chatImageInTicketConversation) "image=$($chatImageInTicketConversation.fileUrl)"
+    Add-Result "service ticket conversation includes chat image risk" ($null -ne $chatImageInTicketConversation -and $null -ne $chatImageInTicketConversation.imageRisk) "image=$($chatImageInTicketConversation.fileUrl),risk=$($chatImageInTicketConversation.imageRisk.auditStatus)"
 
     $traces = Api-Get "/chat-sessions/$($created.sessionId)/process-traces"
     $traceCount = @($traces).Count
     $hasContextTrace = $null -ne ($traces | Where-Object { $_.stepName -eq "CONTEXT_RESOLVE" } | Select-Object -First 1)
-    Add-Result "process traces" ($traceCount -ge 7 -and $hasContextTrace) "count=$traceCount, contextTrace=$hasContextTrace"
+    $hasImageRiskTrace = $null -ne ($traces | Where-Object { $_.stepName -eq "CHAT_IMAGE_RISK_SCAN" -and $_.stepStatus -eq "SUCCESS" } | Select-Object -First 1)
+    Add-Result "process traces include chat image risk" ($traceCount -ge 7 -and $hasContextTrace -and $hasImageRiskTrace) "count=$traceCount, contextTrace=$hasContextTrace,imageRiskTrace=$hasImageRiskTrace"
 
     $aiLogs = Api-Get "/ai-call-logs?page=1&pageSize=10&status=SUCCESS"
     Add-Result "ai call logs" ($aiLogs.total -ge 1) "total=$($aiLogs.total)"

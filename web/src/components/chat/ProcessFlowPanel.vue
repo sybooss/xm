@@ -72,6 +72,7 @@ function stepLabel(stepName, title) {
     CONTEXT_RESOLVE: '多轮上下文解析',
     INTENT_RECOGNIZE: '意图识别',
     ORDER_CONTEXT: '订单上下文',
+    CHAT_IMAGE_RISK_SCAN: '聊天图片风险预审',
     KNOWLEDGE_RETRIEVAL: '知识库检索',
     BUSINESS_TOOL_CALLS: '业务工具调用',
     AI_GENERATION: 'AI 回答生成',

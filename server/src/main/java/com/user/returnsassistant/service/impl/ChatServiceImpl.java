@@ -9,6 +9,7 @@ import com.user.returnsassistant.mapper.*;
 import com.user.returnsassistant.pojo.*;
 import com.user.returnsassistant.service.AiService;
 import com.user.returnsassistant.service.AiBusinessToolService;
+import com.user.returnsassistant.service.ChatImageRiskService;
 import com.user.returnsassistant.service.ChatService;
 import com.user.returnsassistant.service.ProductInsightService;
 import com.user.returnsassistant.service.ServiceTicketService;
@@ -54,6 +55,8 @@ public class ChatServiceImpl implements ChatService {
     private ProductInsightService productInsightService;
     @Autowired
     private ServiceTicketService ticketService;
+    @Autowired
+    private ChatImageRiskService chatImageRiskService;
 
     @Override
     public PageResult<ChatSession> page(ChatSessionSearch search) {
@@ -89,6 +92,7 @@ public class ChatServiceImpl implements ChatService {
             session.setOrder(orderMapper.getById(session.getOrderId()));
         }
         session.setMessages(messageMapper.listBySessionId(id));
+        chatImageRiskService.attachRisks(id, session.getMessages());
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id", session.getId());
         data.put("sessionNo", session.getSessionNo());
@@ -135,7 +139,9 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public List<ChatMessage> listMessages(Long id) {
         requireSession(id);
-        return messageMapper.listBySessionId(id);
+        List<ChatMessage> messages = messageMapper.listBySessionId(id);
+        chatImageRiskService.attachRisks(id, messages);
+        return messages;
     }
 
     @Transactional
@@ -194,6 +200,11 @@ public class ChatServiceImpl implements ChatService {
                         "afterSaleStatus", order == null ? null : order.getAfterSaleStatus(),
                         "logisticsStatus", order == null ? null : order.getLogisticsStatus()));
 
+        ChatImageRisk imageRisk = chatImageRiskService.scan(request, userContent, order);
+        userMessage.setImageRisk(imageRisk);
+        trace(id, userMessage.getId(), ChatImageRiskService.TRACE_STEP, imageRisk == null ? "SKIPPED" : "SUCCESS",
+                chatImageRiskService.toTraceDetail(imageRisk));
+
         boolean useAi = request.getUseAi() == null || request.getUseAi();
         ProductInsight productInsight = productInsightService.build(order, userContent, intent.getIntentCode(), false);
         trace(id, userMessage.getId(), "PRODUCT_PROFILE_LOOKUP",
@@ -231,14 +242,14 @@ public class ChatServiceImpl implements ChatService {
                         "topTitle", hits.isEmpty() ? null : hits.get(0).getTitle(),
                         "summary", hits.isEmpty() ? "未命中精确规则，使用本地流程模板兜底" : "已命中可用于回答的规则依据"));
 
-        String localReply = buildReply(intent, order, hits, conversationContext, productInsight);
+        String localReply = buildReply(intent, order, hits, conversationContext, productInsight, imageRisk);
         Map<String, Object> businessTools = buildBusinessToolEvidence(order, userContent, intent);
         trace(id, userMessage.getId(), "BUSINESS_TOOL_CALLS", "SUCCESS",
                 detail("title", "LangChain4j 业务工具",
                         "tools", businessTools.get("tools"),
                         "summary", "已把订单查询、知识检索和工单能力封装为可调用工具，并将结果注入模型上下文"));
 
-        String aiPrompt = buildAiPrompt(userContent, intent, orderContext, productInsight, hits, localReply, conversationContext, businessTools);
+        String aiPrompt = buildAiPrompt(userContent, intent, orderContext, productInsight, hits, localReply, conversationContext, businessTools, imageRisk);
         AiService.AiResult aiResult = useAi
                 ? aiService.generate(aiPrompt)
                 : new AiService.AiResult(false, "SKIPPED", true, "local-fallback", "local-rule-template", "", 0, "本轮未启用 AI");
@@ -279,6 +290,7 @@ public class ChatServiceImpl implements ChatService {
         data.put("context", conversationContext.toResponse(intent));
         data.put("orderContext", orderContext);
         data.put("productInsight", productInsight);
+        data.put("imageRisk", imageRisk);
         data.put("knowledgeHits", hits);
         data.put("businessTools", businessTools);
         Map<String, Object> ai = new LinkedHashMap<>();
@@ -469,7 +481,7 @@ public class ChatServiceImpl implements ChatService {
         return map;
     }
 
-    private String buildReply(IntentRecord intent, DemoOrder order, List<KnowledgeDoc> hits, ConversationContext context, ProductInsight productInsight) {
+    private String buildReply(IntentRecord intent, DemoOrder order, List<KnowledgeDoc> hits, ConversationContext context, ProductInsight productInsight, ChatImageRisk imageRisk) {
         String contextText = context.followUp() && hasText(context.inheritedIntentCode())
                 ? "结合你前面关于“" + intentName(context.inheritedIntentCode()) + "”的追问，"
                 : "";
@@ -479,25 +491,26 @@ public class ChatServiceImpl implements ChatService {
         String productText = productInsight == null || !hasText(productInsight.getLocalSummary())
                 ? ""
                 : " 产品顾问提示：" + trim(productInsight.getLocalSummary(), 160);
+        String imageRiskText = buildImageRiskReply(imageRisk);
         AfterSaleRecord latest = order == null ? null : latestAfterSale(afterSaleRecordMapper.listByOrderId(order.getId()));
         if (latest != null && isApplyIntent(intent.getIntentCode()) && hasActiveAfterSale(latest)) {
             return contextText + orderText + "系统已查到这单已有" + afterSaleTypeText(latest.getServiceType())
                     + "申请，当前状态为" + afterSaleStatusText(latest.getStatus())
-                    + "，无需重复提交。你可以继续等待商家处理，或补充问题照片、物流凭证后联系人工客服跟进。" + productText;
+                    + "，无需重复提交。你可以继续等待商家处理，或补充问题照片、物流凭证后联系人工客服跟进。" + productText + imageRiskText;
         }
         return contextText + switch (intent.getIntentCode()) {
-            case "RETURN_APPLY" -> orderText + basis + productText + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
-            case "EXCHANGE_APPLY" -> orderText + basis + productText + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
-            case "REFUND_PROGRESS" -> orderText + basis + " 退款一般会在商家确认收货或审核通过后按原支付渠道退回，具体到账时间以支付渠道为准。";
-            case "LOGISTICS_QUERY" -> orderText + basis + " 如果物流长时间不更新，建议先查看最新物流节点，必要时联系商家或申请平台介入。";
-            case "COMPLAINT_TRANSFER" -> orderText + basis + " 我已将问题整理成人工客服工单，后续客服可以根据订单、意图和对话摘要继续处理。";
-            case "PRE_SALE" -> basis + productText + " 你可以补充商品型号、预算和使用场景，我会按售后规则和商品信息给出咨询建议。";
-            default -> orderText + basis + " 请补充更具体的问题，例如退货、换货、退款进度或物流异常。";
+            case "RETURN_APPLY" -> orderText + basis + productText + imageRiskText + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
+            case "EXCHANGE_APPLY" -> orderText + basis + productText + imageRiskText + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
+            case "REFUND_PROGRESS" -> orderText + basis + imageRiskText + " 退款一般会在商家确认收货或审核通过后按原支付渠道退回，具体到账时间以支付渠道为准。";
+            case "LOGISTICS_QUERY" -> orderText + basis + imageRiskText + " 如果物流长时间不更新，建议先查看最新物流节点，必要时联系商家或申请平台介入。";
+            case "COMPLAINT_TRANSFER" -> orderText + basis + imageRiskText + " 我已将问题整理成人工客服工单，后续客服可以根据订单、意图和对话摘要继续处理。";
+            case "PRE_SALE" -> basis + productText + imageRiskText + " 你可以补充商品型号、预算和使用场景，我会按售后规则和商品信息给出咨询建议。";
+            default -> orderText + basis + imageRiskText + " 请补充更具体的问题，例如退货、换货、退款进度或物流异常。";
         };
     }
 
     private String buildAiPrompt(String userMessage, IntentRecord intent, Map<String, Object> orderContext, ProductInsight productInsight, List<KnowledgeDoc> hits,
-                                 String localReply, ConversationContext context, Map<String, Object> businessTools) {
+                                 String localReply, ConversationContext context, Map<String, Object> businessTools, ChatImageRisk imageRisk) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("你是电商退换货智能客服系统的回复生成模块。请基于已给出的业务判断、订单上下文、对话上下文和知识库依据，生成一段简洁、可靠、可执行的中文客服回复。\n\n");
         prompt.append("回复要求：\n");
@@ -507,7 +520,8 @@ public class ChatServiceImpl implements ChatService {
         prompt.append("4. 如果本轮是追问，要自然承接上一轮，不要像重新开场。\n");
         prompt.append("5. 如果订单已有售后申请，不要引导用户重复提交，要说明当前申请状态和下一步。\n");
         prompt.append("6. 可以引用产品智能顾问中的参数、排查步骤和同类对比，但不要夸大商品能力。\n");
-        prompt.append("7. 回复适合展示在客服工作台，语气礼貌清楚，控制在 220 字以内。\n\n");
+        prompt.append("7. 如果本轮有聊天图片风险预审，只能说疑似风险和补证建议，不要断言图片一定为 AI 生成。\n");
+        prompt.append("8. 回复适合展示在客服工作台，语气礼貌清楚，控制在 220 字以内。\n\n");
         prompt.append("用户本轮问题：\n").append(nullToEmpty(userMessage)).append("\n\n");
         prompt.append("多轮上下文：\n").append(context.summary()).append("\n");
         for (String line : context.recentPromptLines()) {
@@ -520,6 +534,7 @@ public class ChatServiceImpl implements ChatService {
                 .append(intent.getMethod()).append("\n\n");
         prompt.append("订单上下文：\n").append(orderContext).append("\n\n");
         prompt.append("产品智能顾问：\n").append(productInsight == null ? "未生成产品洞察" : productInsight).append("\n\n");
+        prompt.append("聊天图片风险预审：\n").append(imageRisk == null ? "本轮无图片或未触发图片预审" : imageRisk).append("\n\n");
         prompt.append("LangChain4j 业务工具结果：\n").append(businessTools).append("\n\n");
         prompt.append("知识库命中：\n");
         if (hits.isEmpty()) {
@@ -537,6 +552,22 @@ public class ChatServiceImpl implements ChatService {
         prompt.append("\n业务规则初步判断：\n").append(localReply).append("\n\n");
         prompt.append("请输出最终客服回复，不要输出分析过程。");
         return prompt.toString();
+    }
+
+    private String buildImageRiskReply(ChatImageRisk imageRisk) {
+        if (imageRisk == null) {
+            return "";
+        }
+        if ("RISKY".equals(imageRisk.getAuditStatus()) || "HIGH".equals(imageRisk.getAiGeneratedRisk()) || "HIGH".equals(imageRisk.getTamperRisk())) {
+            return " 你上传的图片已进入真实性预审，系统发现疑似 AI 生成、来源不清或二次处理风险信号，建议补充原始实拍图、故障视频和序列号照片，客服会人工复核。";
+        }
+        if ("MANUAL_REVIEW".equals(imageRisk.getAuditStatus())) {
+            return " 你上传的图片存在需要人工复核的风险信号，建议保留原图并补充故障视频或包装配件照片。";
+        }
+        if ("NEED_MORE".equals(imageRisk.getAuditStatus())) {
+            return " 你上传的图片可作为初步凭证，但材料还不够完整，建议补充原始实拍、故障视频或序列号信息。";
+        }
+        return " 你上传的图片已通过基础预审，暂未发现明显 AI 生成或篡改风险信号。";
     }
 
     private Map<String, Object> buildBusinessToolEvidence(DemoOrder order, String question, IntentRecord intent) {

@@ -104,6 +104,7 @@
                 <div v-if="message.fileUrl" class="message-image-box">
                   <img class="message-image" :src="imageUrl(message.fileUrl)" alt="聊天图片" />
                   <span>{{ message.originalFilename || '聊天图片' }}</span>
+                  <ChatImageRiskPanel v-if="message.imageRisk" :risk="message.imageRisk" compact :show-signals="false" />
                 </div>
               </article>
             </div>
@@ -173,6 +174,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Refresh, Search } from '@element-plus/icons-vue'
+import ChatImageRiskPanel from '../components/chat/ChatImageRiskPanel.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   getTicketConversation,

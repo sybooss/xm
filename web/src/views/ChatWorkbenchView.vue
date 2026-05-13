@@ -98,6 +98,7 @@
             <div v-if="message.fileUrl" class="message-image-box">
               <img class="message-image" :src="imageUrl(message.fileUrl)" alt="聊天图片" />
               <span>{{ message.originalFilename || '聊天图片' }}</span>
+              <ChatImageRiskPanel v-if="message.imageRisk" :risk="message.imageRisk" compact :show-signals="false" />
             </div>
           </div>
         </div>
@@ -248,6 +249,10 @@
           <ProductInsightPanel :insight="chatStore.insight?.productInsight" />
         </section>
 
+        <section v-if="chatStore.insight?.imageRisk">
+          <ChatImageRiskPanel :risk="chatStore.insight.imageRisk" />
+        </section>
+
         <section>
           <h4>知识命中</h4>
           <div v-if="chatStore.insight?.knowledgeHits?.length" class="hit-list">
@@ -291,6 +296,7 @@ import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ArrowLeft, Delete, DocumentChecked, Picture, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import CustomerOrderPanel from '../components/chat/CustomerOrderPanel.vue'
+import ChatImageRiskPanel from '../components/chat/ChatImageRiskPanel.vue'
 import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
 import ProductInsightPanel from '../components/chat/ProductInsightPanel.vue'
 import TicketPanel from '../components/chat/TicketPanel.vue'

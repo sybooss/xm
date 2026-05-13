@@ -19,5 +19,6 @@ public class ChatMessage {
     private Long replyToId;
     private String intentCode;
     private String sourceType;
+    private ChatImageRisk imageRisk;
     private LocalDateTime createdAt;
 }

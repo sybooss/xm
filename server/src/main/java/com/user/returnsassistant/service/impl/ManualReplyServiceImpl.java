@@ -11,6 +11,7 @@ import com.user.returnsassistant.pojo.ReplyDraft;
 import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
+import com.user.returnsassistant.service.ChatImageRiskService;
 import com.user.returnsassistant.service.ManualReplyService;
 import com.user.returnsassistant.service.ServiceTicketService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,11 +36,15 @@ public class ManualReplyServiceImpl implements ManualReplyService {
     private AfterSaleApplicationMapper applicationMapper;
     @Autowired
     private AfterSaleApplicationService afterSaleApplicationService;
+    @Autowired
+    private ChatImageRiskService chatImageRiskService;
 
     @Override
     public List<ChatMessage> listConversation(Long ticketId) {
         ServiceTicket ticket = requireReplyableTicket(ticketId);
-        return messageMapper.listBySessionId(ticket.getSessionId());
+        List<ChatMessage> messages = messageMapper.listBySessionId(ticket.getSessionId());
+        chatImageRiskService.attachRisks(ticket.getSessionId(), messages);
+        return messages;
     }
 
     @Transactional
