@@ -55,6 +55,7 @@
         </div>
         <div class="panel-body quick-actions">
           <el-button type="primary" :icon="ChatDotRound" @click="$router.push('/chat')">咨询工作台</el-button>
+          <el-button :icon="TrendCharts" @click="$router.push('/admin/product-issues')">商品预警</el-button>
           <el-button :icon="Cpu" @click="$router.push('/ai-test')">AI 测试</el-button>
           <el-button :icon="Collection" @click="$router.push('/knowledge')">知识库</el-button>
           <el-button :icon="Document" @click="$router.push('/logs')">日志中心</el-button>
@@ -66,7 +67,7 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { ChatDotRound, Collection, Cpu, Document, Refresh } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, Cpu, Document, Refresh, TrendCharts } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { useSystemStore } from '../stores/systemStore'
 

@@ -14,6 +14,8 @@ let seededCustomerOrderId = null
 let seededReviewOrderId = null
 let seededReviewApplicationId = null
 let seededReviewTicketSessionId = null
+const productIssueOrderIds = []
+const productIssueProductName = '浏览器聚合预警耳机'
 let demoCustomerToken = ''
 let lastOrderResponseSummary = ''
 
@@ -203,6 +205,32 @@ try {
   }, demoCustomerToken)
   const reviewApplicationPage = await apiGet(`/customer/after-sales?page=1&pageSize=1&keyword=${reviewOrderNo}`, demoCustomerToken)
   seededReviewApplicationId = reviewApplicationPage.rows?.[0]?.id
+  for (let i = 0; i < 3; i += 1) {
+    const issueOrderNo = `BISSUE${Date.now()}${i}`
+    await apiPost('/orders', {
+      orderNo: issueOrderNo,
+      userId: demoCustomerAuth.userId,
+      productName: productIssueProductName,
+      skuName: `断连样本 ${i + 1}`,
+      orderAmount: 329.00,
+      payStatus: 'PAID',
+      orderStatus: 'SIGNED',
+      logisticsStatus: 'DELIVERED',
+      afterSaleStatus: 'NONE',
+      paidAt: '2026-04-23T10:00:00',
+      shippedAt: '2026-04-24T10:00:00',
+      signedAt: '2026-04-25T10:00:00'
+    })
+    const issueOrder = await apiGet(`/orders/no/${issueOrderNo}`)
+    productIssueOrderIds.push(issueOrder.id)
+    await apiPost('/customer/after-sales', {
+      orderId: issueOrder.id,
+      serviceType: 'EXCHANGE',
+      reasonCode: 'QUALITY_PROBLEM',
+      reasonText: '蓝牙耳机断连，左耳无声，申请换货检测。',
+      refundAmount: 329.00
+    }, demoCustomerToken)
+  }
   await page.goto(`${baseUrl}/admin/after-sales/review`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '售后审核工作台', 'admin after-sale review page visible')
   await page.getByPlaceholder('售后单号、订单号或商品名').fill(reviewOrderNo)
@@ -217,7 +245,9 @@ try {
   await page.getByPlaceholder('售后单号、订单号或商品名').fill(reviewOrderNo)
   await page.getByRole('button', { name: '查询' }).first().click()
   await expectText(page, reviewOrderNo, 'admin SLA seeded task visible')
-  await expectText(page, '待顾客补材料', 'admin SLA waiting customer risk visible')
+  const waitingCustomerTasks = await apiGet(`/admin/sla/tasks?page=1&pageSize=10&keyword=${reviewOrderNo}`)
+  const waitingTask = waitingCustomerTasks.rows?.find(item => item.id === seededReviewApplicationId)
+  record('admin SLA waiting customer task visible', waitingTask?.status === 'NEED_MORE_EVIDENCE', waitingTask?.status || waitingTask?.riskLabel || '')
   await page.getByRole('button', { name: '处理' }).first().click()
   await expectText(page, '审核处理台', 'admin SLA task jumps to review desk')
   await apiPost(`/customer/after-sales/${seededReviewApplicationId}/evidence`, {
@@ -241,6 +271,18 @@ try {
   await expectText(page, '评估等级', 'admin SLA assessment level column visible')
   await expectText(page, '风险分', 'admin SLA risk score column visible')
   await expectText(page, /LOW|MEDIUM|HIGH|低|中|高/, 'admin SLA risk assessment value visible')
+  await apiPost('/admin/product-issue-insights/refresh', { days: 7 })
+  await page.goto(`${baseUrl}/admin/product-issues`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '商品质量预警', 'product issue insight page visible')
+  await expectText(page, '开放预警', 'product issue summary visible')
+  await expectText(page, '刷新预警', 'product issue refresh button visible')
+  await page.getByPlaceholder('商品、关键词或建议动作').fill(productIssueProductName)
+  await page.getByRole('button', { name: '查询' }).first().click()
+  await expectText(page, productIssueProductName, 'product issue seeded product visible')
+  await expectText(page, '断连', 'product issue keyword visible')
+  await expectText(page, '运营建议', 'product issue suggested action visible')
+  await expectText(page, /中|高|MEDIUM|HIGH/, 'product issue alert level visible')
+  await page.screenshot({ path: path.join(artifactDir, '00-product-issues.png'), fullPage: true })
   await page.goto(`${baseUrl}/admin/after-sales/review`, { waitUntil: 'networkidle', timeout: 60000 })
   await page.getByPlaceholder('售后单号、订单号或商品名').fill(reviewOrderNo)
   await page.getByRole('button', { name: '查询' }).first().click()
@@ -421,6 +463,11 @@ try {
   if (seededReviewOrderId) {
     await apiDelete(`/orders/${seededReviewOrderId}`).catch(error => {
       record('browser review order cleanup', false, error.message)
+    })
+  }
+  for (const orderId of productIssueOrderIds) {
+    await apiDelete(`/orders/${orderId}`).catch(error => {
+      record('browser product issue order cleanup', false, error.message)
     })
   }
   if (seededReviewTicketSessionId) {

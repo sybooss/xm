@@ -20,6 +20,8 @@ $created = @{
     ticketId = $null
 }
 $otherCustomerToken = $null
+$productIssueProductName = "Auto Cluster Earphone $stamp"
+$productIssueOrderIds = New-Object System.Collections.Generic.List[object]
 
 function U($codes) {
     return -join ($codes | ForEach-Object { [char]$_ })
@@ -29,6 +31,8 @@ $chatQuestion = U @(0x8fd9,0x4e2a,0x8ba2,0x5355,0x80fd,0x4e0d,0x80fd,0x9000,0x8d
 $followQuestion = U @(0x90a3,0x9000,0x6b3e,0x591a,0x4e45,0x5230,0x8d26,0xff1f)
 $ticketQuestion = U @(0x5546,0x5bb6,0x4e00,0x76f4,0x4e0d,0x5904,0x7406,0x53ef,0x4ee5,0x8f6c,0x4eba,0x5de5,0x6295,0x8bc9,0x5417,0xff1f)
 $accountExistsMessage = U @(0x8d26,0x53f7,0x5df2,0x5b58,0x5728)
+$productIssueReturnReason = U @(0x8033,0x673a,0x65ad,0x8fde,0x4e14,0x5de6,0x8033,0x65e0,0x58f0,0xff0c,0x7533,0x8bf7,0x9000,0x8d27,0x9000,0x6b3e,0x3002)
+$productIssueExchangeReason = U @(0x8033,0x673a,0x65ad,0x8fde,0xff0c,0x5de6,0x8033,0x65e0,0x58f0,0xff0c,0x7533,0x8bf7,0x6362,0x8d27,0x68c0,0x6d4b,0x3002)
 
 function Add-Result($name, $ok, $detail = "") {
     $passed = $false
@@ -284,7 +288,7 @@ try {
     Api-Post "/orders" @{
         orderNo = $realOrderNo
         userId = $customerUserId
-        productName = "Real Flow Test Product $stamp"
+        productName = $productIssueProductName
         skuName = "Blue Standard"
         orderAmount = 268.80
         payStatus = "PAID"
@@ -299,15 +303,45 @@ try {
     $realOrderId = $realOrder.id
     Add-Result "real after-sale order create" ($realOrder.userId -eq $customerUserId) "id=$realOrderId,user=$($realOrder.userId)"
 
+    for ($i = 1; $i -le 3; $i++) {
+        $issueOrderNo = "ISSUE$stamp$i"
+        Api-Post "/orders" @{
+            orderNo = $issueOrderNo
+            userId = $customerUserId
+            productName = $productIssueProductName
+            skuName = "Noise Control Demo $i"
+            orderAmount = 329.00
+            payStatus = "PAID"
+            orderStatus = "SIGNED"
+            logisticsStatus = "DELIVERED"
+            afterSaleStatus = "NONE"
+            paidAt = "2026-04-23T10:00:00"
+            shippedAt = "2026-04-24T10:00:00"
+            signedAt = "2026-04-25T10:00:00"
+        } | Out-Null
+        $issueOrder = Api-Get "/orders/no/$issueOrderNo"
+        $productIssueOrderIds.Add($issueOrder.id) | Out-Null
+    }
+
     $script:authToken = $customerToken
     $realApplication = Api-Post "/customer/after-sales" @{
         orderId = $realOrderId
         serviceType = "RETURN"
         reasonCode = "QUALITY_PROBLEM"
-        reasonText = "Auto real flow return reason"
+        reasonText = $productIssueReturnReason
         refundAmount = 188.80
     }
     $created.realAfterSaleId = $realApplication.id
+
+    foreach ($issueOrderId in $productIssueOrderIds) {
+        Api-Post "/customer/after-sales" @{
+            orderId = $issueOrderId
+            serviceType = "EXCHANGE"
+            reasonCode = "QUALITY_PROBLEM"
+            reasonText = $productIssueExchangeReason
+            refundAmount = 329.00
+        } | Out-Null
+    }
     $customerAfterSales = Api-Get "/customer/after-sales?page=1&pageSize=10&keyword=$($realApplication.applicationNo)"
     $customerAfterSaleDetail = Api-Get "/customer/after-sales/$($created.realAfterSaleId)"
     $customerFlowOk = $realApplication.status -eq "SUBMITTED" -and
@@ -370,9 +404,23 @@ try {
     $adminEvidenceAuditOk = @($adminEvidenceAudits | Where-Object { $_.evidenceId -eq $evidence.id }).Count -ge 1
     Add-Result "admin after-sale evidence audit list" $adminEvidenceAuditOk "audits=$(@($adminEvidenceAudits).Count)"
 
+    $productIssueRefresh = Api-Post "/admin/product-issue-insights/refresh" @{
+        days = 7
+    }
+    $productIssueSummary = Api-Get "/admin/product-issue-insights/summary?days=7"
+    $productIssuePage = Api-Get ("/admin/product-issue-insights?days=7&page=1&pageSize=10&keyword=" + [uri]::EscapeDataString($productIssueProductName))
+    $productIssueTop = $productIssuePage.rows | Where-Object { $_.productName -eq $productIssueProductName -and $_.applicationCount -ge 4 } | Select-Object -First 1
+    $productIssueOk = $null -ne $productIssueTop -and
+                      @("MEDIUM", "HIGH") -contains $productIssueTop.alertLevel -and
+                      $productIssueTop.applicationCount -ge 4 -and
+                      $productIssueSummary.openCount -ge 1 -and
+                      $productIssueRefresh.refreshedCount -ge 1
+    Add-Result "admin product issue insight refresh/list" $productIssueOk "level=$($productIssueTop.alertLevel),score=$($productIssueTop.trendScore),apps=$($productIssueTop.applicationCount)"
+
     $riskAssessment = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/risk-assessment" @{
         useAi = $false
     }
+    $riskRuleDetail = $riskAssessment.ruleDetailJson | ConvertFrom-Json
     $riskAssessmentDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
     $riskAssessmentList = Api-Get "/admin/risk-assessments?page=1&pageSize=5&keyword=$($riskAssessment.assessmentNo)"
     $riskAssessmentOk = $null -ne $riskAssessmentDetail.riskAssessment -and
@@ -380,8 +428,9 @@ try {
                         @("LOW", "MEDIUM", "HIGH") -contains $riskAssessment.riskLevel -and
                         $riskAssessment.riskScore -ge 0 -and
                         $riskAssessmentList.total -ge 1 -and
+                        $riskRuleDetail.productIssueAlertCount -ge 1 -and
                         (@($riskAssessmentDetail.processLogs | Where-Object { $_.action -eq "RISK_ASSESSMENT" }).Count -ge 1)
-    Add-Result "admin after-sale risk assessment" $riskAssessmentOk "level=$($riskAssessment.riskLevel),score=$($riskAssessment.riskScore),tags=$($riskAssessment.riskTags)"
+    Add-Result "admin after-sale risk assessment" $riskAssessmentOk "level=$($riskAssessment.riskLevel),score=$($riskAssessment.riskScore),productAlerts=$($riskRuleDetail.productIssueAlertCount),tags=$($riskAssessment.riskTags)"
 
     $approvedApplication = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/approve" @{
         remark = "Auto admin approved real after-sale flow"
@@ -667,6 +716,9 @@ finally {
     } catch {}
     try {
         if ($created.reviewOrderId) { Api-Delete "/orders/$($created.reviewOrderId)" | Out-Null }
+    } catch {}
+    try {
+        foreach ($issueOrderId in $productIssueOrderIds) { Api-Delete "/orders/$issueOrderId" | Out-Null }
     } catch {}
     try {
         if ($realOrderId) { Api-Delete "/orders/$realOrderId" | Out-Null }

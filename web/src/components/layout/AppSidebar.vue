@@ -24,7 +24,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Files, Monitor, Service, Tickets, UserFilled, View } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, Cpu, DataAnalysis, Document, Files, Monitor, Service, Tickets, TrendCharts, UserFilled, View } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/authStore'
 
 const route = useRoute()
@@ -34,6 +34,7 @@ const menus = [
   { path: '/dashboard', label: '系统总览', icon: DataAnalysis, adminOnly: true },
   { path: '/admin/after-sales/review', label: '售后审核', icon: View, adminOnly: true },
   { path: '/admin/sla', label: 'SLA 中心', icon: DataAnalysis, adminOnly: true },
+  { path: '/admin/product-issues', label: '商品预警', icon: TrendCharts, adminOnly: true },
   { path: '/admin/customers/profile', label: '客户画像', icon: UserFilled, adminOnly: true },
   { path: '/customer/after-sales', label: '我的售后', icon: Files, customerOnly: true },
   { path: '/chat', label: '在线咨询', icon: ChatDotRound },

@@ -287,8 +287,12 @@ async function loadApplications() {
     const data = await pageAdminAfterSales(query)
     applications.value = data?.rows || []
     total.value = data?.total || 0
-    if (!selected.value && applications.value.length) {
+    const selectedStillVisible = selected.value && applications.value.some(item => item.id === selected.value.id)
+    if (applications.value.length && !selectedStillVisible) {
       await selectApplication(applications.value[0])
+    } else if (!applications.value.length) {
+      selected.value = null
+      replyDrafts.value = []
     }
   } finally {
     loading.value = false

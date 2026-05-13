@@ -18,9 +18,11 @@ import com.user.returnsassistant.pojo.AfterSaleRiskAssessmentSearch;
 import com.user.returnsassistant.pojo.DemoOrder;
 import com.user.returnsassistant.pojo.EvidenceAudit;
 import com.user.returnsassistant.pojo.PageResult;
+import com.user.returnsassistant.pojo.ProductIssueAlert;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AfterSaleRiskAssessmentService;
 import com.user.returnsassistant.service.AiService;
+import com.user.returnsassistant.service.ProductIssueInsightService;
 import com.user.returnsassistant.utils.NoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,8 @@ public class AfterSaleRiskAssessmentServiceImpl implements AfterSaleRiskAssessme
     private ServiceReviewMapper reviewMapper;
     @Autowired
     private AiService aiService;
+    @Autowired
+    private ProductIssueInsightService productIssueInsightService;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -199,6 +203,21 @@ public class AfterSaleRiskAssessmentServiceImpl implements AfterSaleRiskAssessme
                 score += 15;
                 tags.add("商品集中问题");
                 reasons.add("同商品 7 天内售后集中出现，建议关注批次或质量问题");
+            }
+            List<ProductIssueAlert> productAlerts = productIssueInsightService.listOpenByProduct(order.getProductName(), 7);
+            detail.put("productIssueAlertCount", productAlerts.size());
+            if (!productAlerts.isEmpty()) {
+                ProductIssueAlert topAlert = productAlerts.get(0);
+                int alertScore = "HIGH".equals(topAlert.getAlertLevel()) ? 20 : 12;
+                score += alertScore;
+                tags.add("商品质量预警");
+                reasons.add("该商品存在开放质量预警：" + topAlert.getIssueKeyword() + "，等级 " + topAlert.getAlertLevel());
+                detail.put("topProductIssueAlert", Map.of(
+                        "alertNo", topAlert.getAlertNo(),
+                        "issueKeyword", topAlert.getIssueKeyword(),
+                        "alertLevel", topAlert.getAlertLevel(),
+                        "trendScore", topAlert.getTrendScore()
+                ));
             }
         }
 

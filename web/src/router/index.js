@@ -8,6 +8,7 @@ const ChatWorkbenchView = () => import('../views/ChatWorkbenchView.vue')
 const CustomerAfterSaleCenterView = () => import('../views/CustomerAfterSaleCenterView.vue')
 const AdminAfterSaleReviewView = () => import('../views/AdminAfterSaleReviewView.vue')
 const SlaCenterView = () => import('../views/SlaCenterView.vue')
+const ProductIssueInsightView = () => import('../views/ProductIssueInsightView.vue')
 const AdminCustomerProfileView = () => import('../views/AdminCustomerProfileView.vue')
 const KnowledgeDocView = () => import('../views/KnowledgeDocView.vue')
 const OrderView = () => import('../views/OrderView.vue')
@@ -26,6 +27,7 @@ const routes = [
   { path: '/customer/after-sales', name: 'customer-after-sales', component: CustomerAfterSaleCenterView, meta: { title: '我的售后', customerOnly: true } },
   { path: '/admin/after-sales/review', name: 'admin-after-sale-review', component: AdminAfterSaleReviewView, meta: { title: '售后审核工作台', adminOnly: true } },
   { path: '/admin/sla', name: 'admin-sla', component: SlaCenterView, meta: { title: 'SLA 中心', adminOnly: true } },
+  { path: '/admin/product-issues', name: 'admin-product-issues', component: ProductIssueInsightView, meta: { title: '商品质量预警', adminOnly: true } },
   { path: '/admin/customers/profile', name: 'admin-customer-profile', component: AdminCustomerProfileView, meta: { title: '客户画像', adminOnly: true } },
   { path: '/knowledge', name: 'knowledge', component: KnowledgeDocView, meta: { title: '知识库', adminOnly: true } },
   { path: '/orders', name: 'orders', component: OrderView, meta: { title: '订单管理', adminOnly: true } },

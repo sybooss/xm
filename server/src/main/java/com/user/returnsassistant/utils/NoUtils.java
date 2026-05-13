@@ -34,6 +34,10 @@ public class NoUtils {
         return "RA" + now() + random();
     }
 
+    public static String productIssueAlertNo() {
+        return "PI" + now() + random();
+    }
+
     private static String now() {
         return LocalDateTime.now().format(FORMATTER);
     }

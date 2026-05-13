@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.ProductIssueAlertMapper">
+    <sql id="AlertWhere">
+        where 1=1
+        <if test="s.days != null">and time_window_days=#{s.days}</if>
+        <if test="s.status != null and s.status != ''">and status=#{s.status}</if>
+        <if test="s.alertLevel != null and s.alertLevel != ''">and alert_level=#{s.alertLevel}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (
+                alert_no like concat('%',#{s.keyword},'%')
+                or product_name like concat('%',#{s.keyword},'%')
+                or issue_keyword like concat('%',#{s.keyword},'%')
+                or sample_reasons like concat('%',#{s.keyword},'%')
+                or suggested_action like concat('%',#{s.keyword},'%')
+            )
+        </if>
+    </sql>
+
+    <select id="listSourceItems" resultType="com.user.returnsassistant.pojo.ProductIssueSourceItem">
+        select a.id as application_id,
+               a.application_no,
+               o.product_name,
+               a.service_type,
+               a.reason_text,
+               t.customer_issue,
+               r.tags as review_tags,
+               r.comment as review_comment,
+               r.rating,
+               a.refund_amount,
+               a.created_at
+        from after_sale_application a
+        left join demo_order o on a.order_id=o.id
+        left join service_ticket t on a.ticket_id=t.id
+        left join service_review r on a.id=r.application_id
+        where a.created_at &gt;= date_sub(now(), interval #{days} day)
+          and o.product_name is not null
+        order by a.created_at desc, a.id desc
+    </select>
+
+    <select id="getOpenByUniqueKey" resultType="com.user.returnsassistant.pojo.ProductIssueAlert">
+        select *
+        from product_issue_alert
+        where product_name=#{productName}
+          and issue_keyword=#{issueKeyword}
+          and time_window_days=#{timeWindowDays}
+          and status='OPEN'
+        limit 1
+    </select>
+
+    <select id="listOpenByProduct" resultType="com.user.returnsassistant.pojo.ProductIssueAlert">
+        select *
+        from product_issue_alert
+        where product_name=#{productName}
+          and time_window_days=#{days}
+          and status='OPEN'
+        order by trend_score desc, updated_at desc, id desc
+    </select>
+
+    <select id="getTop" resultType="com.user.returnsassistant.pojo.ProductIssueAlert">
+        select *
+        from product_issue_alert
+        where time_window_days=#{days}
+          and status=#{status}
+        order by trend_score desc, issue_count desc, updated_at desc, id desc
+        limit 1
+    </select>
+
+    <select id="countByLevel" resultType="long">
+        select count(*)
+        from product_issue_alert
+        where time_window_days=#{days}
+          and status=#{status}
+          <if test="alertLevel != null and alertLevel != ''">and alert_level=#{alertLevel}</if>
+    </select>
+
+    <select id="countDistinctProducts" resultType="long">
+        select count(distinct product_name)
+        from product_issue_alert
+        where time_window_days=#{days}
+          and status=#{status}
+    </select>
+
+    <select id="sumApplications" resultType="long">
+        select coalesce(sum(application_count), 0)
+        from product_issue_alert
+        where time_window_days=#{days}
+          and status=#{status}
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.ProductIssueAlert">
+        select *
+        from product_issue_alert
+        <include refid="AlertWhere"/>
+        order by trend_score desc, issue_count desc, updated_at desc, id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into product_issue_alert(
+            alert_no, product_name, issue_keyword, issue_count, application_count,
+            ticket_count, low_rating_count, refund_amount, time_window_days,
+            alert_level, trend_score, sample_application_ids, sample_reasons,
+            suggested_action, status
+        )
+        values(
+            #{alertNo}, #{productName}, #{issueKeyword}, #{issueCount}, #{applicationCount},
+            #{ticketCount}, #{lowRatingCount}, #{refundAmount}, #{timeWindowDays},
+            #{alertLevel}, #{trendScore}, #{sampleApplicationIds}, #{sampleReasons},
+            #{suggestedAction}, #{status}
+        )
+    </insert>
+
+    <update id="update">
+        update product_issue_alert
+        set issue_count=#{issueCount},
+            application_count=#{applicationCount},
+            ticket_count=#{ticketCount},
+            low_rating_count=#{lowRatingCount},
+            refund_amount=#{refundAmount},
+            alert_level=#{alertLevel},
+            trend_score=#{trendScore},
+            sample_application_ids=#{sampleApplicationIds},
+            sample_reasons=#{sampleReasons},
+            suggested_action=#{suggestedAction},
+            status=#{status}
+        where id=#{id}
+    </update>
+</mapper>

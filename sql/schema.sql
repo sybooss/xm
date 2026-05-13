@@ -234,13 +234,13 @@ CREATE TABLE IF NOT EXISTS after_sale_process_log (
   CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
   CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
-  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'PRODUCT_ISSUE_ALERT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
   INDEX idx_after_sale_process_log_application (application_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 ALTER TABLE after_sale_process_log DROP CHECK ck_after_sale_process_log_action;
 ALTER TABLE after_sale_process_log
-  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
+  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'PRODUCT_ISSUE_ALERT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
 
 CREATE TABLE IF NOT EXISTS after_sale_evidence (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -312,6 +312,34 @@ CREATE TABLE IF NOT EXISTS after_sale_risk_assessment (
   CONSTRAINT ck_after_sale_risk_assessment_ai_status CHECK (ai_status IN ('SUCCESS', 'FAILED', 'SKIPPED')),
   INDEX idx_after_sale_risk_assessment_level (risk_level, risk_score, updated_at),
   INDEX idx_after_sale_risk_assessment_score (risk_score, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS product_issue_alert (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  alert_no VARCHAR(40) NOT NULL,
+  product_name VARCHAR(120) NOT NULL,
+  issue_keyword VARCHAR(50) NOT NULL,
+  issue_count INT NOT NULL DEFAULT 0,
+  application_count INT NOT NULL DEFAULT 0,
+  ticket_count INT NOT NULL DEFAULT 0,
+  low_rating_count INT NOT NULL DEFAULT 0,
+  refund_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  time_window_days INT NOT NULL DEFAULT 7,
+  alert_level VARCHAR(20) NOT NULL,
+  trend_score INT NOT NULL DEFAULT 0,
+  sample_application_ids VARCHAR(300) NULL,
+  sample_reasons VARCHAR(1000) NULL,
+  suggested_action VARCHAR(1000) NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uk_product_issue_alert_no UNIQUE (alert_no),
+  CONSTRAINT ck_product_issue_alert_level CHECK (alert_level IN ('LOW', 'MEDIUM', 'HIGH')),
+  CONSTRAINT ck_product_issue_alert_score CHECK (trend_score BETWEEN 0 AND 100),
+  CONSTRAINT ck_product_issue_alert_status CHECK (status IN ('OPEN', 'WATCHING', 'RESOLVED')),
+  INDEX idx_product_issue_alert_unique_open (product_name, issue_keyword, time_window_days, status),
+  INDEX idx_product_issue_alert_level (alert_level, trend_score, updated_at),
+  INDEX idx_product_issue_alert_window (time_window_days, status, updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS knowledge_category (
