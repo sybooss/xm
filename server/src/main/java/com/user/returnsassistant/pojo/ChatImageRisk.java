@@ -14,6 +14,9 @@ public class ChatImageRisk {
     private String metadataSignal;
     private String visualSignal;
     private String watermarkSignal;
+    private String visionStatus;
+    private String visionModel;
+    private String visionSignal;
     private String requiredEvidence;
     private List<String> requiredEvidenceList;
     private String summary;

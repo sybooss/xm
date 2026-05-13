@@ -33,6 +33,7 @@ $ticketQuestion = U @(0x5546,0x5bb6,0x4e00,0x76f4,0x4e0d,0x5904,0x7406,0x53ef,0x
 $accountExistsMessage = U @(0x8d26,0x53f7,0x5df2,0x5b58,0x5728)
 $productIssueReturnReason = U @(0x8033,0x673a,0x65ad,0x8fde,0x4e14,0x5de6,0x8033,0x65e0,0x58f0,0xff0c,0x7533,0x8bf7,0x9000,0x8d27,0x9000,0x6b3e,0x3002)
 $productIssueExchangeReason = U @(0x8033,0x673a,0x65ad,0x8fde,0xff0c,0x5de6,0x8033,0x65e0,0x58f0,0xff0c,0x7533,0x8bf7,0x6362,0x8d27,0x68c0,0x6d4b,0x3002)
+$doubaoWatermark = U @(0x8c46,0x5305,0x0041,0x0049,0x751f,0x6210)
 
 function Add-Result($name, $ok, $detail = "") {
     $passed = $false
@@ -86,6 +87,38 @@ function Api-Post-File($path, $filePath) {
         throw "$path failed: $($response.msg)"
     }
     return $response.data
+}
+
+function New-Watermarked-Png($filePath) {
+    Add-Type -AssemblyName System.Drawing
+    $bitmap = New-Object System.Drawing.Bitmap 640, 420
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    try {
+        $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $graphics.Clear([System.Drawing.Color]::FromArgb(245, 244, 240))
+        $tableBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(156, 96, 47))
+        $graphics.FillRectangle($tableBrush, 0, 300, 640, 120)
+        $boxBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(26, 26, 24))
+        $graphics.FillRectangle($boxBrush, 190, 85, 235, 245)
+        $crackPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(232, 232, 220)), 4
+        $graphics.DrawLine($crackPen, 230, 120, 385, 295)
+        $graphics.DrawLine($crackPen, 320, 90, 285, 310)
+        $graphics.DrawLine($crackPen, 390, 130, 205, 250)
+        $speakerPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(210, 210, 200)), 10
+        $graphics.DrawEllipse($speakerPen, 235, 175, 105, 105)
+        $graphics.DrawEllipse($speakerPen, 275, 115, 45, 45)
+        $font = New-Object System.Drawing.Font "Microsoft YaHei", 24, ([System.Drawing.FontStyle]::Bold)
+        $watermarkBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(252, 252, 252))
+        $graphics.DrawString($script:doubaoWatermark, $font, $watermarkBrush, 455, 370)
+    } finally {
+        $graphics.Dispose()
+    }
+    try {
+        $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+        $bitmap.Dispose()
+    }
+    return [System.IO.File]::ReadAllBytes($filePath)
 }
 
 function Api-Put($path, $body) {
@@ -402,8 +435,7 @@ try {
     $uploadDir = Join-Path (Get-Location) "tmp"
     New-Item -ItemType Directory -Path $uploadDir -Force | Out-Null
     $pngPath = Join-Path $uploadDir "ai-generated-evidence-$stamp.png"
-    [byte[]]$pngBytes = 0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x08,0x06,0x00,0x00,0x00,0x1F,0x15,0xC4,0x89,0x00,0x00,0x00,0x0A,0x49,0x44,0x41,0x54,0x78,0x9C,0x63,0x00,0x01,0x00,0x00,0x05,0x00,0x01,0x0D,0x0A,0x2D,0xB4,0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44,0xAE,0x42,0x60,0x82
-    [System.IO.File]::WriteAllBytes($pngPath, $pngBytes)
+    [byte[]]$pngBytes = New-Watermarked-Png $pngPath
     $uploadedImage = Api-Post-File "/customer/evidence-files" $pngPath
     $imageEvidence = Api-Post "/customer/after-sales/$($created.realAfterSaleId)/evidence" @{
         evidenceType = "IMAGE"
@@ -670,11 +702,11 @@ try {
     $followOk = $followChat.context.followUp -eq $true -and $followChat.intent.intentCode -eq "REFUND_PROGRESS" -and $followChat.intent.method -eq "HYBRID"
     Add-Result "multi-turn follow-up context" $followOk "followUp=$($followChat.context.followUp), intent=$($followChat.intent.intentCode), method=$($followChat.intent.method)"
 
-    $chatImagePath = Join-Path $uploadDir "chat-product-photo-$stamp.png"
-    [System.IO.File]::WriteAllBytes($chatImagePath, $pngBytes)
+    $chatImagePath = Join-Path $uploadDir "豆包AI生成坏损照片-$stamp.png"
+    [byte[]]$chatPngBytes = New-Watermarked-Png $chatImagePath
     $uploadedChatImage = Api-Post-File "/chat-sessions/$($created.sessionId)/image-files" $chatImagePath
     $chatImageMessage = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
-        content = "Chat image sent directly to customer service: possible AI generated synthetic damage photo, manual original-photo review needed."
+        content = "Chat image sent directly to customer service: visible 豆包AI生成 watermark on a synthetic damage photo, manual original-photo review needed."
         orderNo = "DD202604290001"
         useAi = $false
         fileUrl = $uploadedChatImage.fileUrl
@@ -686,12 +718,15 @@ try {
                    $chatImageMessage.userMessage.messageType -eq "IMAGE" -and
                    $chatImageMessage.userMessage.fileUrl -eq $uploadedChatImage.fileUrl -and
                    $null -ne $chatImageMessage.imageRisk -and
-                   $chatImageMessage.imageRisk.auditStatus -in @("PASS", "NEED_MORE", "RISKY", "MANUAL_REVIEW")
-    Add-Result "chat image upload/message risk scan" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType),risk=$($chatImageMessage.imageRisk.auditStatus)/$($chatImageMessage.imageRisk.aiGeneratedRisk)"
+                   $chatImageMessage.imageRisk.auditStatus -eq "RISKY" -and
+                   $chatImageMessage.imageRisk.aiGeneratedRisk -eq "HIGH" -and
+                   (-not $aiEnabled -or $chatImageMessage.imageRisk.visionStatus -eq "SUCCESS") -and
+                   $chatImageMessage.imageRisk.watermarkSignal -like "*AI*"
+    Add-Result "chat image upload/message risk scan" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType),risk=$($chatImageMessage.imageRisk.auditStatus)/$($chatImageMessage.imageRisk.aiGeneratedRisk),vision=$($chatImageMessage.imageRisk.visionStatus)"
 
     $largeChatImagePath = Join-Path $uploadDir "chat-product-photo-large-$stamp.png"
     $largePngBytes = New-Object byte[] (2 * 1024 * 1024)
-    [Array]::Copy($pngBytes, 0, $largePngBytes, 0, $pngBytes.Length)
+    [Array]::Copy($chatPngBytes, 0, $largePngBytes, 0, $chatPngBytes.Length)
     [System.IO.File]::WriteAllBytes($largeChatImagePath, $largePngBytes)
     $uploadedLargeChatImage = Api-Post-File "/chat-sessions/$($created.sessionId)/image-files" $largeChatImagePath
     $largeChatImageOk = $uploadedLargeChatImage.fileUrl -like "/uploads/chat/*" -and

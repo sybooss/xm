@@ -8,8 +8,12 @@ import com.user.returnsassistant.pojo.ChatMessageRequest;
 import com.user.returnsassistant.pojo.DemoOrder;
 import com.user.returnsassistant.pojo.ProcessTrace;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -28,6 +32,11 @@ public class ChatImageRiskService {
     private ProcessTraceMapper processTraceMapper;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private AiService aiService;
+
+    @Value("${app.upload.root:tmp/uploads}")
+    private String uploadRoot;
 
     public ChatImageRisk scan(ChatMessageRequest request, String userContent, DemoOrder order) {
         if (request == null || !hasText(request.getFileUrl())) {
@@ -45,6 +54,7 @@ public class ChatImageRiskService {
         Set<String> visualSignals = new LinkedHashSet<>();
         Set<String> watermarkSignals = new LinkedHashSet<>();
 
+        VisionDecision visionDecision = analyzeWithVisionModel(request, userContent, order);
         int contentLength = userContent == null ? 0 : userContent.trim().length();
         boolean imageType = normalize(request.getContentType()).startsWith("image/");
         boolean issueMatched = issueMatched(text);
@@ -70,8 +80,30 @@ public class ChatImageRiskService {
             required.add("补充原始实拍图、故障视频、序列号照片或包装配件照片");
         }
 
-        if (containsAny(text, "ai生成", "ai 生成", "aigc", "生成图", "midjourney", "stable diffusion", "stablediffusion", "dall-e", "dalle", "synthetic")) {
-            watermarkSignals.add("聊天图片说明或文件信息包含 AI 生成/AIGC/生成平台相关信号。");
+        if (visionDecision != null) {
+            visualSignals.add("视觉模型预审：" + visionDecision.summary());
+            if (hasText(visionDecision.watermarkSignal())) {
+                watermarkSignals.add("视觉模型发现：" + visionDecision.watermarkSignal());
+            }
+            if (hasText(visionDecision.tamperSignal())) {
+                metadataSignals.add("视觉模型提示：" + visionDecision.tamperSignal());
+            }
+            aiRiskScore += scoreForRisk(visionDecision.aiGeneratedRisk());
+            tamperRiskScore += scoreForRisk(visionDecision.tamperRisk());
+            authenticityScore += scoreForRisk(visionDecision.authenticityRisk());
+        }
+        if (containsAny(text, "豆包ai生成", "豆包 ai生成", "豆包 ai 生成", "ai生成水印", "ai 生成水印", "aigc水印", "生成平台水印")) {
+            watermarkSignals.add("聊天图片说明、文件名或来源信息出现 AI 生成水印信号，需按疑似生图平台来源处理。");
+            aiRiskScore += 4;
+            authenticityScore++;
+        }
+        if (containsAny(text, "豆包", "即梦", "剪映ai", "火山引擎", "通义万相", "文心一格", "可灵", "kolors", "秒画", "吐司ai", "liblib", "midjourney", "stable diffusion", "stablediffusion", "dall-e", "dalle", "synthetic")) {
+            watermarkSignals.add("聊天图片说明或文件信息包含常见 AI 生图平台/生成模型来源信号。");
+            aiRiskScore += 4;
+            authenticityScore++;
+        }
+        if (containsAny(text, "ai生成", "ai 生成", "aigc", "生成图", "生成图片", "ai绘图", "ai 绘图", "ai作图", "ai 作图", "人工智能生成")) {
+            watermarkSignals.add("聊天图片说明或文件信息包含 AI 生成/AIGC 相关信号。");
             aiRiskScore += 3;
         }
         if (containsAny(text, "无原图", "网图", "示意图", "参考图", "合成", "渲染", "非实拍")) {
@@ -109,6 +141,9 @@ public class ChatImageRiskService {
         risk.setMetadataSignal(joinOrDefault(metadataSignals, "未发现明确元数据异常信号，聊天预审未读取真实 EXIF/C2PA。"));
         risk.setVisualSignal(joinOrDefault(visualSignals, "图片说明与售后问题未发现明显冲突，仍需客服结合原始文件判断。"));
         risk.setWatermarkSignal(joinOrDefault(watermarkSignals, "未发现明确水印或生成平台来源信号。"));
+        risk.setVisionStatus(visionDecision == null ? "SKIPPED" : visionDecision.status());
+        risk.setVisionModel(visionDecision == null ? null : visionDecision.modelName());
+        risk.setVisionSignal(visionDecision == null ? "未调用视觉模型或模型不可用，已使用本地规则兜底。" : visionDecision.rawSummary());
         risk.setRequiredEvidence(joinOrDefault(required, "当前图片可作为初步材料，客服仍需结合订单和售后规则复核。"));
         risk.setRequiredEvidenceList(new ArrayList<>(required));
         risk.setSummary(summary(risk));
@@ -130,6 +165,8 @@ public class ChatImageRiskService {
         detail.put("authenticityRisk", risk.getAuthenticityRisk());
         detail.put("aiGeneratedRisk", risk.getAiGeneratedRisk());
         detail.put("tamperRisk", risk.getTamperRisk());
+        detail.put("visionStatus", risk.getVisionStatus());
+        detail.put("visionModel", risk.getVisionModel());
         detail.put("imageRisk", risk);
         return detail;
     }
@@ -204,6 +241,9 @@ public class ChatImageRiskService {
 
     private String summary(ChatImageRisk risk) {
         if ("RISKY".equals(risk.getAuditStatus())) {
+            if ("SUCCESS".equals(risk.getVisionStatus())) {
+                return "视觉模型识别到聊天图片存在疑似 AI 生成、平台水印或二次处理风险，建议要求用户补充原始实拍材料并人工复核。";
+            }
             return "聊天图片存在疑似 AI 生成、来源不清或二次处理风险，建议要求用户补充原始实拍材料并人工复核。";
         }
         if ("MANUAL_REVIEW".equals(risk.getAuditStatus())) {
@@ -213,6 +253,131 @@ public class ChatImageRiskService {
             return "聊天图片可作为初步材料，但说明或配套证据不足，建议补充原始照片、视频或序列号信息。";
         }
         return "聊天图片预审通过基础规则，暂未发现明显 AI 生成或篡改风险信号。";
+    }
+
+    private VisionDecision analyzeWithVisionModel(ChatMessageRequest request, String userContent, DemoOrder order) {
+        byte[] imageBytes = readUploadedImage(request.getFileUrl());
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        AiService.AiResult result = aiService.analyzeImage(buildVisionPrompt(request, userContent, order),
+                request.getContentType(), imageBytes);
+        if (!"SUCCESS".equals(result.status()) || !hasText(result.reply())) {
+            return null;
+        }
+        try {
+            Map<?, ?> payload = objectMapper.readValue(extractJson(result.reply()), Map.class);
+            String aiRisk = normalizeRisk(text(payload.get("aiGeneratedRisk")));
+            String authenticityRisk = normalizeRisk(text(payload.get("authenticityRisk")));
+            String tamperRisk = normalizeRisk(text(payload.get("tamperRisk")));
+            String summary = trimToLength(text(payload.get("summary")), 300);
+            String watermarkSignal = trimToLength(text(payload.get("watermarkSignal")), 300);
+            String tamperSignal = trimToLength(text(payload.get("tamperSignal")), 300);
+            if (!hasText(summary)) {
+                summary = trimToLength(result.reply(), 300);
+            }
+            return new VisionDecision("SUCCESS", result.modelName(), aiRisk, authenticityRisk, tamperRisk,
+                    summary, watermarkSignal, tamperSignal, trimToLength(result.reply(), 1000));
+        } catch (Exception ignored) {
+            String normalized = normalize(result.reply());
+            String aiRisk = containsAny(normalized, "high", "高", "明显", "豆包", "ai生成", "ai 生成", "aigc", "watermark")
+                    ? "HIGH" : (containsAny(normalized, "medium", "中", "疑似") ? "MEDIUM" : "LOW");
+            return new VisionDecision("SUCCESS", result.modelName(), aiRisk, aiRisk, "LOW",
+                    trimToLength(result.reply(), 300), "", "", trimToLength(result.reply(), 1000));
+        }
+    }
+
+    private String buildVisionPrompt(ChatMessageRequest request, String userContent, DemoOrder order) {
+        return """
+                你是电商退换货客服系统的图片真实性预审模型。请直接查看上传图片本身，而不是只依赖文字说明。
+                重点判断：
+                1. 图片里是否有可见 AI 生成水印或平台标识，例如“豆包AI生成”“豆包”“即梦”“Midjourney”“Stable Diffusion”“DALL-E”等。
+                2. 商品损坏、裂痕、变形等是否像真实拍摄，还是更像 AI 合成、渲染、示意图或二次编辑。
+                3. 是否存在裁剪、拼接、文字水印、来源可疑等需要人工复核的迹象。
+                请只返回 JSON，不要返回 Markdown，字段如下：
+                {
+                  "aiGeneratedRisk": "LOW|MEDIUM|HIGH",
+                  "authenticityRisk": "LOW|MEDIUM|HIGH",
+                  "tamperRisk": "LOW|MEDIUM|HIGH",
+                  "watermarkSignal": "如果看到水印/平台标识，写出具体内容；没有则写空字符串",
+                  "tamperSignal": "如果看到篡改/合成迹象，简要说明；没有则写空字符串",
+                  "summary": "一句话说明判断依据"
+                }
+                只要图片中可见“豆包AI生成”或类似 AI 生成平台水印，aiGeneratedRisk 必须为 HIGH。
+                用户文字：%s
+                文件名：%s
+                商品：%s
+                """.formatted(
+                nullToEmpty(userContent),
+                nullToEmpty(request.getOriginalFilename()),
+                order == null ? "" : nullToEmpty(order.getProductName())
+        );
+    }
+
+    private byte[] readUploadedImage(String fileUrl) {
+        if (!hasText(fileUrl) || !fileUrl.startsWith("/uploads/")) {
+            return null;
+        }
+        Path root = Path.of(uploadRoot).toAbsolutePath().normalize();
+        String relative = fileUrl.substring("/uploads/".length()).replace('/', java.io.File.separatorChar);
+        Path file = root.resolve(relative).normalize();
+        if (!file.startsWith(root) || !Files.isRegularFile(file)) {
+            return null;
+        }
+        try {
+            long size = Files.size(file);
+            if (size <= 0 || size > 5L * 1024 * 1024) {
+                return null;
+            }
+            return Files.readAllBytes(file);
+        } catch (IOException ignored) {
+            return null;
+        }
+    }
+
+    private int scoreForRisk(String risk) {
+        if ("HIGH".equals(risk)) {
+            return 4;
+        }
+        if ("MEDIUM".equals(risk)) {
+            return 2;
+        }
+        return 0;
+    }
+
+    private String normalizeRisk(String value) {
+        String normalized = normalize(value);
+        if (normalized.contains("high") || normalized.contains("高")) {
+            return "HIGH";
+        }
+        if (normalized.contains("medium") || normalized.contains("中")) {
+            return "MEDIUM";
+        }
+        return "LOW";
+    }
+
+    private String extractJson(String text) {
+        String value = text == null ? "" : text.trim();
+        if (value.startsWith("```")) {
+            value = value.replaceFirst("^```(?:json)?", "").replaceFirst("```$", "").trim();
+        }
+        int start = value.indexOf('{');
+        int end = value.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return value.substring(start, end + 1);
+        }
+        return value;
+    }
+
+    private String text(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private String trimToLength(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     private String joinOrDefault(Set<String> values, String fallback) {
@@ -248,5 +413,10 @@ public class ChatImageRiskService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private record VisionDecision(String status, String modelName, String aiGeneratedRisk, String authenticityRisk,
+                                  String tamperRisk, String summary, String watermarkSignal, String tamperSignal,
+                                  String rawSummary) {
     }
 }

@@ -7,6 +7,8 @@ import java.util.List;
 public interface AiService {
     AiResult generate(String prompt);
 
+    AiResult analyzeImage(String prompt, String contentType, byte[] imageBytes);
+
     AiResult test(String prompt);
 
     AiCallLog toLog(Long sessionId, Long messageId, String prompt, AiResult result);

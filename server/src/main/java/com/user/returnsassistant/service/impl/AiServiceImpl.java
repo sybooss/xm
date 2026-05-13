@@ -16,8 +16,11 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -76,6 +79,26 @@ public class AiServiceImpl implements AiService {
         }
         try {
             String reply = getChatModel().chat(prompt);
+            return new AiResult(true, "SUCCESS", false, provider, currentModelName(), reply, elapsed(start), null);
+        } catch (Exception e) {
+            return new AiResult(false, "FAILED", fallbackEnabled, provider, currentModelName(), "", elapsed(start), summarizeError(e));
+        }
+    }
+
+    @Override
+    public AiResult analyzeImage(String prompt, String contentType, byte[] imageBytes) {
+        long start = System.currentTimeMillis();
+        if (!aiEnabled) {
+            return skipped(start, "AI 未启用，使用本地规则兜底");
+        }
+        if (!hasText(apiKey)) {
+            return skipped(start, "未配置 OPENAI_API_KEY，使用本地规则兜底");
+        }
+        if (imageBytes == null || imageBytes.length == 0) {
+            return new AiResult(false, "FAILED", fallbackEnabled, provider, currentModelName(), "", elapsed(start), "图片内容为空");
+        }
+        try {
+            String reply = postVisionChat(prompt, contentType, imageBytes);
             return new AiResult(true, "SUCCESS", false, provider, currentModelName(), reply, elapsed(start), null);
         } catch (Exception e) {
             return new AiResult(false, "FAILED", fallbackEnabled, provider, currentModelName(), "", elapsed(start), summarizeError(e));
@@ -232,6 +255,47 @@ public class AiServiceImpl implements AiService {
             }
         }
         return new ArrayList<>(names);
+    }
+
+    private String postVisionChat(String prompt, String contentType, byte[] imageBytes) throws Exception {
+        String mimeType = hasText(contentType) ? contentType.trim().toLowerCase() : "image/png";
+        String dataUrl = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", currentModelName());
+        body.put("temperature", 0.0);
+        body.put("max_tokens", 700);
+        body.put("messages", List.of(Map.of(
+                "role", "user",
+                "content", List.of(
+                        Map.of("type", "text", "text", prompt),
+                        Map.of("type", "image_url", "image_url", Map.of("url", dataUrl))
+                )
+        )));
+
+        int timeout = Math.max(1, safeInt(timeoutSeconds, 30));
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(timeout))
+                .build();
+        HttpRequest request = HttpRequest.newBuilder(URI.create(normalizeBaseUrl(baseUrl) + "/chat/completions"))
+                .timeout(Duration.ofSeconds(timeout))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body), StandardCharsets.UTF_8))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException("vision analysis failed: HTTP " + response.statusCode() + " " + trim(response.body(), 400));
+        }
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode choices = root.path("choices");
+        if (choices.isArray() && !choices.isEmpty()) {
+            String content = choices.get(0).path("message").path("content").asText("");
+            if (hasText(content)) {
+                return content;
+            }
+        }
+        return response.body();
     }
 
     private String normalizeBaseUrl(String url) {

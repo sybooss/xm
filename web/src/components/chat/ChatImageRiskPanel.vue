@@ -36,6 +36,7 @@
     </div>
 
     <div v-if="showSignals" class="signal-list">
+      <p><strong>视觉模型：</strong>{{ visionLine }}</p>
       <p><strong>元数据：</strong>{{ risk.metadataSignal || '-' }}</p>
       <p><strong>视觉：</strong>{{ risk.visualSignal || '-' }}</p>
       <p><strong>来源：</strong>{{ risk.watermarkSignal || '-' }}</p>
@@ -67,6 +68,13 @@ const requiredList = computed(() => {
     return props.risk.requiredEvidenceList.filter(Boolean)
   }
   return splitText(props.risk?.requiredEvidence)
+})
+
+const visionLine = computed(() => {
+  const status = props.risk?.visionStatus || 'SKIPPED'
+  const model = props.risk?.visionModel ? ` · ${props.risk.visionModel}` : ''
+  const signal = props.risk?.visionSignal ? ` · ${props.risk.visionSignal}` : ''
+  return `${status}${model}${signal}`
 })
 
 function splitText(value) {

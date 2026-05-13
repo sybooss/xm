@@ -28,6 +28,47 @@ function largePngBuffer(size = 2 * 1024 * 1024) {
   return Buffer.concat([tinyPng, Buffer.alloc(Math.max(0, size - tinyPng.length))])
 }
 
+async function watermarkedPngBuffer() {
+  const browser = await chromium.launch({ headless: true })
+  const page = await browser.newPage({ viewport: { width: 640, height: 420 }, deviceScaleFactor: 1 })
+  await page.setContent(`
+    <html>
+      <body style="margin:0">
+        <canvas id="c" width="640" height="420"></canvas>
+        <script>
+          const canvas = document.getElementById('c')
+          const ctx = canvas.getContext('2d')
+          ctx.fillStyle = '#f5f4f0'
+          ctx.fillRect(0, 0, 640, 420)
+          ctx.fillStyle = '#9c602f'
+          ctx.fillRect(0, 300, 640, 120)
+          ctx.fillStyle = '#1a1a18'
+          ctx.fillRect(190, 85, 235, 245)
+          ctx.strokeStyle = '#e8e8dc'
+          ctx.lineWidth = 4
+          ctx.beginPath()
+          ctx.moveTo(230, 120); ctx.lineTo(385, 295)
+          ctx.moveTo(320, 90); ctx.lineTo(285, 310)
+          ctx.moveTo(390, 130); ctx.lineTo(205, 250)
+          ctx.stroke()
+          ctx.strokeStyle = '#d2d2c8'
+          ctx.lineWidth = 10
+          ctx.beginPath()
+          ctx.ellipse(288, 228, 52, 52, 0, 0, Math.PI * 2)
+          ctx.ellipse(298, 138, 23, 23, 0, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.font = 'bold 26px Microsoft YaHei, Arial, sans-serif'
+          ctx.fillStyle = '#ffffff'
+          ctx.fillText('豆包AI生成', 455, 394)
+        </script>
+      </body>
+    </html>
+  `)
+  const dataUrl = await page.locator('canvas').evaluate(canvas => canvas.toDataURL('image/png'))
+  await browser.close()
+  return Buffer.from(dataUrl.split(',')[1], 'base64')
+}
+
 async function expectText(page, text, name) {
   await page.getByText(text, { exact: false }).first().waitFor({ timeout: 20000 })
   record(name, true, text)
@@ -83,6 +124,7 @@ async function apiDelete(pathname, token = adminToken) {
   return result.data
 }
 
+const chatWatermarkedImage = await watermarkedPngBuffer()
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({ viewport: { width: 1440, height: 920 } })
 
@@ -452,17 +494,18 @@ try {
   await expectText(page, '测试台', 'chat admin test channel option visible')
   record('chat removes app channel option', !(await page.getByText('App', { exact: true }).count()), 'App absent')
   record('chat removes mini program channel option', !(await page.getByText('小程序', { exact: true }).count()), '小程序 absent')
-  const chatImagePath = path.join(artifactDir, 'browser-chat-product-photo.png')
-  await fs.writeFile(chatImagePath, largePngBuffer())
+  const chatImagePath = path.join(artifactDir, '豆包AI生成坏损照片.png')
+  await fs.writeFile(chatImagePath, chatWatermarkedImage)
   await page.locator('input[type="file"]').setInputFiles(chatImagePath)
   await expectText(page, '图片已添加到聊天消息', 'chat image upload toast')
   await expectText(page, '将随本轮消息发送给客服', 'chat pending image preview visible')
-  await page.locator('textarea[placeholder*="输入售后问题"]').fill('这个订单能不能退货？这张图是我聊天时直接发给客服的坏损照片。')
+  await page.locator('textarea[placeholder*="输入售后问题"]').fill('这个订单能不能退货？这张图右下角有豆包AI生成水印，是我聊天时直接发给客服的坏损照片。')
   await page.getByRole('button', { name: /发送/ }).click()
   await page.getByText(/AI 增强|本地兜底/, { exact: false }).first().waitFor({ timeout: 120000 })
-  await expectText(page, 'browser-chat-product-photo.png', 'chat image filename visible')
+  await expectText(page, '豆包AI生成坏损照片.png', 'chat image filename visible')
   await expectText(page, '图片真实性预审', 'chat image risk panel visible')
-  await expectText(page, /AI 生成|需补材料|人工复核|凭证通过/, 'chat image risk result visible')
+  await expectText(page, /AI 生成风险|风险较高|HIGH|高/, 'chat image risk result visible')
+  await expectText(page, '视觉模型', 'chat image vision model visible')
   await expectText(page, 'RETURN_APPLY', 'chat intent visible')
   await expectText(page, 'AI 决策摘要', 'chat decision summary visible')
   await expectText(page, '导出证据', 'chat evidence export visible')
@@ -506,7 +549,7 @@ try {
   await expectText(page, '处理建议', 'service ticket detail visible')
   await expectText(page, 'SLA 风险', 'service ticket SLA risk visible')
   await expectText(page, '原始会话', 'service ticket conversation visible')
-  await expectText(page, 'browser-chat-product-photo.png', 'service ticket conversation chat image visible')
+  await expectText(page, '豆包AI生成坏损照片.png', 'service ticket conversation chat image visible')
   await expectText(page, '图片真实性预审', 'service ticket conversation chat image risk visible')
   await expectText(page, '人工接管回复工作台', 'service ticket manual workbench visible')
   await expectText(page, '发送人工回复', 'service ticket manual reply button visible')
