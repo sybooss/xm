@@ -254,13 +254,47 @@ try {
     evidenceType: 'LOGISTICS_NO',
     content: 'BROWSER-EVIDENCE-' + Date.now()
   }, demoCustomerToken)
+  await page.locator('header').getByRole('button', { name: /退出/ }).click()
+  await expectText(page, '管理员登录', 'admin logout before customer image evidence')
+  await page.getByRole('button', { name: '客户' }).click()
+  await page.locator('.login-form .login-button').click()
+  await page.evaluate(user => {
+    localStorage.setItem('returns_assistant_token', user.token)
+    localStorage.setItem('returns_assistant_user', JSON.stringify({
+      userId: user.userId,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      expiresAt: user.expiresAt
+    }))
+  }, demoCustomerAuth)
+  await page.goto(`${baseUrl}/customer/after-sales?focus=${seededReviewApplicationId}`, { waitUntil: 'networkidle', timeout: 60000 })
+  await expectVisibleBodyText(page, reviewOrderNo, 'customer image evidence after-sale visible')
+  await page.getByRole('button', { name: '补充凭证' }).click()
+  await expectText(page, '补充凭证', 'customer evidence dialog visible')
+  const imagePath = path.join(artifactDir, 'browser-ai-generated-evidence.png')
+  await fs.writeFile(imagePath, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==', 'base64'))
+  await page.locator('input[type="file"]').setInputFiles(imagePath)
+  await expectText(page, '图片凭证已上传', 'customer image evidence upload toast')
+  await page.locator('textarea[placeholder*="说明图片中坏损"]').fill('AI generated product damage image, possible hidden watermark, synthetic photo, needs original real-shot evidence.')
+  await page.getByRole('button', { name: '提交凭证' }).click()
+  await expectText(page, '凭证已提交', 'customer image evidence submit toast')
+  await expectText(page, '图片凭证预览', 'customer image evidence preview visible')
+  await page.locator('header').getByRole('button', { name: /退出/ }).click()
+  await expectText(page, '管理员登录', 'customer logout before admin image audit')
+  await page.getByRole('button', { name: '管理员' }).click()
+  await page.locator('.login-form .login-button').click()
+  await expectText(page, '售后审核工作台', 'admin login after customer image evidence')
   await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '凭证真实性审核', 'admin evidence audit panel visible')
   await expectText(page, '凭证材料', 'admin after-sale evidence list visible')
   await expectText(page, 'BROWSER-EVIDENCE-', 'admin after-sale evidence content visible')
+  await expectText(page, 'AI generated product damage image', 'admin image evidence content visible')
+  await expectText(page, '图片凭证预览', 'admin image evidence preview visible')
   await page.getByRole('button', { name: '审核全部凭证' }).click()
   await expectText(page, '全部凭证已完成审核', 'admin evidence audit all toast')
   await expectText(page, /凭证通过|需补材料|风险较高|人工复核/, 'admin evidence audit result visible')
+  await expectText(page, /AI 生成风险|风险较高|中|高|HIGH|MEDIUM/, 'admin AI generated image risk visible')
   await expectText(page, '售后风险识别', 'admin risk assessment panel visible')
   await page.getByRole('button', { name: '重新评估' }).click()
   await expectText(page, '售后风险评估已更新', 'admin risk assessment toast')
@@ -321,6 +355,8 @@ try {
   await page.getByRole('button', { name: '客户' }).click()
   await page.locator('.login-form .login-button').click()
   await expectText(page, '我的售后', 'demo customer back to after-sales for review')
+  const refreshedDemoCustomerAuth = await apiPost('/auth/login', { username: 'demo_customer', password: '123456' }, '')
+  demoCustomerToken = refreshedDemoCustomerAuth.token
   await page.evaluate(user => {
     localStorage.setItem('returns_assistant_token', user.token)
     localStorage.setItem('returns_assistant_user', JSON.stringify({
@@ -330,8 +366,8 @@ try {
       role: user.role,
       expiresAt: user.expiresAt
     }))
-  }, demoCustomerAuth)
-  const customerReviewApplication = await apiGet(`/customer/after-sales/${seededReviewApplicationId}`, demoCustomerAuth.token)
+  }, refreshedDemoCustomerAuth)
+  const customerReviewApplication = await apiGet(`/customer/after-sales/${seededReviewApplicationId}`, refreshedDemoCustomerAuth.token)
   record(
     'customer completed after-sale api visible',
     customerReviewApplication.orderNo === reviewOrderNo &&

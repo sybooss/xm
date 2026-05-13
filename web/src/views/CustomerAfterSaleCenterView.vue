@@ -183,6 +183,10 @@
             <span>{{ evidence.createdAt }}</span>
           </div>
           <p>{{ evidence.content }}</p>
+          <div v-if="evidence.fileUrl" class="image-preview-box">
+            <strong>图片凭证预览</strong>
+            <img class="evidence-preview" :src="evidenceImageUrl(evidence.fileUrl)" alt="图片凭证预览" />
+          </div>
           <div class="evidence-actions">
             <el-button size="small" type="primary" plain :loading="auditingEvidenceId === evidence.id" @click="auditEvidence(evidence)">审核凭证</el-button>
           </div>
@@ -266,11 +270,25 @@
           <el-select v-model="evidenceForm.evidenceType">
             <el-option label="文字说明" value="TEXT" />
             <el-option label="物流单号" value="LOGISTICS_NO" />
-            <el-option label="图片链接" value="IMAGE" />
+            <el-option label="图片凭证" value="IMAGE" />
           </el-select>
         </el-form-item>
+        <el-form-item label="上传图片">
+          <div class="upload-area">
+            <input ref="evidenceFileInput" type="file" accept="image/*" @change="handleEvidenceFileChange" />
+            <el-button size="small" :loading="uploadingEvidence" @click="triggerEvidenceFileInput">选择图片</el-button>
+            <span>{{ evidenceUploadName || '支持 jpg、png、webp、gif，最大 5MB' }}</span>
+          </div>
+          <div v-if="evidenceForm.fileUrl" class="image-preview-box">
+            <strong>图片凭证预览</strong>
+            <img class="upload-preview" :src="evidenceImageUrl(evidenceForm.fileUrl)" alt="图片凭证预览" />
+          </div>
+        </el-form-item>
+        <el-form-item v-if="evidenceForm.evidenceType === 'IMAGE'" label="图片说明">
+          <el-input v-model="evidenceForm.fileUrl" placeholder="图片上传成功后自动填入，也可以粘贴图片 URL" />
+        </el-form-item>
         <el-form-item label="凭证内容">
-          <el-input v-model="evidenceForm.content" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="填写物流单号、问题说明或凭证链接。" />
+          <el-input v-model="evidenceForm.content" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="说明图片中坏损/故障位置，或注明是否为实拍原图、是否含水印/EXIF/编辑痕迹。" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -316,7 +334,8 @@ import {
   createCustomerAfterSaleReview,
   getCustomerAfterSale,
   getCustomerAfterSaleReview,
-  pageCustomerAfterSales
+  pageCustomerAfterSales,
+  uploadEvidenceFile
 } from '../api/customerAfterSaleApi'
 
 const router = useRouter()
@@ -334,6 +353,7 @@ const orderLoading = ref(false)
 const afterSaleLoading = ref(false)
 const submitting = ref(false)
 const evidenceSubmitting = ref(false)
+const uploadingEvidence = ref(false)
 const reviewSubmitting = ref(false)
 const diagnosing = ref(false)
 const auditingEvidenceId = ref(null)
@@ -345,6 +365,8 @@ const evidenceForm = reactive(defaultEvidenceForm())
 const reviewForm = reactive(defaultReviewForm())
 const selectedReview = ref(null)
 const currentDiagnosis = ref(null)
+const evidenceFileInput = ref(null)
+const evidenceUploadName = ref('')
 
 const activeAfterSaleCount = computed(() => afterSales.value.filter(item => !['REJECTED', 'COMPLETED', 'CANCELLED'].includes(item.status)).length)
 const needCustomerActionCount = computed(() => afterSales.value.filter(item => ['NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND'].includes(item.status)).length)
@@ -440,6 +462,7 @@ function adoptDiagnosisType() {
 
 function openEvidenceDialog() {
   Object.assign(evidenceForm, defaultEvidenceForm())
+  evidenceUploadName.value = ''
   evidenceDialogVisible.value = true
 }
 
@@ -473,8 +496,12 @@ async function submitApplication() {
 
 async function submitEvidence() {
   if (!selectedAfterSale.value) return
-  if (!evidenceForm.content) {
-    ElMessage.warning('请填写凭证内容')
+  if (!evidenceForm.content && !evidenceForm.fileUrl) {
+    ElMessage.warning('请填写凭证内容或上传图片')
+    return
+  }
+  if (evidenceForm.evidenceType === 'IMAGE' && !evidenceForm.fileUrl) {
+    ElMessage.warning('请先上传图片或填写图片 URL')
     return
   }
   evidenceSubmitting.value = true
@@ -486,6 +513,33 @@ async function submitEvidence() {
     selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
   } finally {
     evidenceSubmitting.value = false
+  }
+}
+
+function triggerEvidenceFileInput() {
+  evidenceFileInput.value?.click()
+}
+
+async function handleEvidenceFileChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) {
+    return
+  }
+  uploadingEvidence.value = true
+  try {
+    const uploaded = await uploadEvidenceFile(file)
+    evidenceForm.evidenceType = 'IMAGE'
+    evidenceForm.fileUrl = uploaded.fileUrl
+    evidenceUploadName.value = uploaded.originalFilename
+    if (!evidenceForm.content) {
+      evidenceForm.content = `图片凭证：${uploaded.originalFilename}。请客服核对是否为商品实拍原图，并检查是否存在 AI 生成、水印缺失或二次编辑风险。`
+    }
+    ElMessage.success('图片凭证已上传')
+  } finally {
+    uploadingEvidence.value = false
+    if (event.target) {
+      event.target.value = ''
+    }
   }
 }
 
@@ -529,6 +583,20 @@ function money(value) {
     return '-'
   }
   return `￥${Number(value).toFixed(2)}`
+}
+
+function evidenceImageUrl(fileUrl) {
+  if (!fileUrl) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  if (fileUrl.startsWith('/uploads/')) {
+    return `${apiBase}${fileUrl}`
+  }
+  return fileUrl
 }
 
 function nextActionLabel(status) {
@@ -582,6 +650,7 @@ function defaultApplyForm() {
 function defaultEvidenceForm() {
   return {
     evidenceType: 'TEXT',
+    fileUrl: '',
     content: ''
   }
 }
@@ -817,6 +886,41 @@ onMounted(reloadAll)
 
 .evidence-audit {
   margin-top: 10px;
+}
+
+.upload-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.upload-area input {
+  display: none;
+}
+
+.upload-preview,
+.evidence-preview {
+  display: block;
+  width: min(320px, 100%);
+  max-height: 220px;
+  margin-top: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.image-preview-box {
+  margin-top: 10px;
+}
+
+.image-preview-box strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 13px;
 }
 
 @media (max-width: 1120px) {

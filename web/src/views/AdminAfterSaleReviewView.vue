@@ -111,6 +111,10 @@
                 <strong>{{ evidence.content }}</strong>
                 <el-button size="small" type="primary" :loading="auditingEvidenceId === evidence.id" @click="auditEvidence(evidence)">重新审核</el-button>
               </div>
+              <div v-if="evidence.fileUrl" class="image-preview-box">
+                <strong>图片凭证预览</strong>
+                <img class="evidence-preview" :src="evidenceImageUrl(evidence.fileUrl)" alt="图片凭证预览" />
+              </div>
               <EvidenceAuditPanel :audit="evidence.latestAudit" compact />
             </div>
           </div>
@@ -203,6 +207,10 @@
                 <span>{{ evidence.createdAt }}</span>
               </div>
               <p>{{ evidence.content }}</p>
+              <div v-if="evidence.fileUrl" class="image-preview-box">
+                <strong>图片凭证预览</strong>
+                <img class="evidence-preview" :src="evidenceImageUrl(evidence.fileUrl)" alt="图片凭证预览" />
+              </div>
             </div>
           </div>
 
@@ -495,6 +503,20 @@ function money(value) {
   return `￥${Number(value).toFixed(2)}`
 }
 
+function evidenceImageUrl(fileUrl) {
+  if (!fileUrl) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  if (fileUrl.startsWith('/uploads/')) {
+    return `${apiBase}${fileUrl}`
+  }
+  return fileUrl
+}
+
 onMounted(() => {
   query.keyword = route.query.keyword || ''
   loadApplications()
@@ -721,6 +743,28 @@ onMounted(() => {
   margin: 0;
   color: var(--text);
   line-height: 1.6;
+}
+
+.evidence-preview {
+  display: block;
+  width: min(320px, 100%);
+  max-height: 220px;
+  margin: 10px 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.image-preview-box {
+  margin: 10px 0;
+}
+
+.image-preview-box strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 13px;
 }
 
 @media (max-width: 1180px) {

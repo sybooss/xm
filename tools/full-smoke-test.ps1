@@ -77,6 +77,17 @@ function Api-Post-Raw($path, $body) {
     return $content | ConvertFrom-Json
 }
 
+function Api-Post-File($path, $filePath) {
+    $headers = Auth-Headers
+    $authHeader = $headers.Authorization
+    $content = & curl.exe -sS -X POST "$base$path" -H "Authorization: $authHeader" -F "file=@$filePath"
+    $response = $content | ConvertFrom-Json
+    if ($response.code -ne 1) {
+        throw "$path failed: $($response.msg)"
+    }
+    return $response.data
+}
+
 function Api-Put($path, $body) {
     $json = $body | ConvertTo-Json -Depth 12
     $headers = Auth-Headers
@@ -387,6 +398,29 @@ try {
                   $customerEvidenceDetail.customerResultSummary.Length -gt 10 -and
                   $customerEvidenceDetail.customerNextAction.Length -gt 10
     Add-Result "real after-sale customer evidence chain" $evidenceOk "evidences=$(@($customerEvidenceDetail.evidences).Count),logs=$(@($customerEvidenceDetail.processLogs).Count)"
+
+    $uploadDir = Join-Path (Get-Location) "tmp"
+    New-Item -ItemType Directory -Path $uploadDir -Force | Out-Null
+    $pngPath = Join-Path $uploadDir "ai-generated-evidence-$stamp.png"
+    [byte[]]$pngBytes = 0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x08,0x06,0x00,0x00,0x00,0x1F,0x15,0xC4,0x89,0x00,0x00,0x00,0x0A,0x49,0x44,0x41,0x54,0x78,0x9C,0x63,0x00,0x01,0x00,0x00,0x05,0x00,0x01,0x0D,0x0A,0x2D,0xB4,0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44,0xAE,0x42,0x60,0x82
+    [System.IO.File]::WriteAllBytes($pngPath, $pngBytes)
+    $uploadedImage = Api-Post-File "/customer/evidence-files" $pngPath
+    $imageEvidence = Api-Post "/customer/after-sales/$($created.realAfterSaleId)/evidence" @{
+        evidenceType = "IMAGE"
+        fileUrl = $uploadedImage.fileUrl
+        content = "AI generated image evidence from ai-generated-evidence-$stamp.png, possible hidden watermark or synthetic product photo."
+    }
+    $imageAudit = Api-Post "/after-sale-evidences/$($imageEvidence.id)/audits" @{
+        useAi = $false
+    }
+    $imageEvidenceDetail = Api-Get "/customer/after-sales/$($created.realAfterSaleId)"
+    $imageEvidenceInDetail = $imageEvidenceDetail.evidences | Where-Object { $_.id -eq $imageEvidence.id } | Select-Object -First 1
+    $imageEvidenceOk = $uploadedImage.fileUrl -like "/uploads/evidences/*" -and
+                       $imageEvidence.evidenceType -eq "IMAGE" -and
+                       -not [string]::IsNullOrWhiteSpace([string]$imageEvidence.fileUrl) -and
+                       $imageAudit.aiGeneratedRisk -in @("MEDIUM", "HIGH") -and
+                       $null -ne $imageEvidenceInDetail.latestAudit
+    Add-Result "real after-sale image evidence upload/audit" $imageEvidenceOk "url=$($uploadedImage.fileUrl),aiRisk=$($imageAudit.aiGeneratedRisk),status=$($imageAudit.auditStatus)"
 
     $evidenceAudit = Api-Post "/after-sale-evidences/$($evidence.id)/audits" @{
         useAi = $false
