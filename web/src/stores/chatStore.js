@@ -63,7 +63,7 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function ask(content, orderNo, useAi = true) {
+  async function ask(content, orderNo, useAi = true, attachment = null) {
     if (!currentSessionId.value) {
       await startSession({ orderNo })
     }
@@ -78,6 +78,11 @@ export const useChatStore = defineStore('chat', () => {
         id: tempUserId,
         role: 'USER',
         content,
+        messageType: attachment?.fileUrl ? 'IMAGE' : 'TEXT',
+        fileUrl: attachment?.fileUrl || '',
+        originalFilename: attachment?.originalFilename || '',
+        contentType: attachment?.contentType || '',
+        fileSize: attachment?.size || attachment?.fileSize || null,
         seqNo: lastSeqNo + 1,
         pending: true
       },
@@ -98,7 +103,15 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const data = await sendMessageStream(
         currentSessionId.value,
-        { content, orderNo, useAi },
+        {
+          content,
+          orderNo,
+          useAi,
+          fileUrl: attachment?.fileUrl || undefined,
+          originalFilename: attachment?.originalFilename || undefined,
+          contentType: attachment?.contentType || undefined,
+          fileSize: attachment?.size || attachment?.fileSize || undefined
+        },
         {
           onProgress: progress => {
             messages.value = messages.value.map(message => {

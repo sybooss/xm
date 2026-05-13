@@ -20,7 +20,9 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        insert into chat_message(session_id, role, content, message_type, seq_no, reply_to_id, intent_code, source_type)
-        values(#{sessionId}, #{role}, #{content}, coalesce(#{messageType}, 'TEXT'), #{seqNo}, #{replyToId}, #{intentCode}, #{sourceType})
+        insert into chat_message(session_id, role, content, message_type, file_url, original_filename, content_type, file_size,
+                                 seq_no, reply_to_id, intent_code, source_type)
+        values(#{sessionId}, #{role}, #{content}, coalesce(#{messageType}, 'TEXT'), #{fileUrl}, #{originalFilename}, #{contentType}, #{fileSize},
+               #{seqNo}, #{replyToId}, #{intentCode}, #{sourceType})
     </insert>
 </mapper>

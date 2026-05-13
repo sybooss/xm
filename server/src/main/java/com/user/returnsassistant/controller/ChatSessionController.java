@@ -10,12 +10,14 @@ import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AuthService;
 import com.user.returnsassistant.service.ChatService;
+import com.user.returnsassistant.service.EvidenceFileService;
 import com.user.returnsassistant.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -31,6 +33,8 @@ public class ChatSessionController {
     private AuthService authService;
     @Autowired
     private OrderService orderService;
+    @Autowired
+    private EvidenceFileService evidenceFileService;
 
     @GetMapping
     public Result page(ChatSessionSearch search, HttpServletRequest request) {
@@ -84,6 +88,12 @@ public class ChatSessionController {
         UserAccount user = ensureSessionAccess(id, request);
         ensureOrderAccess(messageRequest.getOrderNo(), user);
         return Result.success(chatService.sendMessage(id, messageRequest));
+    }
+
+    @PostMapping("/{id}/image-files")
+    public Result uploadImage(@PathVariable Long id, @RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        UserAccount user = ensureSessionAccess(id, request);
+        return Result.success(evidenceFileService.uploadChatImage(file, user));
     }
 
     @PostMapping(value = "/{id}/message-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

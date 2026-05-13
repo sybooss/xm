@@ -7,4 +7,6 @@ import java.util.Map;
 
 public interface EvidenceFileService {
     Map<String, Object> upload(MultipartFile file, UserAccount customer);
+
+    Map<String, Object> uploadChatImage(MultipartFile file, UserAccount user);
 }

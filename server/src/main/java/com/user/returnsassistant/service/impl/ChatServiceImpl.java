@@ -141,24 +141,32 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public Map<String, Object> sendMessage(Long id, ChatMessageRequest request) {
+        if (request == null) {
+            request = new ChatMessageRequest();
+        }
         ChatSession session = requireSession(id);
         if ("CLOSED".equals(session.getStatus())) {
             throw new BusinessException("会话已关闭");
         }
-        if (request.getContent() == null || request.getContent().isBlank()) {
+        String userContent = normalizeUserContent(request);
+        if (userContent == null || userContent.isBlank()) {
             throw new BusinessException("消息内容不能为空");
         }
 
         DemoOrder order = resolveOrder(session, request.getOrderNo());
         List<ChatMessage> recentBefore = messageMapper.listRecentBySessionId(id, 8);
-        ConversationContext conversationContext = buildConversationContext(session, recentBefore, request.getContent());
+        ConversationContext conversationContext = buildConversationContext(session, recentBefore, userContent);
 
         int nextSeq = messageMapper.maxSeqNo(id) + 1;
         ChatMessage userMessage = new ChatMessage();
         userMessage.setSessionId(id);
         userMessage.setRole("USER");
-        userMessage.setContent(request.getContent());
-        userMessage.setMessageType("TEXT");
+        userMessage.setContent(userContent);
+        userMessage.setMessageType(hasText(request.getFileUrl()) ? "IMAGE" : "TEXT");
+        userMessage.setFileUrl(cleanOptional(request.getFileUrl()));
+        userMessage.setOriginalFilename(trimToLength(request.getOriginalFilename(), 200));
+        userMessage.setContentType(trimToLength(request.getContentType(), 80));
+        userMessage.setFileSize(request.getFileSize());
         userMessage.setSeqNo(nextSeq);
         messageMapper.insert(userMessage);
 
@@ -169,7 +177,7 @@ public class ChatServiceImpl implements ChatService {
                         "inheritedIntent", conversationContext.inheritedIntentCode(),
                         "recentMessageCount", recentBefore.size()));
 
-        IntentRecord intent = recognizeIntent(id, userMessage.getId(), request.getContent(), request.getOrderNo(), conversationContext);
+        IntentRecord intent = recognizeIntent(id, userMessage.getId(), userContent, request.getOrderNo(), conversationContext);
         trace(id, userMessage.getId(), "INTENT_RECOGNIZE", "SUCCESS",
                 detail("title", "意图识别",
                         "intentCode", intent.getIntentCode(),
@@ -187,7 +195,7 @@ public class ChatServiceImpl implements ChatService {
                         "logisticsStatus", order == null ? null : order.getLogisticsStatus()));
 
         boolean useAi = request.getUseAi() == null || request.getUseAi();
-        ProductInsight productInsight = productInsightService.build(order, request.getContent(), intent.getIntentCode(), false);
+        ProductInsight productInsight = productInsightService.build(order, userContent, intent.getIntentCode(), false);
         trace(id, userMessage.getId(), "PRODUCT_PROFILE_LOOKUP",
                 Boolean.TRUE.equals(productInsight.getHasProfile()) ? "SUCCESS" : "SKIPPED",
                 detail("title", "商品档案查询",
@@ -202,13 +210,13 @@ public class ChatServiceImpl implements ChatService {
                         "summary", productInsight.getLocalSummary(),
                         "aiStatus", productInsight.getAiStatus()));
 
-        List<KnowledgeDoc> hits = knowledgeDocMapper.search(request.getContent(), intent.getIntentCode(), 5);
+        List<KnowledgeDoc> hits = knowledgeDocMapper.search(userContent, intent.getIntentCode(), 5);
         int rank = 1;
         for (KnowledgeDoc doc : hits) {
             RetrievalLog log = new RetrievalLog();
             log.setSessionId(id);
             log.setMessageId(userMessage.getId());
-            log.setQueryText(request.getContent());
+            log.setQueryText(userContent);
             log.setDocId(doc.getId());
             log.setRankNo(rank++);
             log.setScore(BigDecimal.valueOf(doc.getScore() == null ? 0.8 : doc.getScore()).setScale(4, RoundingMode.HALF_UP));
@@ -224,13 +232,13 @@ public class ChatServiceImpl implements ChatService {
                         "summary", hits.isEmpty() ? "未命中精确规则，使用本地流程模板兜底" : "已命中可用于回答的规则依据"));
 
         String localReply = buildReply(intent, order, hits, conversationContext, productInsight);
-        Map<String, Object> businessTools = buildBusinessToolEvidence(order, request.getContent(), intent);
+        Map<String, Object> businessTools = buildBusinessToolEvidence(order, userContent, intent);
         trace(id, userMessage.getId(), "BUSINESS_TOOL_CALLS", "SUCCESS",
                 detail("title", "LangChain4j 业务工具",
                         "tools", businessTools.get("tools"),
                         "summary", "已把订单查询、知识检索和工单能力封装为可调用工具，并将结果注入模型上下文"));
 
-        String aiPrompt = buildAiPrompt(request.getContent(), intent, orderContext, productInsight, hits, localReply, conversationContext, businessTools);
+        String aiPrompt = buildAiPrompt(userContent, intent, orderContext, productInsight, hits, localReply, conversationContext, businessTools);
         AiService.AiResult aiResult = useAi
                 ? aiService.generate(aiPrompt)
                 : new AiService.AiResult(false, "SKIPPED", true, "local-fallback", "local-rule-template", "", 0, "本轮未启用 AI");
@@ -262,7 +270,7 @@ public class ChatServiceImpl implements ChatService {
                         "replyLength", assistantMessage.getContent() == null ? 0 : assistantMessage.getContent().length(),
                         "ticketCreated", Boolean.TRUE.equals(ticketPayload.get("created"))));
 
-        sessionMapper.updateSummary(id, intent.getIntentCode(), buildSessionSummary(order, intent, request.getContent(), conversationContext));
+        sessionMapper.updateSummary(id, intent.getIntentCode(), buildSessionSummary(order, intent, userContent, conversationContext));
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("userMessage", userMessage);
@@ -634,6 +642,29 @@ public class ChatServiceImpl implements ChatService {
         return text != null && !text.isBlank();
     }
 
+    private String normalizeUserContent(ChatMessageRequest request) {
+        String content = request == null ? null : cleanOptional(request.getContent());
+        if (hasText(content)) {
+            return trimToLength(content, 2000);
+        }
+        if (request != null && hasText(request.getFileUrl())) {
+            return "用户上传了一张商品问题图片，请客服结合订单、图片和售后规则判断。";
+        }
+        return content;
+    }
+
+    private String cleanOptional(String text) {
+        return text == null ? null : text.trim();
+    }
+
+    private String trimToLength(String text, int maxLength) {
+        String value = cleanOptional(text);
+        if (value == null) {
+            return null;
+        }
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
+    }
+
     private String normalizeChannel(String channel) {
         String value = channel == null || channel.isBlank() ? "WEB" : channel.trim().toUpperCase(Locale.ROOT);
         if (!SUPPORTED_CHANNELS.contains(value)) {
@@ -651,6 +682,10 @@ public class ChatServiceImpl implements ChatService {
         for (ChatMessage message : messages) {
             md.append("### ").append(text(message.getRole())).append(" #").append(message.getSeqNo()).append("\n\n");
             md.append(text(message.getContent())).append("\n\n");
+            if (hasText(message.getFileUrl())) {
+                md.append("- 图片：").append(text(message.getFileUrl())).append("\n");
+                md.append("- 原始文件：").append(text(message.getOriginalFilename())).append("\n\n");
+            }
         }
     }
 

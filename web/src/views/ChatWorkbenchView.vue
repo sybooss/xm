@@ -95,6 +95,10 @@
               </template>
               <template v-else>{{ message.content }}</template>
             </div>
+            <div v-if="message.fileUrl" class="message-image-box">
+              <img class="message-image" :src="imageUrl(message.fileUrl)" alt="聊天图片" />
+              <span>{{ message.originalFilename || '聊天图片' }}</span>
+            </div>
           </div>
         </div>
         <EmptyState v-if="!chatStore.messages.length" text="选择会话或输入问题开始咨询" />
@@ -107,6 +111,14 @@
       </div>
 
       <div v-if="!showOrderPanel" class="composer">
+        <div v-if="pendingImage.fileUrl" class="composer-image-preview">
+          <img :src="imageUrl(pendingImage.fileUrl)" alt="待发送图片" />
+          <div>
+            <strong>{{ pendingImage.originalFilename || '待发送图片' }}</strong>
+            <span>将随本轮消息发送给客服</span>
+          </div>
+          <el-button size="small" text type="danger" @click="clearPendingImage">移除</el-button>
+        </div>
         <el-input
           v-model="draft"
           type="textarea"
@@ -117,6 +129,10 @@
         />
         <div class="composer-actions">
           <div class="composer-options">
+            <input ref="chatImageInputRef" class="hidden-file-input" type="file" accept="image/*" @change="uploadChatImageFile" />
+            <el-button :icon="Picture" :loading="imageUploading" :disabled="chatStore.sending || imageUploading" @click="chooseChatImage">
+              发图片
+            </el-button>
             <el-switch v-model="useAi" active-text="AI" inactive-text="兜底" />
             <el-select
               v-if="authStore.isAdmin"
@@ -272,7 +288,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
-import { ArrowLeft, Delete, DocumentChecked, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowLeft, Delete, DocumentChecked, Picture, Plus, Promotion, Search, ShoppingBag, SwitchButton } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import CustomerOrderPanel from '../components/chat/CustomerOrderPanel.vue'
 import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
@@ -283,7 +299,7 @@ import StatusTag from '../components/common/StatusTag.vue'
 import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { useSystemStore } from '../stores/systemStore'
-import { downloadEvidenceReport } from '../api/chatApi'
+import { downloadEvidenceReport, uploadChatImage } from '../api/chatApi'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -295,8 +311,11 @@ const channelFilter = ref('ALL')
 const draft = ref('这个订单能不能退货？')
 const useAi = ref(true)
 const messageScrollRef = ref(null)
+const chatImageInputRef = ref(null)
 const showOrderPanel = ref(false)
 const selectedModel = ref('')
+const imageUploading = ref(false)
+const pendingImage = ref({})
 
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
 const channelOptions = [
@@ -366,6 +385,7 @@ watch(
 )
 
 async function newSession() {
+  pendingImage.value = {}
   await chatStore.startSession({
     orderNo: orderNo.value,
     channel: selectedChannel.value,
@@ -377,6 +397,7 @@ async function newSession() {
 
 async function selectSession(id) {
   showOrderPanel.value = false
+  pendingImage.value = {}
   await chatStore.loadSession(id)
   chatStore.insight = {}
   await scrollBottom()
@@ -398,12 +419,15 @@ async function submit() {
     return
   }
   const content = draft.value.trim()
-  if (!content) {
-    ElMessage.warning('请输入咨询内容')
+  if (!content && !pendingImage.value.fileUrl) {
+    ElMessage.warning('请输入咨询内容或选择图片')
     return
   }
   draft.value = ''
-  const task = chatStore.ask(content, orderNo.value, useAi.value)
+  const attachment = pendingImage.value.fileUrl ? { ...pendingImage.value } : null
+  pendingImage.value = {}
+  const messageContent = content || (attachment ? `这是我拍的商品问题照片：${attachment.originalFilename || '聊天图片'}` : '')
+  const task = chatStore.ask(messageContent, orderNo.value, useAi.value, attachment)
   await scrollBottom()
   try {
     await task
@@ -411,6 +435,58 @@ async function submit() {
     // request.js already shows the concrete network or backend error.
   }
   await scrollBottom()
+}
+
+function chooseChatImage() {
+  chatImageInputRef.value?.click()
+}
+
+async function uploadChatImageFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) {
+    return
+  }
+  if (!file.type?.startsWith('image/')) {
+    ElMessage.warning('只能发送图片')
+    return
+  }
+  imageUploading.value = true
+  try {
+    if (!chatStore.currentSessionId) {
+      await chatStore.startSession({
+        orderNo: orderNo.value,
+        channel: selectedChannel.value,
+        title: `${channelName(selectedChannel.value)}咨询会话`
+      })
+    }
+    const uploaded = await uploadChatImage(chatStore.currentSessionId, file)
+    pendingImage.value = uploaded
+    if (!draft.value.trim()) {
+      draft.value = `这是我拍的商品问题照片：${uploaded.originalFilename}`
+    }
+    ElMessage.success('图片已添加到聊天消息')
+  } finally {
+    imageUploading.value = false
+  }
+}
+
+function clearPendingImage() {
+  pendingImage.value = {}
+}
+
+function imageUrl(fileUrl) {
+  if (!fileUrl) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  if (fileUrl.startsWith('/uploads/')) {
+    return `${apiBase}${fileUrl}`
+  }
+  return fileUrl
 }
 
 function openMyOrders() {
@@ -727,6 +803,28 @@ onMounted(async () => {
   white-space: pre-wrap;
 }
 
+.message-image-box {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.message-image {
+  display: block;
+  width: min(260px, 100%);
+  max-height: 220px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.message-image-box span {
+  color: var(--text-muted);
+  font-size: 12px;
+  word-break: break-all;
+}
+
 .thinking-content {
   display: flex;
   align-items: center;
@@ -784,6 +882,44 @@ onMounted(async () => {
   border-top: 1px solid var(--line-soft);
 }
 
+.composer-image-preview {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.composer-image-preview img {
+  width: 72px;
+  height: 54px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: white;
+}
+
+.composer-image-preview strong,
+.composer-image-preview span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-image-preview strong {
+  font-size: 13px;
+}
+
+.composer-image-preview span {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .composer-actions {
   display: flex;
   align-items: center;
@@ -800,6 +936,10 @@ onMounted(async () => {
 
 .composer-model-select {
   width: 172px;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 .insight-body {

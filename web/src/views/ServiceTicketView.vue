@@ -101,6 +101,10 @@
                   <span>{{ formatDateTime(message.createdAt) }}</span>
                 </div>
                 <p>{{ message.content }}</p>
+                <div v-if="message.fileUrl" class="message-image-box">
+                  <img class="message-image" :src="imageUrl(message.fileUrl)" alt="聊天图片" />
+                  <span>{{ message.originalFilename || '聊天图片' }}</span>
+                </div>
               </article>
             </div>
 
@@ -407,6 +411,20 @@ function formatDateTime(value) {
   return String(value).replace('T', ' ').slice(0, 16)
 }
 
+function imageUrl(fileUrl) {
+  if (!fileUrl) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  if (fileUrl.startsWith('/uploads/')) {
+    return `${apiBase}${fileUrl}`
+  }
+  return fileUrl
+}
+
 onMounted(loadTickets)
 </script>
 
@@ -571,6 +589,28 @@ onMounted(loadTickets)
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.message-image-box {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.message-image {
+  display: block;
+  width: min(280px, 100%);
+  max-height: 220px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.message-image-box span {
+  color: var(--text-muted);
+  font-size: 12px;
+  word-break: break-all;
 }
 
 .message-user {

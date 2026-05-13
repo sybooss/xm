@@ -9,6 +9,14 @@ export const updateSession = (id, data) => request.put(`/chat-sessions/${id}`, d
 export const deleteSession = id => request.delete(`/chat-sessions/${id}`)
 export const listMessages = id => request.get(`/chat-sessions/${id}/messages`)
 export const sendMessage = (id, data) => request.post(`/chat-sessions/${id}/messages`, data)
+export const uploadChatImage = (id, file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post(`/chat-sessions/${id}/image-files`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000
+  })
+}
 export async function downloadEvidenceReport(id) {
   const token = localStorage.getItem('returns_assistant_token')
   const response = await fetch(`${apiBase}/chat-sessions/${id}/evidence-report`, {

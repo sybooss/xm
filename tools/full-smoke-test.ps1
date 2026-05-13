@@ -670,6 +670,23 @@ try {
     $followOk = $followChat.context.followUp -eq $true -and $followChat.intent.intentCode -eq "REFUND_PROGRESS" -and $followChat.intent.method -eq "HYBRID"
     Add-Result "multi-turn follow-up context" $followOk "followUp=$($followChat.context.followUp), intent=$($followChat.intent.intentCode), method=$($followChat.intent.method)"
 
+    $chatImagePath = Join-Path $uploadDir "chat-product-photo-$stamp.png"
+    [System.IO.File]::WriteAllBytes($chatImagePath, $pngBytes)
+    $uploadedChatImage = Api-Post-File "/chat-sessions/$($created.sessionId)/image-files" $chatImagePath
+    $chatImageMessage = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
+        content = "Chat image sent directly to customer service: possible AI generated synthetic damage photo, manual original-photo review needed."
+        orderNo = "DD202604290001"
+        useAi = $false
+        fileUrl = $uploadedChatImage.fileUrl
+        originalFilename = $uploadedChatImage.originalFilename
+        contentType = $uploadedChatImage.contentType
+        fileSize = $uploadedChatImage.size
+    }
+    $chatImageOk = $uploadedChatImage.fileUrl -like "/uploads/chat/*" -and
+                   $chatImageMessage.userMessage.messageType -eq "IMAGE" -and
+                   $chatImageMessage.userMessage.fileUrl -eq $uploadedChatImage.fileUrl
+    Add-Result "chat image upload/message" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType)"
+
     $ticketChat = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
         content = $ticketQuestion
         orderNo = "DD202604290001"
@@ -694,7 +711,12 @@ try {
 
     $messages = Api-Get "/chat-sessions/$($created.sessionId)/messages"
     $messageCount = @($messages).Count
-    Add-Result "chat messages list" ($messageCount -ge 6) "count=$messageCount"
+    $chatImageInMessages = $messages | Where-Object { $_.fileUrl -eq $uploadedChatImage.fileUrl -and $_.messageType -eq "IMAGE" } | Select-Object -First 1
+    Add-Result "chat messages list" ($messageCount -ge 8 -and $null -ne $chatImageInMessages) "count=$messageCount,image=$($chatImageInMessages.fileUrl)"
+
+    $ticketConversation = Api-Get "/service-tickets/$($created.ticketId)/conversation"
+    $chatImageInTicketConversation = $ticketConversation | Where-Object { $_.fileUrl -eq $uploadedChatImage.fileUrl } | Select-Object -First 1
+    Add-Result "service ticket conversation includes chat image" ($null -ne $chatImageInTicketConversation) "image=$($chatImageInTicketConversation.fileUrl)"
 
     $traces = Api-Get "/chat-sessions/$($created.sessionId)/process-traces"
     $traceCount = @($traces).Count
@@ -716,6 +738,7 @@ try {
                   $evidenceReport.Contains("RETURN_APPLY") -and
                   $evidenceReport.Contains("SUCCESS") -and
                   $evidenceReport.Contains("BUSINESS_TOOL_CALLS") -and
+                  $evidenceReport.Contains($uploadedChatImage.fileUrl) -and
                   $evidenceReport.Contains($ticketChat.ticket.ticketNo)
     Add-Result "chat evidence report export" $evidenceOk "length=$($evidenceReport.Length)"
 

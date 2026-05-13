@@ -11,6 +11,10 @@ public class ChatMessage {
     private String role;
     private String content;
     private String messageType;
+    private String fileUrl;
+    private String originalFilename;
+    private String contentType;
+    private Long fileSize;
     private Integer seqNo;
     private Long replyToId;
     private String intentCode;

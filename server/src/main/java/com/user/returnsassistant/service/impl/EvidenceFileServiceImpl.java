@@ -29,6 +29,15 @@ public class EvidenceFileServiceImpl implements EvidenceFileService {
 
     @Override
     public Map<String, Object> upload(MultipartFile file, UserAccount customer) {
+        return uploadToFolder(file, customer, "evidences");
+    }
+
+    @Override
+    public Map<String, Object> uploadChatImage(MultipartFile file, UserAccount user) {
+        return uploadToFolder(file, user, "chat");
+    }
+
+    private Map<String, Object> uploadToFolder(MultipartFile file, UserAccount user, String folder) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("请选择需要上传的图片凭证");
         }
@@ -46,8 +55,9 @@ public class EvidenceFileServiceImpl implements EvidenceFileService {
         }
 
         String day = LocalDate.now().format(DAY_FORMAT);
-        String filename = "%s-%s.%s".formatted(customer.getId(), UUID.randomUUID(), extension);
-        Path targetDir = Path.of(uploadRoot, "evidences", day).toAbsolutePath().normalize();
+        Long userId = user == null ? 0L : user.getId();
+        String filename = "%s-%s.%s".formatted(userId, UUID.randomUUID(), extension);
+        Path targetDir = Path.of(uploadRoot, folder, day).toAbsolutePath().normalize();
         Path targetFile = targetDir.resolve(filename).normalize();
         if (!targetFile.startsWith(targetDir)) {
             throw new BusinessException("图片保存路径不合法");
@@ -58,7 +68,7 @@ public class EvidenceFileServiceImpl implements EvidenceFileService {
         } catch (IOException e) {
             throw new BusinessException("图片凭证上传失败");
         }
-        String fileUrl = "/uploads/evidences/" + day + "/" + filename;
+        String fileUrl = "/uploads/" + folder + "/" + day + "/" + filename;
         return Map.of(
                 "fileUrl", fileUrl,
                 "originalFilename", originalFilename,

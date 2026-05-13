@@ -440,6 +440,10 @@ CREATE TABLE IF NOT EXISTS chat_message (
   role VARCHAR(20) NOT NULL,
   content TEXT NOT NULL,
   message_type VARCHAR(30) NOT NULL DEFAULT 'TEXT',
+  file_url VARCHAR(500) NULL,
+  original_filename VARCHAR(200) NULL,
+  content_type VARCHAR(80) NULL,
+  file_size BIGINT NULL,
   seq_no INT NOT NULL,
   reply_to_id BIGINT NULL,
   intent_code VARCHAR(50) NULL,
@@ -448,16 +452,84 @@ CREATE TABLE IF NOT EXISTS chat_message (
   CONSTRAINT fk_message_session FOREIGN KEY (session_id) REFERENCES chat_session(id) ON DELETE CASCADE,
   CONSTRAINT fk_message_reply_to FOREIGN KEY (reply_to_id) REFERENCES chat_message(id) ON DELETE SET NULL,
   CONSTRAINT ck_message_role CHECK (role IN ('USER', 'ASSISTANT', 'SYSTEM')),
-  CONSTRAINT ck_message_type CHECK (message_type IN ('TEXT', 'TIP', 'ERROR')),
+  CONSTRAINT ck_message_type CHECK (message_type IN ('TEXT', 'TIP', 'ERROR', 'IMAGE')),
   CONSTRAINT ck_message_source_type CHECK (source_type IS NULL OR source_type IN ('RULE_TEMPLATE', 'AI_ENHANCED', 'FALLBACK', 'MANUAL', 'AI_DRAFT', 'SYSTEM_NOTICE')),
   CONSTRAINT uk_message_session_seq UNIQUE (session_id, seq_no),
   INDEX idx_message_session (session_id, seq_no),
   INDEX idx_message_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+SET @chat_message_file_url_column_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'chat_message'
+    AND column_name = 'file_url'
+);
+SET @chat_message_file_url_column_sql = IF(
+  @chat_message_file_url_column_exists = 0,
+  'ALTER TABLE chat_message ADD COLUMN file_url VARCHAR(500) NULL AFTER message_type',
+  'SELECT 1'
+);
+PREPARE chat_message_file_url_column_stmt FROM @chat_message_file_url_column_sql;
+EXECUTE chat_message_file_url_column_stmt;
+DEALLOCATE PREPARE chat_message_file_url_column_stmt;
+
+SET @chat_message_original_filename_column_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'chat_message'
+    AND column_name = 'original_filename'
+);
+SET @chat_message_original_filename_column_sql = IF(
+  @chat_message_original_filename_column_exists = 0,
+  'ALTER TABLE chat_message ADD COLUMN original_filename VARCHAR(200) NULL AFTER file_url',
+  'SELECT 1'
+);
+PREPARE chat_message_original_filename_column_stmt FROM @chat_message_original_filename_column_sql;
+EXECUTE chat_message_original_filename_column_stmt;
+DEALLOCATE PREPARE chat_message_original_filename_column_stmt;
+
+SET @chat_message_content_type_column_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'chat_message'
+    AND column_name = 'content_type'
+);
+SET @chat_message_content_type_column_sql = IF(
+  @chat_message_content_type_column_exists = 0,
+  'ALTER TABLE chat_message ADD COLUMN content_type VARCHAR(80) NULL AFTER original_filename',
+  'SELECT 1'
+);
+PREPARE chat_message_content_type_column_stmt FROM @chat_message_content_type_column_sql;
+EXECUTE chat_message_content_type_column_stmt;
+DEALLOCATE PREPARE chat_message_content_type_column_stmt;
+
+SET @chat_message_file_size_column_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'chat_message'
+    AND column_name = 'file_size'
+);
+SET @chat_message_file_size_column_sql = IF(
+  @chat_message_file_size_column_exists = 0,
+  'ALTER TABLE chat_message ADD COLUMN file_size BIGINT NULL AFTER content_type',
+  'SELECT 1'
+);
+PREPARE chat_message_file_size_column_stmt FROM @chat_message_file_size_column_sql;
+EXECUTE chat_message_file_size_column_stmt;
+DEALLOCATE PREPARE chat_message_file_size_column_stmt;
+
 ALTER TABLE chat_message DROP CHECK ck_message_source_type;
 ALTER TABLE chat_message
   ADD CONSTRAINT ck_message_source_type CHECK (source_type IS NULL OR source_type IN ('RULE_TEMPLATE', 'AI_ENHANCED', 'FALLBACK', 'MANUAL', 'AI_DRAFT', 'SYSTEM_NOTICE'));
+
+ALTER TABLE chat_message DROP CHECK ck_message_type;
+ALTER TABLE chat_message
+  ADD CONSTRAINT ck_message_type CHECK (message_type IN ('TEXT', 'TIP', 'ERROR', 'IMAGE'));
 
 CREATE TABLE IF NOT EXISTS intent_record (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
