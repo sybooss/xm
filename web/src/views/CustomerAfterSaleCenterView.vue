@@ -367,6 +367,7 @@ const selectedReview = ref(null)
 const currentDiagnosis = ref(null)
 const evidenceFileInput = ref(null)
 const evidenceUploadName = ref('')
+const maxEvidenceImageSize = 5 * 1024 * 1024
 
 const activeAfterSaleCount = computed(() => afterSales.value.filter(item => !['REJECTED', 'COMPLETED', 'CANCELLED'].includes(item.status)).length)
 const needCustomerActionCount = computed(() => afterSales.value.filter(item => ['NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND'].includes(item.status)).length)
@@ -523,6 +524,16 @@ function triggerEvidenceFileInput() {
 async function handleEvidenceFileChange(event) {
   const file = event.target.files?.[0]
   if (!file) {
+    return
+  }
+  if (!file.type?.startsWith('image/')) {
+    ElMessage.warning('只能上传图片凭证')
+    event.target.value = ''
+    return
+  }
+  if (file.size > maxEvidenceImageSize) {
+    ElMessage.warning('图片凭证不能超过 5MB，请压缩后再上传')
+    event.target.value = ''
     return
   }
   uploadingEvidence.value = true

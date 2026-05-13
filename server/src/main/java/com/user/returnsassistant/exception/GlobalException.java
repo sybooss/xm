@@ -3,6 +3,8 @@ package com.user.returnsassistant.exception;
 import com.user.returnsassistant.pojo.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -17,6 +19,12 @@ public class GlobalException {
     @ExceptionHandler(DuplicateKeyException.class)
     public Result handleDuplicateKeyException(DuplicateKeyException e) {
         return Result.error("数据已经存在");
+    }
+
+    @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
+    public Result handleMultipartException(Exception e) {
+        log.warn("文件上传失败：{}", e.getMessage());
+        return Result.error("图片上传失败，请上传 5MB 以内的 jpg、png、webp 或 gif 图片");
     }
 
     @ExceptionHandler(Exception.class)

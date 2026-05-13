@@ -687,6 +687,15 @@ try {
                    $chatImageMessage.userMessage.fileUrl -eq $uploadedChatImage.fileUrl
     Add-Result "chat image upload/message" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType)"
 
+    $largeChatImagePath = Join-Path $uploadDir "chat-product-photo-large-$stamp.png"
+    $largePngBytes = New-Object byte[] (2 * 1024 * 1024)
+    [Array]::Copy($pngBytes, 0, $largePngBytes, 0, $pngBytes.Length)
+    [System.IO.File]::WriteAllBytes($largeChatImagePath, $largePngBytes)
+    $uploadedLargeChatImage = Api-Post-File "/chat-sessions/$($created.sessionId)/image-files" $largeChatImagePath
+    $largeChatImageOk = $uploadedLargeChatImage.fileUrl -like "/uploads/chat/*" -and
+                        $uploadedLargeChatImage.size -eq $largePngBytes.Length
+    Add-Result "chat large image upload" $largeChatImageOk "size=$($uploadedLargeChatImage.size),url=$($uploadedLargeChatImage.fileUrl)"
+
     $ticketChat = Api-Post "/chat-sessions/$($created.sessionId)/messages" @{
         content = $ticketQuestion
         orderNo = "DD202604290001"

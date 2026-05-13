@@ -23,6 +23,11 @@ function record(name, ok, detail = '') {
   results.push({ name, ok: Boolean(ok), detail })
 }
 
+function largePngBuffer(size = 2 * 1024 * 1024) {
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==', 'base64')
+  return Buffer.concat([tinyPng, Buffer.alloc(Math.max(0, size - tinyPng.length))])
+}
+
 async function expectText(page, text, name) {
   await page.getByText(text, { exact: false }).first().waitFor({ timeout: 20000 })
   record(name, true, text)
@@ -273,7 +278,7 @@ try {
   await page.getByRole('button', { name: '补充凭证' }).click()
   await expectText(page, '补充凭证', 'customer evidence dialog visible')
   const imagePath = path.join(artifactDir, 'browser-ai-generated-evidence.png')
-  await fs.writeFile(imagePath, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==', 'base64'))
+  await fs.writeFile(imagePath, largePngBuffer())
   await page.locator('input[type="file"]').setInputFiles(imagePath)
   await expectText(page, '图片凭证已上传', 'customer image evidence upload toast')
   await page.locator('textarea[placeholder*="说明图片中坏损"]').fill('AI generated product damage image, possible hidden watermark, synthetic photo, needs original real-shot evidence.')
@@ -433,7 +438,7 @@ try {
   record('chat removes app channel option', !(await page.getByText('App', { exact: true }).count()), 'App absent')
   record('chat removes mini program channel option', !(await page.getByText('小程序', { exact: true }).count()), '小程序 absent')
   const chatImagePath = path.join(artifactDir, 'browser-chat-product-photo.png')
-  await fs.writeFile(chatImagePath, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==', 'base64'))
+  await fs.writeFile(chatImagePath, largePngBuffer())
   await page.locator('input[type="file"]').setInputFiles(chatImagePath)
   await expectText(page, '图片已添加到聊天消息', 'chat image upload toast')
   await expectText(page, '将随本轮消息发送给客服', 'chat pending image preview visible')

@@ -316,6 +316,7 @@ const showOrderPanel = ref(false)
 const selectedModel = ref('')
 const imageUploading = ref(false)
 const pendingImage = ref({})
+const maxChatImageSize = 5 * 1024 * 1024
 
 const demoPrompts = ['这个订单能不能退货？', '退货后多久能退款？', '物流一直不更新怎么办？', '商家一直不处理可以投诉吗？']
 const channelOptions = [
@@ -449,6 +450,10 @@ async function uploadChatImageFile(event) {
   }
   if (!file.type?.startsWith('image/')) {
     ElMessage.warning('只能发送图片')
+    return
+  }
+  if (file.size > maxChatImageSize) {
+    ElMessage.warning('图片不能超过 5MB，请压缩后再发送')
     return
   }
   imageUploading.value = true
