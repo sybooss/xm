@@ -234,13 +234,13 @@ CREATE TABLE IF NOT EXISTS after_sale_process_log (
   CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
   CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
-  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'PRODUCT_ISSUE_ALERT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'PRODUCT_ISSUE_ALERT', 'CREATE_TICKET', 'UPDATE_TICKET', 'MANUAL_TAKEOVER', 'MANUAL_REPLY_SENT', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
   INDEX idx_after_sale_process_log_application (application_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 ALTER TABLE after_sale_process_log DROP CHECK ck_after_sale_process_log_action;
 ALTER TABLE after_sale_process_log
-  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'PRODUCT_ISSUE_ALERT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
+  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'RISK_ASSESSMENT', 'PRODUCT_ISSUE_ALERT', 'CREATE_TICKET', 'UPDATE_TICKET', 'MANUAL_TAKEOVER', 'MANUAL_REPLY_SENT', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
 
 CREATE TABLE IF NOT EXISTS after_sale_evidence (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -449,11 +449,15 @@ CREATE TABLE IF NOT EXISTS chat_message (
   CONSTRAINT fk_message_reply_to FOREIGN KEY (reply_to_id) REFERENCES chat_message(id) ON DELETE SET NULL,
   CONSTRAINT ck_message_role CHECK (role IN ('USER', 'ASSISTANT', 'SYSTEM')),
   CONSTRAINT ck_message_type CHECK (message_type IN ('TEXT', 'TIP', 'ERROR')),
-  CONSTRAINT ck_message_source_type CHECK (source_type IS NULL OR source_type IN ('RULE_TEMPLATE', 'AI_ENHANCED', 'FALLBACK')),
+  CONSTRAINT ck_message_source_type CHECK (source_type IS NULL OR source_type IN ('RULE_TEMPLATE', 'AI_ENHANCED', 'FALLBACK', 'MANUAL', 'AI_DRAFT', 'SYSTEM_NOTICE')),
   CONSTRAINT uk_message_session_seq UNIQUE (session_id, seq_no),
   INDEX idx_message_session (session_id, seq_no),
   INDEX idx_message_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ALTER TABLE chat_message DROP CHECK ck_message_source_type;
+ALTER TABLE chat_message
+  ADD CONSTRAINT ck_message_source_type CHECK (source_type IS NULL OR source_type IN ('RULE_TEMPLATE', 'AI_ENHANCED', 'FALLBACK', 'MANUAL', 'AI_DRAFT', 'SYSTEM_NOTICE'));
 
 CREATE TABLE IF NOT EXISTS intent_record (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,

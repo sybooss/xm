@@ -1,6 +1,7 @@
 package com.user.returnsassistant.controller;
 
 import com.user.returnsassistant.anno.OperatorAnno;
+import com.user.returnsassistant.pojo.ManualReplyRequest;
 import com.user.returnsassistant.pojo.Result;
 import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.ServiceTicketSearch;
@@ -8,6 +9,7 @@ import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AuthService;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
 import com.user.returnsassistant.service.ChatService;
+import com.user.returnsassistant.service.ManualReplyService;
 import com.user.returnsassistant.service.ServiceTicketService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,8 @@ public class ServiceTicketController {
     private AfterSaleApplicationService afterSaleApplicationService;
     @Autowired
     private ChatService chatService;
+    @Autowired
+    private ManualReplyService manualReplyService;
 
     @GetMapping("/service-tickets")
     @OperatorAnno
@@ -59,6 +63,28 @@ public class ServiceTicketController {
     public Result delete(@PathVariable Long id) {
         ticketService.delete(id);
         return Result.success();
+    }
+
+    @GetMapping("/service-tickets/{id}/conversation")
+    @OperatorAnno
+    public Result conversation(@PathVariable Long id) {
+        return Result.success(manualReplyService.listConversation(id));
+    }
+
+    @PostMapping("/service-tickets/{id}/take-over")
+    @OperatorAnno
+    public Result takeOver(@PathVariable Long id, HttpServletRequest request) {
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
+        return Result.success(manualReplyService.takeOver(id, admin));
+    }
+
+    @PostMapping("/service-tickets/{id}/manual-replies")
+    @OperatorAnno
+    public Result manualReply(@PathVariable Long id,
+                              @RequestBody ManualReplyRequest replyRequest,
+                              HttpServletRequest request) {
+        UserAccount admin = authService.requireAdmin(request.getHeader("Authorization"));
+        return Result.success(manualReplyService.sendManualReply(id, replyRequest, admin));
     }
 
     @GetMapping("/chat-sessions/{sessionId}/service-tickets")

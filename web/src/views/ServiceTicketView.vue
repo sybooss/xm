@@ -83,7 +83,48 @@
           </div>
         </div>
 
-        <div class="detail-grid">
+        <div class="workbench-grid">
+          <section class="conversation-panel">
+            <div class="flow-header">
+              <div>
+                <div class="eyebrow">原始会话</div>
+                <h4>人工接管回复工作台</h4>
+              </div>
+              <el-button size="small" :icon="Refresh" :loading="conversationLoading" @click="loadConversation(selected.id)">刷新会话</el-button>
+            </div>
+            <div v-loading="conversationLoading" class="conversation-list">
+              <div v-if="!conversation.length" class="empty-conversation">暂无会话消息</div>
+              <article v-for="message in conversation" :key="message.id" class="message-item" :class="messageClass(message)">
+                <div class="message-meta">
+                  <strong>{{ roleLabel(message.role) }}</strong>
+                  <StatusTag v-if="message.sourceType" :value="message.sourceType" />
+                  <span>{{ formatDateTime(message.createdAt) }}</span>
+                </div>
+                <p>{{ message.content }}</p>
+              </article>
+            </div>
+
+            <div class="reply-composer">
+              <div class="composer-toolbar">
+                <el-button size="small" :disabled="!selected.suggestedAction" @click="fillSuggestedReply">填入处理建议</el-button>
+                <el-button size="small" :disabled="!selected.aiSummary" @click="fillSummaryReply">填入 AI 摘要</el-button>
+                <el-checkbox v-model="replyForm.resolveTicket">发送后标记已解决</el-checkbox>
+              </div>
+              <el-input
+                v-model="replyForm.content"
+                type="textarea"
+                :rows="5"
+                maxlength="2000"
+                show-word-limit
+                placeholder="输入人工客服最终回复，发送后会写入原聊天会话，用户刷新聊天页可见。"
+              />
+              <div class="composer-actions">
+                <el-button :icon="Check" :loading="takeOverLoading" @click="takeOverSelected">接管会话</el-button>
+                <el-button type="primary" :icon="Check" :loading="replySending" @click="sendReply">发送人工回复</el-button>
+              </div>
+            </div>
+          </section>
+
           <el-descriptions class="detail-descriptions" :column="2" border>
             <el-descriptions-item label="订单号">{{ selected.orderNo || '-' }}</el-descriptions-item>
             <el-descriptions-item label="会话号">{{ selected.sessionNo || '-' }}</el-descriptions-item>
@@ -129,13 +170,24 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Refresh, Search } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
-import { pageTickets, updateTicket } from '../api/serviceTicketApi'
+import {
+  getTicketConversation,
+  pageTickets,
+  sendManualReply,
+  takeOverTicket,
+  updateTicket
+} from '../api/serviceTicketApi'
 
 const query = reactive({ page: 1, pageSize: 10, keyword: '', status: '', priority: '' })
 const tickets = ref([])
 const total = ref(0)
 const loading = ref(false)
 const selected = ref(null)
+const conversation = ref([])
+const conversationLoading = ref(false)
+const takeOverLoading = ref(false)
+const replySending = ref(false)
+const replyForm = reactive({ content: '', resolveTicket: false })
 
 const statusRank = {
   PENDING: 0,
@@ -233,22 +285,119 @@ async function loadTickets() {
     const data = await pageTickets(query)
     tickets.value = data?.rows || []
     total.value = data?.total || 0
-    if (!selected.value && tickets.value.length) {
-      selected.value = { ...tickets.value[0] }
+    if (selected.value) {
+      const latest = tickets.value.find(item => item.id === selected.value.id)
+      if (latest) {
+        selected.value = { ...latest }
+      } else if (tickets.value.length) {
+        await selectTicket(tickets.value[0])
+      } else {
+        selected.value = null
+        conversation.value = []
+      }
+    } else if (tickets.value.length) {
+      await selectTicket(tickets.value[0])
     }
   } finally {
     loading.value = false
   }
 }
 
-function selectTicket(row) {
+async function selectTicket(row) {
   selected.value = { ...row }
+  replyForm.content = ''
+  replyForm.resolveTicket = false
+  await loadConversation(row.id)
 }
 
 async function saveStatus() {
   await updateTicket(selected.value.id, selected.value)
   ElMessage.success('工单状态已更新')
   await loadTickets()
+}
+
+async function loadConversation(ticketId) {
+  if (!ticketId) {
+    conversation.value = []
+    return
+  }
+  conversationLoading.value = true
+  try {
+    conversation.value = await getTicketConversation(ticketId)
+  } finally {
+    conversationLoading.value = false
+  }
+}
+
+async function takeOverSelected() {
+  if (!selected.value) {
+    return
+  }
+  takeOverLoading.value = true
+  try {
+    selected.value = await takeOverTicket(selected.value.id)
+    ElMessage.success('已接管会话')
+    await loadTickets()
+  } finally {
+    takeOverLoading.value = false
+  }
+}
+
+async function sendReply() {
+  if (!selected.value) {
+    return
+  }
+  if (!replyForm.content.trim()) {
+    ElMessage.warning('请先输入人工回复内容')
+    return
+  }
+  replySending.value = true
+  try {
+    await sendManualReply(selected.value.id, {
+      content: replyForm.content,
+      resolveTicket: replyForm.resolveTicket
+    })
+    ElMessage.success('人工回复已发送')
+    replyForm.content = ''
+    replyForm.resolveTicket = false
+    await loadConversation(selected.value.id)
+    await loadTickets()
+  } finally {
+    replySending.value = false
+  }
+}
+
+function fillSuggestedReply() {
+  if (!selected.value?.suggestedAction) {
+    return
+  }
+  replyForm.content = `您好，已收到您的反馈。${selected.value.suggestedAction} 我们会由人工客服继续跟进，并在售后记录中保留处理结果。`
+}
+
+function fillSummaryReply() {
+  if (!selected.value?.aiSummary) {
+    return
+  }
+  replyForm.content = `您好，关于您反馈的问题，客服已查看会话摘要：${selected.value.aiSummary}。后续会结合订单、凭证和平台规则继续处理。`
+}
+
+function roleLabel(role) {
+  const labels = {
+    USER: '用户',
+    ASSISTANT: '客服',
+    SYSTEM: '系统'
+  }
+  return labels[String(role || '').toUpperCase()] || role || '-'
+}
+
+function messageClass(message) {
+  const role = String(message?.role || '').toLowerCase()
+  const source = String(message?.sourceType || '').toLowerCase()
+  return {
+    'message-user': role === 'user',
+    'message-assistant': role === 'assistant',
+    'message-manual': source === 'manual'
+  }
 }
 
 function formatDateTime(value) {
@@ -297,6 +446,7 @@ onMounted(loadTickets)
 .ticket-issue,
 .sla-card,
 .next-action,
+.conversation-panel,
 .ticket-flow {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
@@ -308,6 +458,7 @@ onMounted(loadTickets)
 }
 
 .ticket-issue h4,
+.conversation-panel h4,
 .next-action h4,
 .ticket-flow h4 {
   margin: 4px 0 8px;
@@ -373,11 +524,103 @@ onMounted(loadTickets)
   background: linear-gradient(180deg, #f6f9ff, #fff);
 }
 
-.detail-grid {
+.workbench-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
   gap: 12px;
   align-items: stretch;
+}
+
+.conversation-panel {
+  grid-row: span 2;
+  padding: 14px;
+  min-width: 0;
+}
+
+.conversation-list {
+  max-height: 360px;
+  min-height: 220px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #f8fafc;
+}
+
+.empty-conversation {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.message-item {
+  width: min(86%, 680px);
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.message-item p {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-user {
+  margin-left: auto;
+  border-color: rgb(37 99 235 / 18%);
+  background: #f7fbff;
+}
+
+.message-assistant {
+  margin-right: auto;
+}
+
+.message-manual {
+  border-color: rgb(5 150 105 / 24%);
+  background: #f5fffb;
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.message-meta strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.reply-composer {
+  margin-top: 12px;
+}
+
+.composer-toolbar,
+.composer-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.composer-toolbar {
+  margin-bottom: 8px;
+}
+
+.composer-actions {
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 .detail-descriptions {
@@ -460,7 +703,7 @@ onMounted(loadTickets)
 
 @media (max-width: 1080px) {
   .ticket-hero,
-  .detail-grid {
+  .workbench-grid {
     grid-template-columns: 1fr;
   }
 

@@ -465,6 +465,16 @@ try {
                       (@($linkedTicketAfterSaleDetail.processLogs | Where-Object { $_.action -eq "UPDATE_TICKET" }).Count -ge 1)
     Add-Result "real after-sale linked ticket update/log" $updateTicketOk "status=$($linkedTicketUpdated.status),logs=$(@($linkedTicketAfterSaleDetail.processLogs).Count)"
 
+    $linkedTicketConversation = Api-Get "/service-tickets/$($created.realAfterSaleTicketId)/conversation"
+    Add-Result "real after-sale linked ticket conversation" (@($linkedTicketConversation).Count -ge 0) "messages=$(@($linkedTicketConversation).Count)"
+
+    $takeOverTicket = Api-Post "/service-tickets/$($created.realAfterSaleTicketId)/take-over" @{}
+    $takeOverAfterSaleDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $takeOverOk = $takeOverTicket.status -eq "PROCESSING" -and
+                  -not [string]::IsNullOrWhiteSpace([string]$takeOverTicket.assignedTo) -and
+                  (@($takeOverAfterSaleDetail.processLogs | Where-Object { $_.action -eq "MANUAL_TAKEOVER" }).Count -ge 1)
+    Add-Result "real after-sale manual takeover/log" $takeOverOk "status=$($takeOverTicket.status),assigned=$($takeOverTicket.assignedTo)"
+
     $replyDraft = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/reply-drafts" @{
         remark = "Auto admin requested AI copilot reply draft"
     }
@@ -495,6 +505,21 @@ try {
     $discardDraftOk = $discardedDraft.status -eq "DISCARDED" -and
                       (@($discardDraftDetail.processLogs | Where-Object { $_.action -eq "DISCARD_REPLY_DRAFT" }).Count -ge 1)
     Add-Result "real after-sale AI copilot draft discard/log" $discardDraftOk "status=$($discardedDraft.status)"
+
+    $manualReplyText = "Auto manual reply ${stamp}: we have received your after-sale request and will continue with human support."
+    $manualReply = Api-Post "/service-tickets/$($created.realAfterSaleTicketId)/manual-replies" @{
+        content = $manualReplyText
+        resolveTicket = $false
+    }
+    $manualConversation = Api-Get "/service-tickets/$($created.realAfterSaleTicketId)/conversation"
+    $manualSessionMessages = Api-Get "/chat-sessions/$($created.realAfterSaleTicketSessionId)/messages"
+    $manualReplyAfterSaleDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $manualReplyOk = $manualReply.sourceType -eq "MANUAL" -and
+                     $manualReply.content -eq $manualReplyText -and
+                     @($manualConversation | Where-Object { $_.id -eq $manualReply.id -and $_.sourceType -eq "MANUAL" }).Count -eq 1 -and
+                     @($manualSessionMessages | Where-Object { $_.id -eq $manualReply.id -and $_.sourceType -eq "MANUAL" }).Count -eq 1 -and
+                     (@($manualReplyAfterSaleDetail.processLogs | Where-Object { $_.action -eq "MANUAL_REPLY_SENT" }).Count -ge 1)
+    Add-Result "real after-sale manual reply visible/log" $manualReplyOk "source=$($manualReply.sourceType),messages=$(@($manualSessionMessages).Count)"
 
     $reviewOrderNo = "REVIEWFLOW$stamp"
     Api-Post "/orders" @{

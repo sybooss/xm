@@ -415,7 +415,7 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         }
         List<AfterSaleProcessLog> logs = application.getProcessLogs() == null ? List.of() : application.getProcessLogs();
         AfterSaleProcessLog finalDecision = latestLog(logs, "CONFIRM", "REJECT", "APPROVE", "REQUEST_MORE_EVIDENCE");
-        AfterSaleProcessLog finalReply = latestLog(logs, "USE_REPLY_DRAFT");
+        AfterSaleProcessLog finalReply = latestLog(logs, "MANUAL_REPLY_SENT", "USE_REPLY_DRAFT");
         application.setCustomerResultSummary(buildCustomerResultSummary(application, finalDecision));
         application.setCustomerFinalReply(finalReply == null ? null : extractCustomerReply(finalReply.getRemark()));
         application.setCustomerNextAction(buildCustomerNextAction(application));
@@ -440,6 +440,11 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         int markerIndex = remark.indexOf(marker);
         if (markerIndex >= 0 && markerIndex + marker.length() < remark.length()) {
             return remark.substring(markerIndex + marker.length()).trim();
+        }
+        String manualMarker = "人工客服回复：";
+        int manualIndex = remark.indexOf(manualMarker);
+        if (manualIndex >= 0 && manualIndex + manualMarker.length() < remark.length()) {
+            return remark.substring(manualIndex + manualMarker.length()).trim();
         }
         return remark.trim();
     }
