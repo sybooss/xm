@@ -14,4 +14,5 @@ public class AfterSaleEvidence {
     private Long uploadedBy;
     private String uploadedByName;
     private LocalDateTime createdAt;
+    private EvidenceAudit latestAudit;
 }

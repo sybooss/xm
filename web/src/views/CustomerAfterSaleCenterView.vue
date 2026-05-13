@@ -183,6 +183,16 @@
             <span>{{ evidence.createdAt }}</span>
           </div>
           <p>{{ evidence.content }}</p>
+          <div class="evidence-actions">
+            <el-button size="small" type="primary" plain :loading="auditingEvidenceId === evidence.id" @click="auditEvidence(evidence)">审核凭证</el-button>
+          </div>
+          <EvidenceAuditPanel
+            v-if="evidence.latestAudit"
+            class="evidence-audit"
+            :audit="evidence.latestAudit"
+            compact
+            :show-signals="false"
+          />
         </div>
       </div>
       <div v-if="selectedReview" class="review-box">
@@ -295,10 +305,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import AfterSaleDiagnosisPanel from '../components/after-sale/AfterSaleDiagnosisPanel.vue'
+import EvidenceAuditPanel from '../components/after-sale/EvidenceAuditPanel.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { pageOrders } from '../api/orderApi'
 import {
   addCustomerAfterSaleEvidence,
+  createEvidenceAudit,
   createAfterSaleDiagnosis,
   createCustomerAfterSale,
   createCustomerAfterSaleReview,
@@ -324,6 +336,7 @@ const submitting = ref(false)
 const evidenceSubmitting = ref(false)
 const reviewSubmitting = ref(false)
 const diagnosing = ref(false)
+const auditingEvidenceId = ref(null)
 const applyDialogVisible = ref(false)
 const evidenceDialogVisible = ref(false)
 const reviewDialogVisible = ref(false)
@@ -466,12 +479,27 @@ async function submitEvidence() {
   }
   evidenceSubmitting.value = true
   try {
-    await addCustomerAfterSaleEvidence(selectedAfterSale.value.id, { ...evidenceForm })
+    const evidence = await addCustomerAfterSaleEvidence(selectedAfterSale.value.id, { ...evidenceForm })
+    await createEvidenceAudit(evidence.id, { useAi: false })
     ElMessage.success('凭证已提交')
     evidenceDialogVisible.value = false
     selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
   } finally {
     evidenceSubmitting.value = false
+  }
+}
+
+async function auditEvidence(evidence) {
+  if (!evidence?.id || !selectedAfterSale.value) {
+    return
+  }
+  auditingEvidenceId.value = evidence.id
+  try {
+    await createEvidenceAudit(evidence.id, { useAi: false })
+    ElMessage.success('凭证审核已生成')
+    selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
+  } finally {
+    auditingEvidenceId.value = null
   }
 }
 
@@ -779,6 +807,16 @@ onMounted(reloadAll)
   margin: 0;
   color: var(--text);
   line-height: 1.6;
+}
+
+.evidence-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.evidence-audit {
+  margin-top: 10px;
 }
 
 @media (max-width: 1120px) {

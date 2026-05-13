@@ -34,6 +34,7 @@ const label = computed(() => {
     RESOLVED: '已解决',
     NORMAL: '普通',
     LOW: '低',
+    MEDIUM: '中',
     HIGH: '高',
     URGENT: '紧急',
     ADMIN: '管理员',
@@ -71,10 +72,20 @@ const label = computed(() => {
     REFUND: '仅退款',
     COMPLAINT: '投诉',
     REPAIR: '维修检测',
+    IMAGE: '图片',
+    VIDEO: '视频',
+    TEXT: '文字',
+    LOGISTICS_NO: '物流单号',
     KEEP: '先排查',
     EVIDENCE: '补充凭证',
     MANUAL: '人工复核',
     ALLOW: '建议可受理',
+    PASS: '凭证通过',
+    NEED_MORE: '需补材料',
+    RISKY: '风险较高',
+    SUFFICIENT: '材料充分',
+    PARTIAL: '部分充分',
+    INSUFFICIENT: '材料不足',
     MANUAL_REVIEW: '人工复核',
     REJECT_SUGGESTED: '暂不建议提交',
     SUBMIT: '提交申请',
@@ -82,6 +93,7 @@ const label = computed(() => {
     REJECT: '审核驳回',
     REQUEST_MORE_EVIDENCE: '要求补材料',
     SUPPLEMENT_EVIDENCE: '补充凭证',
+    EVIDENCE_AUDIT: '凭证审核',
     CREATE_TICKET: '创建工单',
     UPDATE_TICKET: '工单更新',
     GENERATE_REPLY_DRAFT: '生成草稿',
@@ -112,10 +124,10 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', 'CREATE_TICKET', 'USE_REPLY_DRAFT', 'SUBMIT_REVIEW', 'AI', 'USED', 'ALLOW', '已验证'].includes(normalized.value)) return 'success'
-  if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED', 'REJECT_SUGGESTED', 'DISCARD_REPLY_DRAFT', 'DISCARDED', '已超时'].includes(normalized.value)) return 'danger'
-  if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID', 'KEEP', 'REPAIR'].includes(normalized.value)) return 'info'
-  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'NEED_EVIDENCE', 'MANUAL_REVIEW', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'TEMPLATE', 'MANUAL', 'EVIDENCE', 'DRAFT', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', 'CREATE_TICKET', 'USE_REPLY_DRAFT', 'SUBMIT_REVIEW', 'AI', 'USED', 'ALLOW', 'PASS', 'SUFFICIENT', '已验证'].includes(normalized.value)) return 'success'
+  if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED', 'REJECT_SUGGESTED', 'RISKY', 'INSUFFICIENT', 'DISCARD_REPLY_DRAFT', 'DISCARDED', '已超时'].includes(normalized.value)) return 'danger'
+  if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID', 'KEEP', 'REPAIR', 'TEXT', 'IMAGE', 'VIDEO', 'LOGISTICS_NO'].includes(normalized.value)) return 'info'
+  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'MEDIUM', 'HIGH', 'PARTIAL', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE', 'NEED_MORE_EVIDENCE', 'NEED_EVIDENCE', 'MANUAL_REVIEW', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'TEMPLATE', 'MANUAL', 'EVIDENCE', 'DRAFT', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
   return 'primary'
 })
 </script>

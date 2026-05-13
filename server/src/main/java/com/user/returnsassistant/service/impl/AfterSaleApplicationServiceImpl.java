@@ -24,6 +24,7 @@ import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
 import com.user.returnsassistant.service.AfterSaleDiagnosisService;
+import com.user.returnsassistant.service.EvidenceAuditService;
 import com.user.returnsassistant.utils.NoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,6 +56,8 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
     private ServiceTicketMapper ticketMapper;
     @Autowired
     private AfterSaleDiagnosisService diagnosisService;
+    @Autowired
+    private EvidenceAuditService evidenceAuditService;
 
     @Override
     public PageResult<AfterSaleApplication> page(AfterSaleApplicationSearch search) {
@@ -71,6 +74,7 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         }
         application.setProcessLogs(processLogMapper.listByApplicationId(id));
         application.setEvidences(evidenceMapper.listByApplicationId(id));
+        evidenceAuditService.attachLatestAudits(id, application.getEvidences());
         if (application.getDiagnosisId() != null) {
             application.setDiagnosis(diagnosisService.getInternal(application.getDiagnosisId()));
         }

@@ -225,8 +225,12 @@ try {
     content: 'BROWSER-EVIDENCE-' + Date.now()
   }, demoCustomerToken)
   await page.reload({ waitUntil: 'networkidle', timeout: 60000 })
+  await expectText(page, '凭证真实性审核', 'admin evidence audit panel visible')
   await expectText(page, '凭证材料', 'admin after-sale evidence list visible')
   await expectText(page, 'BROWSER-EVIDENCE-', 'admin after-sale evidence content visible')
+  await page.getByRole('button', { name: '审核全部凭证' }).click()
+  await expectText(page, '全部凭证已完成审核', 'admin evidence audit all toast')
+  await expectText(page, /凭证通过|需补材料|风险较高|人工复核/, 'admin evidence audit result visible')
   await page.getByRole('button', { name: '创建关联工单' }).click()
   await expectText(page, '已创建关联工单', 'admin after-sale linked ticket toast')
   await expectText(page, '关联客服工单', 'admin after-sale linked ticket section visible')
@@ -235,8 +239,13 @@ try {
   seededReviewTicketSessionId = linkedAfterSaleDetail.ticketId
     ? (await apiGet(`/service-tickets/${linkedAfterSaleDetail.ticketId}`)).sessionId
     : null
+  const draftResponse = page.waitForResponse(response =>
+    response.url().includes(`/api/admin/after-sales/${seededReviewApplicationId}/reply-drafts`)
+      && response.request().method() === 'POST',
+  { timeout: 120000 })
   await page.getByRole('button', { name: '生成回复草稿' }).click()
-  await expectText(page, '回复草稿已生成', 'admin AI copilot draft toast')
+  const draftResult = await (await draftResponse).json()
+  record('admin AI copilot draft create response', draftResult.code === 1, draftResult?.data?.status || draftResult?.msg || '')
   await expectText(page, 'AI 副驾驶回复草稿', 'admin AI copilot panel visible')
   await expectText(page, '草稿', 'admin AI copilot draft status visible')
   await page.getByRole('button', { name: '采纳草稿' }).first().click()

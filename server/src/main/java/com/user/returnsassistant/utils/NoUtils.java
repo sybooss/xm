@@ -26,6 +26,10 @@ public class NoUtils {
         return "DG" + now() + random();
     }
 
+    public static String evidenceAuditNo() {
+        return "EA" + now() + random();
+    }
+
     private static String now() {
         return LocalDateTime.now().format(FORMATTER);
     }

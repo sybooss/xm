@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.EvidenceAuditMapper">
+    <sql id="BaseSelect">
+        select a.*,
+               e.evidence_type,
+               e.content as evidence_content
+        from evidence_audit a
+        left join after_sale_evidence e on a.evidence_id=e.id
+    </sql>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.EvidenceAudit">
+        <include refid="BaseSelect"/>
+        where a.id=#{id}
+    </select>
+
+    <select id="getLatestByEvidenceId" resultType="com.user.returnsassistant.pojo.EvidenceAudit">
+        <include refid="BaseSelect"/>
+        where a.evidence_id=#{evidenceId}
+        order by a.created_at desc, a.id desc
+        limit 1
+    </select>
+
+    <select id="listByEvidenceId" resultType="com.user.returnsassistant.pojo.EvidenceAudit">
+        <include refid="BaseSelect"/>
+        where a.evidence_id=#{evidenceId}
+        order by a.created_at desc, a.id desc
+    </select>
+
+    <select id="listByApplicationId" resultType="com.user.returnsassistant.pojo.EvidenceAudit">
+        <include refid="BaseSelect"/>
+        where a.application_id=#{applicationId}
+        order by a.created_at desc, a.id desc
+    </select>
+
+    <select id="listLatestByApplicationId" resultType="com.user.returnsassistant.pojo.EvidenceAudit">
+        <include refid="BaseSelect"/>
+        inner join (
+            select evidence_id, max(id) as max_id
+            from evidence_audit
+            where application_id=#{applicationId}
+            group by evidence_id
+        ) latest on latest.max_id=a.id
+        order by a.created_at desc, a.id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into evidence_audit(
+            audit_no, application_id, evidence_id, audit_status, sufficiency_level,
+            authenticity_risk, ai_generated_risk, tamper_risk, metadata_signal,
+            visual_signal, watermark_signal, required_evidence, audit_detail_json,
+            ai_summary, ai_status, ai_error_message
+        )
+        values(
+            #{auditNo}, #{applicationId}, #{evidenceId}, #{auditStatus}, #{sufficiencyLevel},
+            #{authenticityRisk}, #{aiGeneratedRisk}, #{tamperRisk}, #{metadataSignal},
+            #{visualSignal}, #{watermarkSignal}, #{requiredEvidence}, #{auditDetailJson},
+            #{aiSummary}, #{aiStatus}, #{aiErrorMessage}
+        )
+    </insert>
+</mapper>

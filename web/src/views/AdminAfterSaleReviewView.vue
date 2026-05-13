@@ -96,6 +96,25 @@
 
           <AfterSaleDiagnosisPanel v-if="selected.diagnosis" :diagnosis="selected.diagnosis" />
 
+          <div class="audit-box">
+            <div class="audit-box-head">
+              <div>
+                <h4>凭证真实性审核</h4>
+                <p>只展示风险信号和补证建议，不替代人工审核结论。</p>
+              </div>
+              <el-button type="primary" plain :loading="auditingAll" @click="auditAllEvidence">审核全部凭证</el-button>
+            </div>
+            <div v-if="!selected.evidences?.length" class="empty-evidence">暂无凭证材料</div>
+            <div v-for="evidence in selected.evidences || []" :key="`audit-${evidence.id}`" class="audit-item">
+              <div class="audit-item-meta">
+                <StatusTag :value="evidence.evidenceType" />
+                <strong>{{ evidence.content }}</strong>
+                <el-button size="small" type="primary" :loading="auditingEvidenceId === evidence.id" @click="auditEvidence(evidence)">重新审核</el-button>
+              </div>
+              <EvidenceAuditPanel :audit="evidence.latestAudit" compact />
+            </div>
+          </div>
+
           <div class="ticket-box">
             <div class="ticket-main">
               <div>
@@ -200,11 +219,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Close, Promotion, Refresh, Search, Ticket } from '@element-plus/icons-vue'
 import AfterSaleDiagnosisPanel from '../components/after-sale/AfterSaleDiagnosisPanel.vue'
+import EvidenceAuditPanel from '../components/after-sale/EvidenceAuditPanel.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   approveAfterSale,
   completeAfterSale,
   createAfterSaleTicket,
+  createEvidenceAudit,
   discardReplyDraft,
   generateReplyDraft,
   getAdminAfterSale,
@@ -225,6 +246,8 @@ const saving = ref(false)
 const creatingTicket = ref(false)
 const generatingDraft = ref(false)
 const savingDraft = ref(false)
+const auditingAll = ref(false)
+const auditingEvidenceId = ref(null)
 const selected = ref(null)
 const replyDrafts = ref([])
 const decisionForm = reactive({ approvedAmount: 0, remark: '' })
@@ -347,6 +370,37 @@ async function createLinkedTicket() {
   }
 }
 
+async function auditEvidence(evidence) {
+  if (!selected.value?.id || !evidence?.id) {
+    return
+  }
+  auditingEvidenceId.value = evidence.id
+  try {
+    await createEvidenceAudit(evidence.id, { useAi: false })
+    ElMessage.success('凭证审核已生成')
+    selected.value = await getAdminAfterSale(selected.value.id)
+  } finally {
+    auditingEvidenceId.value = null
+  }
+}
+
+async function auditAllEvidence() {
+  if (!selected.value?.evidences?.length) {
+    ElMessage.warning('暂无凭证可审核')
+    return
+  }
+  auditingAll.value = true
+  try {
+    for (const evidence of selected.value.evidences) {
+      await createEvidenceAudit(evidence.id, { useAi: false })
+    }
+    ElMessage.success('全部凭证已完成审核')
+    selected.value = await getAdminAfterSale(selected.value.id)
+  } finally {
+    auditingAll.value = false
+  }
+}
+
 async function loadReplyDrafts() {
   if (!selected.value?.id) {
     replyDrafts.value = []
@@ -439,6 +493,7 @@ onMounted(() => {
 .decision-box,
 .ticket-box,
 .ai-copilot-box,
+.audit-box,
 .evidence-list,
 .timeline-box {
   margin-top: 14px;
@@ -446,6 +501,45 @@ onMounted(() => {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: #fff;
+}
+
+.audit-box-head,
+.audit-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.audit-box-head h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.audit-box-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.audit-item {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.audit-item-meta {
+  margin-bottom: 10px;
+}
+
+.audit-item-meta strong {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .copilot-header,

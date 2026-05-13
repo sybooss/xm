@@ -234,13 +234,13 @@ CREATE TABLE IF NOT EXISTS after_sale_process_log (
   CONSTRAINT fk_after_sale_process_log_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
   CONSTRAINT fk_after_sale_process_log_operator FOREIGN KEY (operator_id) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_process_log_role CHECK (operator_role IN ('CUSTOMER', 'ADMIN', 'SYSTEM', 'AI')),
-  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
+  CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK')),
   INDEX idx_after_sale_process_log_application (application_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 ALTER TABLE after_sale_process_log DROP CHECK ck_after_sale_process_log_action;
 ALTER TABLE after_sale_process_log
-  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
+  ADD CONSTRAINT ck_after_sale_process_log_action CHECK (action IN ('SUBMIT', 'APPROVE', 'REJECT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'EVIDENCE_AUDIT', 'CREATE_TICKET', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'USE_REPLY_DRAFT', 'DISCARD_REPLY_DRAFT', 'SUBMIT_REVIEW', 'CANCEL', 'CONFIRM', 'SYSTEM_MARK'));
 
 CREATE TABLE IF NOT EXISTS after_sale_evidence (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -254,6 +254,39 @@ CREATE TABLE IF NOT EXISTS after_sale_evidence (
   CONSTRAINT fk_after_sale_evidence_user FOREIGN KEY (uploaded_by) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT ck_after_sale_evidence_type CHECK (evidence_type IN ('IMAGE', 'VIDEO', 'TEXT', 'LOGISTICS_NO')),
   INDEX idx_after_sale_evidence_application (application_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS evidence_audit (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  audit_no VARCHAR(40) NOT NULL,
+  application_id BIGINT NOT NULL,
+  evidence_id BIGINT NOT NULL,
+  audit_status VARCHAR(30) NOT NULL,
+  sufficiency_level VARCHAR(30) NOT NULL,
+  authenticity_risk VARCHAR(20) NOT NULL,
+  ai_generated_risk VARCHAR(20) NOT NULL,
+  tamper_risk VARCHAR(20) NOT NULL,
+  metadata_signal VARCHAR(1000) NULL,
+  visual_signal VARCHAR(1000) NULL,
+  watermark_signal VARCHAR(1000) NULL,
+  required_evidence VARCHAR(1000) NULL,
+  audit_detail_json JSON NULL,
+  ai_summary VARCHAR(1000) NULL,
+  ai_status VARCHAR(20) NOT NULL DEFAULT 'SKIPPED',
+  ai_error_message VARCHAR(1000) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uk_evidence_audit_no UNIQUE (audit_no),
+  CONSTRAINT fk_evidence_audit_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE CASCADE,
+  CONSTRAINT fk_evidence_audit_evidence FOREIGN KEY (evidence_id) REFERENCES after_sale_evidence(id) ON DELETE CASCADE,
+  CONSTRAINT ck_evidence_audit_status CHECK (audit_status IN ('PASS', 'NEED_MORE', 'RISKY', 'MANUAL_REVIEW')),
+  CONSTRAINT ck_evidence_audit_sufficiency CHECK (sufficiency_level IN ('SUFFICIENT', 'PARTIAL', 'INSUFFICIENT')),
+  CONSTRAINT ck_evidence_audit_auth_risk CHECK (authenticity_risk IN ('LOW', 'MEDIUM', 'HIGH')),
+  CONSTRAINT ck_evidence_audit_ai_risk CHECK (ai_generated_risk IN ('LOW', 'MEDIUM', 'HIGH')),
+  CONSTRAINT ck_evidence_audit_tamper_risk CHECK (tamper_risk IN ('LOW', 'MEDIUM', 'HIGH')),
+  CONSTRAINT ck_evidence_audit_ai_status CHECK (ai_status IN ('SUCCESS', 'FAILED', 'SKIPPED')),
+  INDEX idx_evidence_audit_application (application_id, created_at),
+  INDEX idx_evidence_audit_evidence (evidence_id, created_at),
+  INDEX idx_evidence_audit_status (audit_status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS knowledge_category (

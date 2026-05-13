@@ -354,7 +354,22 @@ try {
                   $customerEvidenceDetail.customerNextAction.Length -gt 10
     Add-Result "real after-sale customer evidence chain" $evidenceOk "evidences=$(@($customerEvidenceDetail.evidences).Count),logs=$(@($customerEvidenceDetail.processLogs).Count)"
 
+    $evidenceAudit = Api-Post "/after-sale-evidences/$($evidence.id)/audits" @{
+        useAi = $false
+    }
+    $customerEvidenceAuditDetail = Api-Get "/customer/after-sales/$($created.realAfterSaleId)"
+    $latestAudit = @($customerEvidenceAuditDetail.evidences | Where-Object { $_.id -eq $evidence.id } | Select-Object -First 1).latestAudit
+    $evidenceAuditOk = $null -ne $latestAudit -and
+                       $latestAudit.auditNo -eq $evidenceAudit.auditNo -and
+                       @("PASS", "NEED_MORE", "RISKY", "MANUAL_REVIEW") -contains $evidenceAudit.auditStatus -and
+                       (@($customerEvidenceAuditDetail.processLogs | Where-Object { $_.action -eq "EVIDENCE_AUDIT" }).Count -ge 1)
+    Add-Result "real after-sale evidence authenticity audit" $evidenceAuditOk "status=$($evidenceAudit.auditStatus),sufficiency=$($evidenceAudit.sufficiencyLevel)"
+
     $script:authToken = $adminToken
+    $adminEvidenceAudits = Api-Get "/admin/after-sales/$($created.realAfterSaleId)/evidence-audits"
+    $adminEvidenceAuditOk = @($adminEvidenceAudits | Where-Object { $_.evidenceId -eq $evidence.id }).Count -ge 1
+    Add-Result "admin after-sale evidence audit list" $adminEvidenceAuditOk "audits=$(@($adminEvidenceAudits).Count)"
+
     $approvedApplication = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/approve" @{
         remark = "Auto admin approved real after-sale flow"
         approvedAmount = 188.80

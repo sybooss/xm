@@ -7,6 +7,8 @@ export const rejectAfterSale = (id, data) => request.post(`/admin/after-sales/${
 export const completeAfterSale = (id, data) => request.post(`/admin/after-sales/${id}/complete`, data)
 export const requestAfterSaleEvidence = (id, data) => request.post(`/admin/after-sales/${id}/request-evidence`, data)
 export const createAfterSaleTicket = (id, data) => request.post(`/admin/after-sales/${id}/tickets`, data)
+export const createEvidenceAudit = (id, data = {}) => request.post(`/after-sale-evidences/${id}/audits`, data)
+export const listAfterSaleEvidenceAudits = id => request.get(`/admin/after-sales/${id}/evidence-audits`)
 export const listReplyDrafts = id => request.get(`/admin/after-sales/${id}/reply-drafts`)
 export const generateReplyDraft = (id, data) => request.post(`/admin/after-sales/${id}/reply-drafts`, data)
 export const useReplyDraft = (id, draftId, data) => request.post(`/admin/after-sales/${id}/reply-drafts/${draftId}/use`, data)
