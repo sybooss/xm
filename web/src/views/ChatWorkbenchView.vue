@@ -229,6 +229,10 @@
         </section>
 
         <section>
+          <ProductInsightPanel :insight="chatStore.insight?.productInsight" />
+        </section>
+
+        <section>
           <h4>知识命中</h4>
           <div v-if="chatStore.insight?.knowledgeHits?.length" class="hit-list">
             <div v-for="doc in chatStore.insight.knowledgeHits" :key="doc.id" class="hit-item">
@@ -272,6 +276,7 @@ import { ArrowLeft, Delete, DocumentChecked, Plus, Promotion, Search, ShoppingBa
 import { useRouter } from 'vue-router'
 import CustomerOrderPanel from '../components/chat/CustomerOrderPanel.vue'
 import ProcessFlowPanel from '../components/chat/ProcessFlowPanel.vue'
+import ProductInsightPanel from '../components/chat/ProductInsightPanel.vue'
 import TicketPanel from '../components/chat/TicketPanel.vue'
 import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'

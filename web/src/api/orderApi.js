@@ -3,6 +3,8 @@ import request from './request'
 export const pageOrders = params => request.get('/orders', { params })
 export const getOrder = id => request.get(`/orders/${id}`)
 export const getOrderByNo = orderNo => request.get(`/orders/no/${orderNo}`)
+export const getOrderProductInsight = (id, params) => request.get(`/orders/${id}/product-insight`, { params })
+export const getOrderProductInsightByNo = (orderNo, params) => request.get(`/orders/no/${orderNo}/product-insight`, { params })
 export const createOrder = data => request.post('/orders', data)
 export const updateOrder = (id, data) => request.put(`/orders/${id}`, data)
 export const deleteOrder = id => request.delete(`/orders/${id}`)

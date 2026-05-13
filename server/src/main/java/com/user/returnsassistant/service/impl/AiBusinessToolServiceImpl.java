@@ -8,8 +8,10 @@ import com.user.returnsassistant.mapper.KnowledgeDocMapper;
 import com.user.returnsassistant.pojo.ChatSession;
 import com.user.returnsassistant.pojo.DemoOrder;
 import com.user.returnsassistant.pojo.KnowledgeDoc;
+import com.user.returnsassistant.pojo.ProductInsight;
 import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.service.AiBusinessToolService;
+import com.user.returnsassistant.service.ProductInsightService;
 import com.user.returnsassistant.service.ServiceTicketService;
 import dev.langchain4j.agent.tool.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,8 @@ public class AiBusinessToolServiceImpl implements AiBusinessToolService {
     private ChatSessionMapper sessionMapper;
     @Autowired
     private ServiceTicketService ticketService;
+    @Autowired
+    private ProductInsightService productInsightService;
 
     @Tool("根据订单号查询订单、物流和售后状态，供售后客服模型回答时引用")
     @Override
@@ -51,6 +55,55 @@ public class AiBusinessToolServiceImpl implements AiBusinessToolService {
         data.put("afterSaleStatus", order.getAfterSaleStatus());
         data.put("signedAt", order.getSignedAt());
         return toJson(data);
+    }
+
+    @Tool("根据订单号查询商品档案，返回商品定位、参数、卖点、常见问题和售后建议")
+    @Override
+    public String queryProductProfile(String orderNo) {
+        if (!hasText(orderNo)) {
+            return toJson(Map.of("found", false, "reason", "未提供订单号"));
+        }
+        try {
+            ProductInsight insight = productInsightService.buildByOrderNo(orderNo.trim(), "", false);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("found", insight.getHasProfile());
+            data.put("matchType", insight.getMatchType());
+            data.put("orderNo", insight.getOrderNo());
+            data.put("productName", insight.getProductName());
+            data.put("category", insight.getCategory());
+            data.put("positioning", insight.getPositioning());
+            data.put("specs", insight.getSpecs());
+            data.put("sellingPoints", insight.getSellingPoints());
+            data.put("usageScenarios", insight.getUsageScenarios());
+            data.put("commonIssues", insight.getCommonIssues());
+            data.put("afterSaleAdvice", insight.getAfterSaleAdvice());
+            return toJson(data);
+        } catch (Exception e) {
+            return toJson(Map.of("found", false, "orderNo", orderNo, "reason", e.getMessage()));
+        }
+    }
+
+    @Tool("结合订单商品和用户问题生成产品售后顾问摘要，供模型回答退换货咨询时引用")
+    @Override
+    public String generateProductInsight(String orderNo, String userIssue) {
+        if (!hasText(orderNo)) {
+            return toJson(Map.of("generated", false, "reason", "未提供订单号"));
+        }
+        try {
+            ProductInsight insight = productInsightService.buildByOrderNo(orderNo.trim(), userIssue, false);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("generated", true);
+            data.put("productName", insight.getProductName());
+            data.put("matchedConcerns", insight.getMatchedConcerns());
+            data.put("troubleshootingSteps", insight.getTroubleshootingSteps());
+            data.put("comparisonText", insight.getComparisonText());
+            data.put("retentionScript", insight.getRetentionScript());
+            data.put("afterSaleAdvice", insight.getAfterSaleAdvice());
+            data.put("localSummary", insight.getLocalSummary());
+            return toJson(data);
+        } catch (Exception e) {
+            return toJson(Map.of("generated", false, "orderNo", orderNo, "reason", e.getMessage()));
+        }
     }
 
     @Tool("按用户问题和售后意图检索知识库，返回可引用的规则依据")

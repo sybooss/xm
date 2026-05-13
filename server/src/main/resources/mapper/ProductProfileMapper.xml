@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.ProductProfileMapper">
+    <select id="count" resultType="long">
+        select count(*)
+        from product_profile
+        where 1=1
+        <if test="s.keyword != null and s.keyword != ''">
+            and (product_name like concat('%',#{s.keyword},'%')
+             or product_alias like concat('%',#{s.keyword},'%')
+             or positioning like concat('%',#{s.keyword},'%')
+             or selling_points like concat('%',#{s.keyword},'%'))
+        </if>
+        <if test="s.category != null and s.category != ''">and category=#{s.category}</if>
+        <if test="s.enabled != null">and enabled=#{s.enabled}</if>
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.ProductProfile">
+        select *
+        from product_profile
+        where 1=1
+        <if test="s.keyword != null and s.keyword != ''">
+            and (product_name like concat('%',#{s.keyword},'%')
+             or product_alias like concat('%',#{s.keyword},'%')
+             or positioning like concat('%',#{s.keyword},'%')
+             or selling_points like concat('%',#{s.keyword},'%'))
+        </if>
+        <if test="s.category != null and s.category != ''">and category=#{s.category}</if>
+        <if test="s.enabled != null">and enabled=#{s.enabled}</if>
+        order by enabled desc, updated_at desc, id desc
+    </select>
+
+    <select id="getById" resultType="com.user.returnsassistant.pojo.ProductProfile">
+        select * from product_profile where id=#{id}
+    </select>
+
+    <select id="getByProductName" resultType="com.user.returnsassistant.pojo.ProductProfile">
+        select * from product_profile
+        where product_name=#{productName} and enabled=1
+        limit 1
+    </select>
+
+    <select id="findBestMatch" resultType="com.user.returnsassistant.pojo.ProductProfile">
+        select *
+        from product_profile
+        where enabled=1
+          and (
+            product_name=#{productName}
+            or product_alias like concat('%',#{productName},'%')
+            or #{productName} like concat('%', product_name, '%')
+          )
+        order by
+          case
+            when product_name=#{productName} then 1
+            when product_alias like concat('%',#{productName},'%') then 2
+            else 3
+          end,
+          updated_at desc,
+          id desc
+        limit 1
+    </select>
+
+    <select id="searchEnabled" resultType="com.user.returnsassistant.pojo.ProductProfile">
+        select *
+        from product_profile
+        where enabled=1
+        <if test="keyword != null and keyword != ''">
+            and (product_name like concat('%',#{keyword},'%')
+             or product_alias like concat('%',#{keyword},'%')
+             or category like concat('%',#{keyword},'%')
+             or positioning like concat('%',#{keyword},'%'))
+        </if>
+        order by updated_at desc, id desc
+        limit #{limit}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into product_profile(product_name, product_alias, category, positioning, spec_json, selling_points,
+                                    usage_scenarios, common_issues, troubleshooting_steps, comparison_text,
+                                    retention_script, after_sale_advice, enabled)
+        values(#{productName}, #{productAlias}, #{category}, #{positioning}, #{specJson}, #{sellingPoints},
+               #{usageScenarios}, #{commonIssues}, #{troubleshootingSteps}, #{comparisonText},
+               #{retentionScript}, #{afterSaleAdvice}, coalesce(#{enabled}, 1))
+    </insert>
+
+    <update id="update">
+        update product_profile
+        set product_name=#{productName},
+            product_alias=#{productAlias},
+            category=#{category},
+            positioning=#{positioning},
+            spec_json=#{specJson},
+            selling_points=#{sellingPoints},
+            usage_scenarios=#{usageScenarios},
+            common_issues=#{commonIssues},
+            troubleshooting_steps=#{troubleshootingSteps},
+            comparison_text=#{comparisonText},
+            retention_script=#{retentionScript},
+            after_sale_advice=#{afterSaleAdvice},
+            enabled=coalesce(#{enabled}, 1)
+        where id=#{id}
+    </update>
+</mapper>

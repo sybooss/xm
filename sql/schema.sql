@@ -45,6 +45,29 @@ CREATE TABLE IF NOT EXISTS demo_order (
   INDEX idx_order_status (order_status, after_sale_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS product_profile (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  product_name VARCHAR(120) NOT NULL,
+  product_alias VARCHAR(300) NULL,
+  category VARCHAR(50) NOT NULL,
+  positioning VARCHAR(200) NOT NULL,
+  spec_json JSON NULL,
+  selling_points TEXT NULL,
+  usage_scenarios TEXT NULL,
+  common_issues TEXT NULL,
+  troubleshooting_steps TEXT NULL,
+  comparison_text TEXT NULL,
+  retention_script TEXT NULL,
+  after_sale_advice TEXT NULL,
+  enabled TINYINT NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uk_product_profile_name UNIQUE (product_name),
+  CONSTRAINT ck_product_profile_enabled CHECK (enabled IN (0, 1)),
+  INDEX idx_product_profile_category (category),
+  INDEX idx_product_profile_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS after_sale_record (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   after_sale_no VARCHAR(40) NOT NULL,

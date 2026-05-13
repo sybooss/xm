@@ -10,6 +10,7 @@ import com.user.returnsassistant.pojo.*;
 import com.user.returnsassistant.service.AiService;
 import com.user.returnsassistant.service.AiBusinessToolService;
 import com.user.returnsassistant.service.ChatService;
+import com.user.returnsassistant.service.ProductInsightService;
 import com.user.returnsassistant.service.ServiceTicketService;
 import com.user.returnsassistant.utils.NoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,8 @@ public class ChatServiceImpl implements ChatService {
     private AiService aiService;
     @Autowired
     private AiBusinessToolService aiBusinessToolService;
+    @Autowired
+    private ProductInsightService productInsightService;
     @Autowired
     private ServiceTicketService ticketService;
 
@@ -183,6 +186,22 @@ public class ChatServiceImpl implements ChatService {
                         "afterSaleStatus", order == null ? null : order.getAfterSaleStatus(),
                         "logisticsStatus", order == null ? null : order.getLogisticsStatus()));
 
+        boolean useAi = request.getUseAi() == null || request.getUseAi();
+        ProductInsight productInsight = productInsightService.build(order, request.getContent(), intent.getIntentCode(), false);
+        trace(id, userMessage.getId(), "PRODUCT_PROFILE_LOOKUP",
+                Boolean.TRUE.equals(productInsight.getHasProfile()) ? "SUCCESS" : "SKIPPED",
+                detail("title", "商品档案查询",
+                        "hasProfile", productInsight.getHasProfile(),
+                        "matchType", productInsight.getMatchType(),
+                        "productName", productInsight.getProductName(),
+                        "category", productInsight.getCategory()));
+        trace(id, userMessage.getId(), "PRODUCT_INSIGHT_GENERATE",
+                order == null ? "SKIPPED" : "SUCCESS",
+                detail("title", "产品智能顾问",
+                        "matchedConcerns", productInsight.getMatchedConcerns(),
+                        "summary", productInsight.getLocalSummary(),
+                        "aiStatus", productInsight.getAiStatus()));
+
         List<KnowledgeDoc> hits = knowledgeDocMapper.search(request.getContent(), intent.getIntentCode(), 5);
         int rank = 1;
         for (KnowledgeDoc doc : hits) {
@@ -204,15 +223,14 @@ public class ChatServiceImpl implements ChatService {
                         "topTitle", hits.isEmpty() ? null : hits.get(0).getTitle(),
                         "summary", hits.isEmpty() ? "未命中精确规则，使用本地流程模板兜底" : "已命中可用于回答的规则依据"));
 
-        String localReply = buildReply(intent, order, hits, conversationContext);
+        String localReply = buildReply(intent, order, hits, conversationContext, productInsight);
         Map<String, Object> businessTools = buildBusinessToolEvidence(order, request.getContent(), intent);
         trace(id, userMessage.getId(), "BUSINESS_TOOL_CALLS", "SUCCESS",
                 detail("title", "LangChain4j 业务工具",
                         "tools", businessTools.get("tools"),
                         "summary", "已把订单查询、知识检索和工单能力封装为可调用工具，并将结果注入模型上下文"));
 
-        String aiPrompt = buildAiPrompt(request.getContent(), intent, orderContext, hits, localReply, conversationContext, businessTools);
-        boolean useAi = request.getUseAi() == null || request.getUseAi();
+        String aiPrompt = buildAiPrompt(request.getContent(), intent, orderContext, productInsight, hits, localReply, conversationContext, businessTools);
         AiService.AiResult aiResult = useAi
                 ? aiService.generate(aiPrompt)
                 : new AiService.AiResult(false, "SKIPPED", true, "local-fallback", "local-rule-template", "", 0, "本轮未启用 AI");
@@ -252,6 +270,7 @@ public class ChatServiceImpl implements ChatService {
         data.put("intent", intent);
         data.put("context", conversationContext.toResponse(intent));
         data.put("orderContext", orderContext);
+        data.put("productInsight", productInsight);
         data.put("knowledgeHits", hits);
         data.put("businessTools", businessTools);
         Map<String, Object> ai = new LinkedHashMap<>();
@@ -393,7 +412,7 @@ public class ChatServiceImpl implements ChatService {
         if (containsAny(text, "换货", "换一个", "更换", "换大一码", "换小一码")) {
             return new IntentDecision("EXCHANGE_APPLY", 0.89, 0.92);
         }
-        if (containsAny(text, "退货", "退掉", "不要了", "能不能退", "七天无理由", "拒收")) {
+        if (containsAny(text, "退货", "退掉", "想退", "要退", "不想要", "不要了", "能不能退", "七天无理由", "拒收")) {
             return new IntentDecision("RETURN_APPLY", 0.89, 0.92);
         }
         if (containsAny(text, "退款", "到账", "钱", "退到哪里", "退回", "原路", "多久到账")) {
@@ -442,31 +461,34 @@ public class ChatServiceImpl implements ChatService {
         return map;
     }
 
-    private String buildReply(IntentRecord intent, DemoOrder order, List<KnowledgeDoc> hits, ConversationContext context) {
+    private String buildReply(IntentRecord intent, DemoOrder order, List<KnowledgeDoc> hits, ConversationContext context, ProductInsight productInsight) {
         String contextText = context.followUp() && hasText(context.inheritedIntentCode())
                 ? "结合你前面关于“" + intentName(context.inheritedIntentCode()) + "”的追问，"
                 : "";
         String basis = hits.isEmpty() ? "当前知识库没有精确命中规则，以下回复基于本地售后流程模板。" : "已参考知识库：" + hits.get(0).getTitle() + "。";
         String orderText = order == null ? "你还没有提供订单号，建议补充订单号后我可以结合订单状态判断。" :
                 "当前订单号为 " + order.getOrderNo() + "，订单状态为 " + order.getOrderStatus() + "，售后状态为 " + order.getAfterSaleStatus() + "。";
+        String productText = productInsight == null || !hasText(productInsight.getLocalSummary())
+                ? ""
+                : " 产品顾问提示：" + trim(productInsight.getLocalSummary(), 160);
         AfterSaleRecord latest = order == null ? null : latestAfterSale(afterSaleRecordMapper.listByOrderId(order.getId()));
         if (latest != null && isApplyIntent(intent.getIntentCode()) && hasActiveAfterSale(latest)) {
             return contextText + orderText + "系统已查到这单已有" + afterSaleTypeText(latest.getServiceType())
                     + "申请，当前状态为" + afterSaleStatusText(latest.getStatus())
-                    + "，无需重复提交。你可以继续等待商家处理，或补充问题照片、物流凭证后联系人工客服跟进。";
+                    + "，无需重复提交。你可以继续等待商家处理，或补充问题照片、物流凭证后联系人工客服跟进。" + productText;
         }
         return contextText + switch (intent.getIntentCode()) {
-            case "RETURN_APPLY" -> orderText + basis + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
-            case "EXCHANGE_APPLY" -> orderText + basis + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
+            case "RETURN_APPLY" -> orderText + basis + productText + " 如商品已签收且仍在规则允许时间内，通常可以在订单详情页提交退货申请，并保持商品完好、配件齐全。";
+            case "EXCHANGE_APPLY" -> orderText + basis + productText + " 如果商品存在质量问题或规格不符，可以提交换货申请，并上传问题照片方便商家审核。";
             case "REFUND_PROGRESS" -> orderText + basis + " 退款一般会在商家确认收货或审核通过后按原支付渠道退回，具体到账时间以支付渠道为准。";
             case "LOGISTICS_QUERY" -> orderText + basis + " 如果物流长时间不更新，建议先查看最新物流节点，必要时联系商家或申请平台介入。";
             case "COMPLAINT_TRANSFER" -> orderText + basis + " 我已将问题整理成人工客服工单，后续客服可以根据订单、意图和对话摘要继续处理。";
-            case "PRE_SALE" -> basis + " 你可以补充商品型号、预算和使用场景，我会按售后规则和商品信息给出咨询建议。";
+            case "PRE_SALE" -> basis + productText + " 你可以补充商品型号、预算和使用场景，我会按售后规则和商品信息给出咨询建议。";
             default -> orderText + basis + " 请补充更具体的问题，例如退货、换货、退款进度或物流异常。";
         };
     }
 
-    private String buildAiPrompt(String userMessage, IntentRecord intent, Map<String, Object> orderContext, List<KnowledgeDoc> hits,
+    private String buildAiPrompt(String userMessage, IntentRecord intent, Map<String, Object> orderContext, ProductInsight productInsight, List<KnowledgeDoc> hits,
                                  String localReply, ConversationContext context, Map<String, Object> businessTools) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("你是电商退换货智能客服系统的回复生成模块。请基于已给出的业务判断、订单上下文、对话上下文和知识库依据，生成一段简洁、可靠、可执行的中文客服回复。\n\n");
@@ -476,7 +498,8 @@ public class ChatServiceImpl implements ChatService {
         prompt.append("3. 如果知识库依据为空，只能给出通用建议。\n");
         prompt.append("4. 如果本轮是追问，要自然承接上一轮，不要像重新开场。\n");
         prompt.append("5. 如果订单已有售后申请，不要引导用户重复提交，要说明当前申请状态和下一步。\n");
-        prompt.append("6. 回复适合展示在客服工作台，语气礼貌清楚，控制在 180 字以内。\n\n");
+        prompt.append("6. 可以引用产品智能顾问中的参数、排查步骤和同类对比，但不要夸大商品能力。\n");
+        prompt.append("7. 回复适合展示在客服工作台，语气礼貌清楚，控制在 220 字以内。\n\n");
         prompt.append("用户本轮问题：\n").append(nullToEmpty(userMessage)).append("\n\n");
         prompt.append("多轮上下文：\n").append(context.summary()).append("\n");
         for (String line : context.recentPromptLines()) {
@@ -488,6 +511,7 @@ public class ChatServiceImpl implements ChatService {
                 .append(intent.getConfidence()).append("，方法 ")
                 .append(intent.getMethod()).append("\n\n");
         prompt.append("订单上下文：\n").append(orderContext).append("\n\n");
+        prompt.append("产品智能顾问：\n").append(productInsight == null ? "未生成产品洞察" : productInsight).append("\n\n");
         prompt.append("LangChain4j 业务工具结果：\n").append(businessTools).append("\n\n");
         prompt.append("知识库命中：\n");
         if (hits.isEmpty()) {
@@ -510,8 +534,10 @@ public class ChatServiceImpl implements ChatService {
     private Map<String, Object> buildBusinessToolEvidence(DemoOrder order, String question, IntentRecord intent) {
         String orderNo = order == null ? "" : order.getOrderNo();
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("tools", List.of("queryOrderStatus", "searchAfterSaleKnowledge", "createServiceTicket"));
+        data.put("tools", List.of("queryOrderStatus", "queryProductProfile", "generateProductInsight", "searchAfterSaleKnowledge", "createServiceTicket"));
         data.put("orderStatus", aiBusinessToolService.queryOrderStatus(orderNo));
+        data.put("productProfile", aiBusinessToolService.queryProductProfile(orderNo));
+        data.put("productInsight", aiBusinessToolService.generateProductInsight(orderNo, question));
         data.put("knowledgeEvidence", aiBusinessToolService.searchAfterSaleKnowledge(question, intent.getIntentCode()));
         data.put("ticketTool", "当用户触发投诉、人工客服或异常升级时，业务链路会调用 createServiceTicket 创建或复用工单");
         return data;
