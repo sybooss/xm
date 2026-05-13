@@ -152,6 +152,10 @@
           </div>
         </div>
 
+        <div v-if="selectedAfterSale.diagnosis" class="diagnosis-detail-box">
+          <AfterSaleDiagnosisPanel :diagnosis="selectedAfterSale.diagnosis" />
+        </div>
+
         <div class="timeline-box">
           <h4>处理时间线</h4>
           <el-timeline>
@@ -219,6 +223,26 @@
         <el-form-item label="问题说明">
           <el-input v-model="applyForm.reasonText" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="请说明问题、期望处理方式和已有凭证。" />
         </el-form-item>
+        <el-form-item label="智能诊断">
+          <div class="diagnosis-action">
+            <el-button type="primary" plain :loading="diagnosing" @click="runDiagnosis">智能诊断</el-button>
+            <span>提交前先生成处理路径、凭证要求和多方案建议。</span>
+          </div>
+        </el-form-item>
+        <el-form-item v-if="currentDiagnosis" label="诊断结果">
+          <div class="diagnosis-form-block">
+            <AfterSaleDiagnosisPanel :diagnosis="currentDiagnosis" compact />
+            <el-button
+              v-if="currentDiagnosis.suggestedServiceType && currentDiagnosis.suggestedServiceType !== applyForm.serviceType && currentDiagnosis.suggestedServiceType !== 'REPAIR'"
+              class="adopt-diagnosis"
+              size="small"
+              type="success"
+              @click="adoptDiagnosisType"
+            >
+              采用推荐类型
+            </el-button>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="applyDialogVisible = false">取消</el-button>
@@ -270,10 +294,12 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
+import AfterSaleDiagnosisPanel from '../components/after-sale/AfterSaleDiagnosisPanel.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { pageOrders } from '../api/orderApi'
 import {
   addCustomerAfterSaleEvidence,
+  createAfterSaleDiagnosis,
   createCustomerAfterSale,
   createCustomerAfterSaleReview,
   getCustomerAfterSale,
@@ -297,6 +323,7 @@ const afterSaleLoading = ref(false)
 const submitting = ref(false)
 const evidenceSubmitting = ref(false)
 const reviewSubmitting = ref(false)
+const diagnosing = ref(false)
 const applyDialogVisible = ref(false)
 const evidenceDialogVisible = ref(false)
 const reviewDialogVisible = ref(false)
@@ -304,6 +331,7 @@ const applyForm = reactive(defaultApplyForm())
 const evidenceForm = reactive(defaultEvidenceForm())
 const reviewForm = reactive(defaultReviewForm())
 const selectedReview = ref(null)
+const currentDiagnosis = ref(null)
 
 const activeAfterSaleCount = computed(() => afterSales.value.filter(item => !['REJECTED', 'COMPLETED', 'CANCELLED'].includes(item.status)).length)
 const needCustomerActionCount = computed(() => afterSales.value.filter(item => ['NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND'].includes(item.status)).length)
@@ -358,11 +386,43 @@ async function selectAfterSale(row) {
 
 function openApplyDialog(order) {
   applyingOrder.value = order
+  currentDiagnosis.value = null
   Object.assign(applyForm, defaultApplyForm(), {
     orderId: order.id,
     refundAmount: Number(order.orderAmount || 0)
   })
   applyDialogVisible.value = true
+}
+
+async function runDiagnosis() {
+  if (!applyingOrder.value) return
+  if (!applyForm.reasonText) {
+    ElMessage.warning('请先填写问题说明')
+    return
+  }
+  diagnosing.value = true
+  try {
+    currentDiagnosis.value = await createAfterSaleDiagnosis({
+      orderId: applyingOrder.value.id,
+      issueText: applyForm.reasonText,
+      serviceType: applyForm.serviceType,
+      refundAmount: applyForm.refundAmount,
+      useAi: false
+    })
+    if (currentDiagnosis.value?.suggestedServiceType && currentDiagnosis.value.suggestedServiceType !== 'REPAIR') {
+      applyForm.serviceType = currentDiagnosis.value.suggestedServiceType
+    }
+    ElMessage.success('智能诊断已生成')
+  } finally {
+    diagnosing.value = false
+  }
+}
+
+function adoptDiagnosisType() {
+  if (!currentDiagnosis.value?.suggestedServiceType || currentDiagnosis.value.suggestedServiceType === 'REPAIR') {
+    return
+  }
+  applyForm.serviceType = currentDiagnosis.value.suggestedServiceType
 }
 
 function openEvidenceDialog() {
@@ -383,7 +443,11 @@ async function submitApplication() {
   }
   submitting.value = true
   try {
-    const created = await createCustomerAfterSale({ ...applyForm, orderId: applyingOrder.value.id })
+    const created = await createCustomerAfterSale({
+      ...applyForm,
+      orderId: applyingOrder.value.id,
+      diagnosisId: currentDiagnosis.value?.id || null
+    })
     ElMessage.success('售后申请已提交')
     applyDialogVisible.value = false
     selectedAfterSale.value = created
@@ -556,6 +620,10 @@ onMounted(reloadAll)
   background: var(--surface-soft);
 }
 
+.diagnosis-detail-box {
+  min-width: 0;
+}
+
 .result-header,
 .final-reply,
 .next-action {
@@ -659,6 +727,24 @@ onMounted(reloadAll)
 .evidence-list h4 {
   margin: 0 0 12px;
   font-size: 14px;
+}
+
+.diagnosis-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.diagnosis-form-block {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.adopt-diagnosis {
+  justify-self: start;
 }
 
 .empty-evidence {

@@ -5,11 +5,12 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class AfterSaleApplicationCreateRequest {
+public class AfterSaleDiagnosisRequest {
     private Long orderId;
-    private Long diagnosisId;
+    private String orderNo;
+    private Long sessionId;
+    private String issueText;
     private String serviceType;
-    private String reasonCode;
-    private String reasonText;
     private BigDecimal refundAmount;
+    private Boolean useAi;
 }

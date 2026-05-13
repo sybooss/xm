@@ -30,4 +30,6 @@ public interface AfterSaleApplicationMapper {
     void updateDecision(AfterSaleApplication application);
 
     void bindTicket(@Param("id") Long id, @Param("ticketId") Long ticketId);
+
+    void bindDiagnosis(@Param("id") Long id, @Param("diagnosisId") Long diagnosisId);
 }

@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS after_sale_application (
   sla_deadline DATETIME NULL,
   assigned_to BIGINT NULL,
   ticket_id BIGINT NULL,
+  diagnosis_id BIGINT NULL,
   ai_summary TEXT NULL,
   risk_level VARCHAR(20) NOT NULL DEFAULT 'LOW',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -120,6 +121,7 @@ CREATE TABLE IF NOT EXISTS after_sale_application (
   INDEX idx_after_sale_application_user (user_id, status),
   INDEX idx_after_sale_application_order (order_id),
   INDEX idx_after_sale_application_ticket (ticket_id),
+  INDEX idx_after_sale_application_diagnosis (diagnosis_id),
   INDEX idx_after_sale_application_status (status, priority, updated_at),
   INDEX idx_after_sale_application_sla (sla_deadline, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -155,6 +157,68 @@ SET @after_sale_application_ticket_index_sql = IF(
 PREPARE after_sale_application_ticket_index_stmt FROM @after_sale_application_ticket_index_sql;
 EXECUTE after_sale_application_ticket_index_stmt;
 DEALLOCATE PREPARE after_sale_application_ticket_index_stmt;
+
+SET @after_sale_application_diagnosis_column_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'after_sale_application'
+    AND column_name = 'diagnosis_id'
+);
+SET @after_sale_application_diagnosis_column_sql = IF(
+  @after_sale_application_diagnosis_column_exists = 0,
+  'ALTER TABLE after_sale_application ADD COLUMN diagnosis_id BIGINT NULL AFTER ticket_id',
+  'SELECT 1'
+);
+PREPARE after_sale_application_diagnosis_column_stmt FROM @after_sale_application_diagnosis_column_sql;
+EXECUTE after_sale_application_diagnosis_column_stmt;
+DEALLOCATE PREPARE after_sale_application_diagnosis_column_stmt;
+
+SET @after_sale_application_diagnosis_index_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.statistics
+  WHERE table_schema = DATABASE()
+    AND table_name = 'after_sale_application'
+    AND index_name = 'idx_after_sale_application_diagnosis'
+);
+SET @after_sale_application_diagnosis_index_sql = IF(
+  @after_sale_application_diagnosis_index_exists = 0,
+  'ALTER TABLE after_sale_application ADD INDEX idx_after_sale_application_diagnosis (diagnosis_id)',
+  'SELECT 1'
+);
+PREPARE after_sale_application_diagnosis_index_stmt FROM @after_sale_application_diagnosis_index_sql;
+EXECUTE after_sale_application_diagnosis_index_stmt;
+DEALLOCATE PREPARE after_sale_application_diagnosis_index_stmt;
+
+CREATE TABLE IF NOT EXISTS after_sale_diagnosis (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  diagnosis_no VARCHAR(40) NOT NULL,
+  application_id BIGINT NULL,
+  session_id BIGINT NULL,
+  order_id BIGINT NOT NULL,
+  user_id BIGINT NULL,
+  issue_text VARCHAR(1000) NOT NULL,
+  suggested_service_type VARCHAR(30) NOT NULL,
+  decision_level VARCHAR(30) NOT NULL,
+  reason_summary VARCHAR(1000) NOT NULL,
+  required_evidence VARCHAR(1000) NULL,
+  solution_options_json JSON NULL,
+  ai_summary VARCHAR(1000) NULL,
+  ai_status VARCHAR(20) NOT NULL DEFAULT 'SKIPPED',
+  ai_error_message VARCHAR(1000) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uk_after_sale_diagnosis_no UNIQUE (diagnosis_no),
+  CONSTRAINT fk_after_sale_diagnosis_application FOREIGN KEY (application_id) REFERENCES after_sale_application(id) ON DELETE SET NULL,
+  CONSTRAINT fk_after_sale_diagnosis_order FOREIGN KEY (order_id) REFERENCES demo_order(id) ON DELETE CASCADE,
+  CONSTRAINT fk_after_sale_diagnosis_user FOREIGN KEY (user_id) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT ck_after_sale_diagnosis_service CHECK (suggested_service_type IN ('RETURN', 'EXCHANGE', 'REFUND', 'COMPLAINT', 'REPAIR')),
+  CONSTRAINT ck_after_sale_diagnosis_level CHECK (decision_level IN ('ALLOW', 'NEED_EVIDENCE', 'MANUAL_REVIEW', 'REJECT_SUGGESTED')),
+  CONSTRAINT ck_after_sale_diagnosis_ai_status CHECK (ai_status IN ('SUCCESS', 'FAILED', 'SKIPPED')),
+  INDEX idx_after_sale_diagnosis_application (application_id),
+  INDEX idx_after_sale_diagnosis_session (session_id, created_at),
+  INDEX idx_after_sale_diagnosis_order (order_id, created_at),
+  INDEX idx_after_sale_diagnosis_user (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS after_sale_process_log (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,

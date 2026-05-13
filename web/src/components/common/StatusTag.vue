@@ -70,6 +70,13 @@ const label = computed(() => {
     EXCHANGE: '换货',
     REFUND: '仅退款',
     COMPLAINT: '投诉',
+    REPAIR: '维修检测',
+    KEEP: '先排查',
+    EVIDENCE: '补充凭证',
+    MANUAL: '人工复核',
+    ALLOW: '建议可受理',
+    MANUAL_REVIEW: '人工复核',
+    REJECT_SUGGESTED: '暂不建议提交',
     SUBMIT: '提交申请',
     APPROVE: '审核通过',
     REJECT: '审核驳回',
@@ -105,10 +112,10 @@ const label = computed(() => {
 })
 
 const tagType = computed(() => {
-  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', 'CREATE_TICKET', 'USE_REPLY_DRAFT', 'SUBMIT_REVIEW', 'AI', 'USED', '已验证'].includes(normalized.value)) return 'success'
-  if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED', 'DISCARD_REPLY_DRAFT', 'DISCARDED', '已超时'].includes(normalized.value)) return 'danger'
-  if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID'].includes(normalized.value)) return 'info'
-  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'TEMPLATE', 'MANUAL', 'DRAFT', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
+  if (['UP', 'SUCCESS', 'AI_ENHANCED', 'ENABLED', 'RESOLVED', 'ADMIN', 'SIGNED', 'PAID', 'DELIVERED', 'FINISHED', 'APPROVED', 'COMPLETED', 'APPROVE', 'CONFIRM', 'CREATE_TICKET', 'USE_REPLY_DRAFT', 'SUBMIT_REVIEW', 'AI', 'USED', 'ALLOW', '已验证'].includes(normalized.value)) return 'success'
+  if (['FAILED', 'DISABLED', 'URGENT', 'ABNORMAL', 'REJECTED', 'REJECT_SUGGESTED', 'DISCARD_REPLY_DRAFT', 'DISCARDED', '已超时'].includes(normalized.value)) return 'danger'
+  if (['SKIPPED', 'FALLBACK', 'CLOSED', 'LOW', 'NONE', 'NOT_SHIPPED', 'UNPAID', 'KEEP', 'REPAIR'].includes(normalized.value)) return 'info'
+  if (['THINKING', 'AFTER_SALE', 'PENDING', 'PROCESSING', 'HIGH', 'IN_TRANSIT', 'RETURN_APPLYING', 'RETURNING', 'EXCHANGE_APPLYING', 'REFUNDING', 'APPLIED', 'SUBMITTED', 'UNDER_REVIEW', 'NEED_MORE_EVIDENCE', 'NEED_EVIDENCE', 'MANUAL_REVIEW', 'WAIT_BUYER_SEND', 'WAIT_SELLER_RECEIVE', 'WAIT_SELLER_CONFIRM', 'EXCHANGING', 'PENDING_PAY', 'SUBMIT', 'REQUEST_MORE_EVIDENCE', 'SUPPLEMENT_EVIDENCE', 'UPDATE_TICKET', 'GENERATE_REPLY_DRAFT', 'TEMPLATE', 'MANUAL', 'EVIDENCE', 'DRAFT', 'SYSTEM_MARK'].includes(normalized.value)) return 'warning'
   return 'primary'
 })
 </script>

@@ -94,6 +94,8 @@
             <el-descriptions-item label="AI 摘要" :span="2">{{ selected.aiSummary || '暂无 AI 摘要，按人工审核流程处理。' }}</el-descriptions-item>
           </el-descriptions>
 
+          <AfterSaleDiagnosisPanel v-if="selected.diagnosis" :diagnosis="selected.diagnosis" />
+
           <div class="ticket-box">
             <div class="ticket-main">
               <div>
@@ -197,6 +199,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Close, Promotion, Refresh, Search, Ticket } from '@element-plus/icons-vue'
+import AfterSaleDiagnosisPanel from '../components/after-sale/AfterSaleDiagnosisPanel.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   approveAfterSale,

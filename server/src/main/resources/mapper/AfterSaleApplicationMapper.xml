@@ -116,4 +116,8 @@
     <update id="bindTicket">
         update after_sale_application set ticket_id=#{ticketId} where id=#{id}
     </update>
+
+    <update id="bindDiagnosis">
+        update after_sale_application set diagnosis_id=#{diagnosisId} where id=#{id}
+    </update>
 </mapper>

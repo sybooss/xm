@@ -22,6 +22,10 @@ public class NoUtils {
         return "T" + now() + random();
     }
 
+    public static String diagnosisNo() {
+        return "DG" + now() + random();
+    }
+
     private static String now() {
         return LocalDateTime.now().format(FORMATTER);
     }

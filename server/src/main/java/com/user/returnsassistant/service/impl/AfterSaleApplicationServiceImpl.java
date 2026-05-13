@@ -13,6 +13,7 @@ import com.user.returnsassistant.pojo.AfterSaleActionRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplication;
 import com.user.returnsassistant.pojo.AfterSaleApplicationCreateRequest;
 import com.user.returnsassistant.pojo.AfterSaleApplicationSearch;
+import com.user.returnsassistant.pojo.AfterSaleDiagnosis;
 import com.user.returnsassistant.pojo.AfterSaleEvidence;
 import com.user.returnsassistant.pojo.AfterSaleEvidenceRequest;
 import com.user.returnsassistant.pojo.AfterSaleProcessLog;
@@ -22,6 +23,7 @@ import com.user.returnsassistant.pojo.PageResult;
 import com.user.returnsassistant.pojo.ServiceTicket;
 import com.user.returnsassistant.pojo.UserAccount;
 import com.user.returnsassistant.service.AfterSaleApplicationService;
+import com.user.returnsassistant.service.AfterSaleDiagnosisService;
 import com.user.returnsassistant.utils.NoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,8 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
     private ChatSessionMapper sessionMapper;
     @Autowired
     private ServiceTicketMapper ticketMapper;
+    @Autowired
+    private AfterSaleDiagnosisService diagnosisService;
 
     @Override
     public PageResult<AfterSaleApplication> page(AfterSaleApplicationSearch search) {
@@ -67,6 +71,9 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         }
         application.setProcessLogs(processLogMapper.listByApplicationId(id));
         application.setEvidences(evidenceMapper.listByApplicationId(id));
+        if (application.getDiagnosisId() != null) {
+            application.setDiagnosis(diagnosisService.getInternal(application.getDiagnosisId()));
+        }
         hydrateCustomerResult(application);
         return application;
     }
@@ -93,6 +100,7 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         if (applicationMapper.countActiveByOrderId(order.getId()) > 0) {
             throw new BusinessException("该订单已有进行中的售后申请");
         }
+        AfterSaleDiagnosis diagnosis = diagnosisService.getOwnedForBinding(request.getDiagnosisId(), order.getId(), customer);
 
         String serviceType = normalizeServiceType(request.getServiceType());
         BigDecimal refundAmount = normalizeAmount(request.getRefundAmount());
@@ -114,7 +122,16 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         application.setSlaDeadline(LocalDateTime.now().plusHours("COMPLAINT".equals(serviceType) ? 12 : 48));
         application.setRiskLevel(resolveRiskLevel(serviceType, refundAmount, order.getOrderAmount()));
         applicationMapper.insert(application);
+        if (diagnosis != null) {
+            diagnosisService.bindApplication(diagnosis.getId(), application.getId());
+            applicationMapper.bindDiagnosis(application.getId(), diagnosis.getId());
+        }
         writeLog(application.getId(), customer, "SUBMIT", null, "SUBMITTED", "顾客提交售后申请：" + application.getReasonText());
+        if (diagnosis != null) {
+            writeLog(application.getId(), customer, "SYSTEM_MARK", "SUBMITTED", "SUBMITTED",
+                    "已绑定前置诊断：" + diagnosis.getDiagnosisNo() + "，建议 "
+                            + diagnosis.getSuggestedServiceType() + " / " + diagnosis.getDecisionLevel());
+        }
         orderMapper.updateAfterSaleStatus(order.getId(), toOrderAfterSaleStatus(serviceType, "SUBMITTED"));
         return getById(application.getId());
     }

@@ -27,6 +27,7 @@ public class AfterSaleApplication {
     private Long assignedTo;
     private String assignedToName;
     private Long ticketId;
+    private Long diagnosisId;
     private String ticketNo;
     private String ticketStatus;
     private String aiSummary;
@@ -37,6 +38,7 @@ public class AfterSaleApplication {
     private String customerResultSummary;
     private String customerFinalReply;
     private String customerNextAction;
+    private AfterSaleDiagnosis diagnosis;
     private List<AfterSaleProcessLog> processLogs;
     private List<AfterSaleEvidence> evidences;
 }
