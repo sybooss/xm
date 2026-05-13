@@ -39,6 +39,7 @@ public class AfterSaleApplication {
     private String customerFinalReply;
     private String customerNextAction;
     private AfterSaleDiagnosis diagnosis;
+    private AfterSaleRiskAssessment riskAssessment;
     private List<AfterSaleProcessLog> processLogs;
     private List<AfterSaleEvidence> evidences;
 }

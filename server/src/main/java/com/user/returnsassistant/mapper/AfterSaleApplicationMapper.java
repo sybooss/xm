@@ -29,6 +29,8 @@ public interface AfterSaleApplicationMapper {
 
     void updateDecision(AfterSaleApplication application);
 
+    void updateRiskLevel(@Param("id") Long id, @Param("riskLevel") String riskLevel);
+
     void bindTicket(@Param("id") Long id, @Param("ticketId") Long ticketId);
 
     void bindDiagnosis(@Param("id") Long id, @Param("diagnosisId") Long diagnosisId);

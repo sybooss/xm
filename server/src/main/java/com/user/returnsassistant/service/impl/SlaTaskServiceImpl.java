@@ -33,16 +33,20 @@ public class SlaTaskServiceImpl implements SlaTaskService {
 
     private void enrich(SlaTask task, LocalDateTime now) {
         if (task.getSlaDeadline() == null) {
-            task.setRiskLabel("未设置 SLA");
+            task.setRiskLabel(hasText(task.getRiskTags()) ? task.getRiskTags() : "未设置 SLA");
             task.setRemainingHours(null);
             return;
         }
         long hours = Duration.between(now, task.getSlaDeadline()).toHours();
         task.setRemainingHours(hours);
-        if (hours < 0) {
+        if ("HIGH".equals(task.getAssessmentRiskLevel()) && hasText(task.getRiskTags())) {
+            task.setRiskLabel(task.getRiskTags());
+        } else if (hours < 0) {
             task.setRiskLabel("已超时");
         } else if (hours <= 24) {
             task.setRiskLabel("即将超时");
+        } else if ("MEDIUM".equals(task.getAssessmentRiskLevel()) && hasText(task.getRiskTags())) {
+            task.setRiskLabel(task.getRiskTags());
         } else if ("URGENT".equals(task.getPriority()) || "HIGH".equals(task.getPriority())) {
             task.setRiskLabel("高优先级");
         } else if ("NEED_MORE_EVIDENCE".equals(task.getStatus())) {
@@ -50,5 +54,9 @@ public class SlaTaskServiceImpl implements SlaTaskService {
         } else {
             task.setRiskLabel("正常跟进");
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

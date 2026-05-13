@@ -46,6 +46,14 @@
         select * from demo_order where order_no=#{orderNo}
     </select>
 
+    <select id="countAfterSalesByProductSince" resultType="long">
+        select count(*)
+        from after_sale_application a
+        left join demo_order o on a.order_id=o.id
+        where o.product_name=#{productName}
+          and a.created_at &gt;= date_sub(now(), interval #{days} day)
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into demo_order(order_no, user_id, product_name, sku_name, order_amount, pay_status, order_status, logistics_status, after_sale_status, paid_at, shipped_at, signed_at)
         values(#{orderNo}, #{userId}, #{productName}, #{skuName}, #{orderAmount}, #{payStatus}, #{orderStatus}, #{logisticsStatus}, coalesce(#{afterSaleStatus}, 'NONE'), #{paidAt}, #{shippedAt}, #{signedAt})

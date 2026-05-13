@@ -370,6 +370,19 @@ try {
     $adminEvidenceAuditOk = @($adminEvidenceAudits | Where-Object { $_.evidenceId -eq $evidence.id }).Count -ge 1
     Add-Result "admin after-sale evidence audit list" $adminEvidenceAuditOk "audits=$(@($adminEvidenceAudits).Count)"
 
+    $riskAssessment = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/risk-assessment" @{
+        useAi = $false
+    }
+    $riskAssessmentDetail = Api-Get "/admin/after-sales/$($created.realAfterSaleId)"
+    $riskAssessmentList = Api-Get "/admin/risk-assessments?page=1&pageSize=5&keyword=$($riskAssessment.assessmentNo)"
+    $riskAssessmentOk = $null -ne $riskAssessmentDetail.riskAssessment -and
+                        $riskAssessmentDetail.riskAssessment.assessmentNo -eq $riskAssessment.assessmentNo -and
+                        @("LOW", "MEDIUM", "HIGH") -contains $riskAssessment.riskLevel -and
+                        $riskAssessment.riskScore -ge 0 -and
+                        $riskAssessmentList.total -ge 1 -and
+                        (@($riskAssessmentDetail.processLogs | Where-Object { $_.action -eq "RISK_ASSESSMENT" }).Count -ge 1)
+    Add-Result "admin after-sale risk assessment" $riskAssessmentOk "level=$($riskAssessment.riskLevel),score=$($riskAssessment.riskScore),tags=$($riskAssessment.riskTags)"
+
     $approvedApplication = Api-Post "/admin/after-sales/$($created.realAfterSaleId)/approve" @{
         remark = "Auto admin approved real after-sale flow"
         approvedAmount = 188.80

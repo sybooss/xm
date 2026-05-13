@@ -113,6 +113,10 @@
         where id=#{id}
     </update>
 
+    <update id="updateRiskLevel">
+        update after_sale_application set risk_level=#{riskLevel} where id=#{id}
+    </update>
+
     <update id="bindTicket">
         update after_sale_application set ticket_id=#{ticketId} where id=#{id}
     </update>

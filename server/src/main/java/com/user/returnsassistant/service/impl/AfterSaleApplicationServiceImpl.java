@@ -6,6 +6,7 @@ import com.user.returnsassistant.exception.BusinessException;
 import com.user.returnsassistant.mapper.AfterSaleApplicationMapper;
 import com.user.returnsassistant.mapper.AfterSaleEvidenceMapper;
 import com.user.returnsassistant.mapper.AfterSaleProcessLogMapper;
+import com.user.returnsassistant.mapper.AfterSaleRiskAssessmentMapper;
 import com.user.returnsassistant.mapper.ChatSessionMapper;
 import com.user.returnsassistant.mapper.DemoOrderMapper;
 import com.user.returnsassistant.mapper.ServiceTicketMapper;
@@ -58,6 +59,8 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
     private AfterSaleDiagnosisService diagnosisService;
     @Autowired
     private EvidenceAuditService evidenceAuditService;
+    @Autowired
+    private AfterSaleRiskAssessmentMapper riskAssessmentMapper;
 
     @Override
     public PageResult<AfterSaleApplication> page(AfterSaleApplicationSearch search) {
@@ -78,6 +81,7 @@ public class AfterSaleApplicationServiceImpl implements AfterSaleApplicationServ
         if (application.getDiagnosisId() != null) {
             application.setDiagnosis(diagnosisService.getInternal(application.getDiagnosisId()));
         }
+        application.setRiskAssessment(riskAssessmentMapper.getByApplicationId(id));
         hydrateCustomerResult(application);
         return application;
     }

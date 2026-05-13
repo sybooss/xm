@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.returnsassistant.mapper.AfterSaleRiskAssessmentMapper">
+    <sql id="BaseSelect">
+        select r.*,
+               a.application_no,
+               a.service_type,
+               a.status,
+               a.user_id,
+               o.order_no,
+               o.product_name,
+               u.display_name as user_display_name
+        from after_sale_risk_assessment r
+        left join after_sale_application a on r.application_id=a.id
+        left join demo_order o on a.order_id=o.id
+        left join user_account u on a.user_id=u.id
+    </sql>
+
+    <sql id="SearchWhere">
+        where 1=1
+        <if test="s.riskLevel != null and s.riskLevel != ''">and r.risk_level=#{s.riskLevel}</if>
+        <if test="s.status != null and s.status != ''">and a.status=#{s.status}</if>
+        <if test="s.serviceType != null and s.serviceType != ''">and a.service_type=#{s.serviceType}</if>
+        <if test="s.keyword != null and s.keyword != ''">
+            and (
+                r.assessment_no like concat('%',#{s.keyword},'%')
+                or a.application_no like concat('%',#{s.keyword},'%')
+                or o.order_no like concat('%',#{s.keyword},'%')
+                or o.product_name like concat('%',#{s.keyword},'%')
+                or r.risk_tags like concat('%',#{s.keyword},'%')
+                or r.risk_reasons like concat('%',#{s.keyword},'%')
+            )
+        </if>
+    </sql>
+
+    <select id="getByApplicationId" resultType="com.user.returnsassistant.pojo.AfterSaleRiskAssessment">
+        <include refid="BaseSelect"/>
+        where r.application_id=#{applicationId}
+        limit 1
+    </select>
+
+    <select id="page" resultType="com.user.returnsassistant.pojo.AfterSaleRiskAssessment">
+        <include refid="BaseSelect"/>
+        <include refid="SearchWhere"/>
+        order by r.risk_score desc, r.updated_at desc, r.id desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into after_sale_risk_assessment(
+            assessment_no, application_id, risk_level, risk_score, risk_tags,
+            risk_reasons, suggested_action, rule_detail_json, ai_summary,
+            ai_status, ai_error_message
+        )
+        values(
+            #{assessmentNo}, #{applicationId}, #{riskLevel}, #{riskScore}, #{riskTags},
+            #{riskReasons}, #{suggestedAction}, #{ruleDetailJson}, #{aiSummary},
+            #{aiStatus}, #{aiErrorMessage}
+        )
+    </insert>
+
+    <update id="update">
+        update after_sale_risk_assessment
+        set risk_level=#{riskLevel},
+            risk_score=#{riskScore},
+            risk_tags=#{riskTags},
+            risk_reasons=#{riskReasons},
+            suggested_action=#{suggestedAction},
+            rule_detail_json=#{ruleDetailJson},
+            ai_summary=#{aiSummary},
+            ai_status=#{aiStatus},
+            ai_error_message=#{aiErrorMessage}
+        where id=#{id}
+    </update>
+</mapper>

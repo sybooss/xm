@@ -30,6 +30,10 @@ public class NoUtils {
         return "EA" + now() + random();
     }
 
+    public static String riskAssessmentNo() {
+        return "RA" + now() + random();
+    }
+
     private static String now() {
         return LocalDateTime.now().format(FORMATTER);
     }

@@ -5,6 +5,7 @@
         from after_sale_application a
         left join demo_order o on a.order_id=o.id
         left join user_account u on a.user_id=u.id
+        left join after_sale_risk_assessment ra on ra.application_id=a.id
     </sql>
 
     <sql id="SearchWhere">
@@ -47,6 +48,10 @@
                a.status,
                a.priority,
                a.risk_level,
+               ra.risk_score,
+               ra.risk_level as assessment_risk_level,
+               ra.risk_tags,
+               ra.suggested_action,
                a.refund_amount,
                a.sla_deadline,
                a.created_at,

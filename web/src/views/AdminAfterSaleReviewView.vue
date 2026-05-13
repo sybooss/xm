@@ -115,6 +115,17 @@
             </div>
           </div>
 
+          <div class="risk-box">
+            <div class="risk-box-head">
+              <div>
+                <h4>售后风险识别</h4>
+                <p>融合用户历史、凭证审核、金额和 SLA，只作为人工审核辅助。</p>
+              </div>
+              <el-button type="primary" plain :loading="assessingRisk" @click="assessRisk">重新评估</el-button>
+            </div>
+            <AfterSaleRiskPanel :assessment="selected.riskAssessment" compact />
+          </div>
+
           <div class="ticket-box">
             <div class="ticket-main">
               <div>
@@ -219,9 +230,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Check, Close, Promotion, Refresh, Search, Ticket } from '@element-plus/icons-vue'
 import AfterSaleDiagnosisPanel from '../components/after-sale/AfterSaleDiagnosisPanel.vue'
+import AfterSaleRiskPanel from '../components/after-sale/AfterSaleRiskPanel.vue'
 import EvidenceAuditPanel from '../components/after-sale/EvidenceAuditPanel.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
+  assessAfterSaleRisk,
   approveAfterSale,
   completeAfterSale,
   createAfterSaleTicket,
@@ -248,6 +261,7 @@ const generatingDraft = ref(false)
 const savingDraft = ref(false)
 const auditingAll = ref(false)
 const auditingEvidenceId = ref(null)
+const assessingRisk = ref(false)
 const selected = ref(null)
 const replyDrafts = ref([])
 const decisionForm = reactive({ approvedAmount: 0, remark: '' })
@@ -401,6 +415,21 @@ async function auditAllEvidence() {
   }
 }
 
+async function assessRisk() {
+  if (!selected.value?.id) {
+    return
+  }
+  assessingRisk.value = true
+  try {
+    await assessAfterSaleRisk(selected.value.id, { useAi: false })
+    ElMessage.success('售后风险评估已更新')
+    selected.value = await getAdminAfterSale(selected.value.id)
+    await loadApplications()
+  } finally {
+    assessingRisk.value = false
+  }
+}
+
 async function loadReplyDrafts() {
   if (!selected.value?.id) {
     replyDrafts.value = []
@@ -494,6 +523,7 @@ onMounted(() => {
 .ticket-box,
 .ai-copilot-box,
 .audit-box,
+.risk-box,
 .evidence-list,
 .timeline-box {
   margin-top: 14px;
@@ -504,6 +534,7 @@ onMounted(() => {
 }
 
 .audit-box-head,
+.risk-box-head,
 .audit-item-meta {
   display: flex;
   align-items: center;
@@ -516,10 +547,16 @@ onMounted(() => {
   font-size: 15px;
 }
 
-.audit-box-head p {
+.audit-box-head p,
+.risk-box-head p {
   margin: 0;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.risk-box-head h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
 }
 
 .audit-item {

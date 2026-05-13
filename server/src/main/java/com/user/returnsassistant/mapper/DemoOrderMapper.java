@@ -18,6 +18,8 @@ public interface DemoOrderMapper {
 
     DemoOrder getByOrderNo(String orderNo);
 
+    long countAfterSalesByProductSince(@Param("productName") String productName, @Param("days") Integer days);
+
     void insert(DemoOrder order);
 
     void update(DemoOrder order);

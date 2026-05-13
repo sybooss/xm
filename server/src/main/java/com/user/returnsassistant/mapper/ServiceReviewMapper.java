@@ -16,6 +16,8 @@ public interface ServiceReviewMapper {
 
     long countLowRatingByUserId(@Param("userId") Long userId, @Param("maxRating") Integer maxRating);
 
+    long countLowRatingByUserIdSince(@Param("userId") Long userId, @Param("maxRating") Integer maxRating, @Param("days") Integer days);
+
     List<String> lowRatingReasonsByUserId(@Param("userId") Long userId, @Param("maxRating") Integer maxRating, @Param("limit") Integer limit);
 
     Double averageRatingByUserId(@Param("userId") Long userId);

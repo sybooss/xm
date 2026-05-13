@@ -35,6 +35,14 @@
           and rating &lt;= #{maxRating}
     </select>
 
+    <select id="countLowRatingByUserIdSince" resultType="long">
+        select count(*)
+        from service_review
+        where user_id=#{userId}
+          and rating &lt;= #{maxRating}
+          and created_at &gt;= date_sub(now(), interval #{days} day)
+    </select>
+
     <select id="lowRatingReasonsByUserId" resultType="string">
         select coalesce(nullif(tags, ''), nullif(comment, ''), concat(rating, '分评价')) as reason
         from service_review

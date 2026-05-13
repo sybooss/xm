@@ -53,6 +53,12 @@
           <el-table-column label="风险" width="110">
             <template #default="{ row }"><StatusTag :value="row.riskLabel" /></template>
           </el-table-column>
+          <el-table-column label="评估等级" width="100">
+            <template #default="{ row }"><StatusTag :value="row.assessmentRiskLevel || row.riskLevel" /></template>
+          </el-table-column>
+          <el-table-column label="风险分" width="90">
+            <template #default="{ row }">{{ row.riskScore ?? '-' }}</template>
+          </el-table-column>
           <el-table-column label="状态" width="120">
             <template #default="{ row }"><StatusTag :value="row.status" /></template>
           </el-table-column>
@@ -63,6 +69,7 @@
           <el-table-column label="剩余小时" width="100">
             <template #default="{ row }">{{ row.remainingHours ?? '-' }}</template>
           </el-table-column>
+          <el-table-column prop="suggestedAction" label="风控建议" min-width="220" show-overflow-tooltip />
           <el-table-column label="操作" width="128" fixed="right">
             <template #default="{ row }">
               <el-button size="small" type="primary" @click="goReview(row)">处理</el-button>
