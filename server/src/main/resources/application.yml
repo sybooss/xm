@@ -45,6 +45,11 @@ app:
     remote-models-cache-seconds: ${OPENAI_REMOTE_MODELS_CACHE_SECONDS:300}
     remote-models-timeout-seconds: ${OPENAI_REMOTE_MODELS_TIMEOUT_SECONDS:5}
     fallback-enabled: true
+  provenance:
+    c2pa:
+      enabled: ${C2PA_ENABLED:true}
+      tool-path: ${C2PATOOL_PATH:c2patool}
+      timeout-seconds: ${C2PA_TIMEOUT_SECONDS:8}
 
 langchain4j:
   open-ai:

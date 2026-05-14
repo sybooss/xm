@@ -2,6 +2,7 @@ package com.user.returnsassistant.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.user.returnsassistant.mapper.ProcessTraceMapper;
+import com.user.returnsassistant.pojo.C2paDetectionResult;
 import com.user.returnsassistant.pojo.ChatImageRisk;
 import com.user.returnsassistant.pojo.ChatMessage;
 import com.user.returnsassistant.pojo.ChatMessageRequest;
@@ -34,6 +35,8 @@ public class ChatImageRiskService {
     private ObjectMapper objectMapper;
     @Autowired
     private AiService aiService;
+    @Autowired
+    private C2paDetectionService c2paDetectionService;
 
     @Value("${app.upload.root:tmp/uploads}")
     private String uploadRoot;
@@ -54,6 +57,7 @@ public class ChatImageRiskService {
         Set<String> visualSignals = new LinkedHashSet<>();
         Set<String> watermarkSignals = new LinkedHashSet<>();
 
+        C2paDetectionResult c2paResult = c2paDetectionService.detect(request.getFileUrl());
         VisionDecision visionDecision = analyzeWithVisionModel(request, userContent, order);
         int contentLength = userContent == null ? 0 : userContent.trim().length();
         boolean imageType = normalize(request.getContentType()).startsWith("image/");
@@ -72,6 +76,27 @@ public class ChatImageRiskService {
         } else if (request.getFileSize() < 1024) {
             metadataSignals.add("图片文件体积异常偏小，可能不是完整原始照片。");
             tamperRiskScore++;
+        }
+        if (c2paResult != null) {
+            String c2paStatus = c2paResult.getStatus();
+            if ("DETECTED".equals(c2paStatus)) {
+                String signal = hasText(c2paResult.getSignal()) ? c2paResult.getSignal() : "C2PA 内容凭证存在来源信号。";
+                metadataSignals.add(signal);
+                watermarkSignals.add(signal);
+                if (containsAny(normalize(nullToEmpty(c2paResult.getProvider()) + " " + nullToEmpty(c2paResult.getGenerator())),
+                        "openai", "gpt-image", "dall-e", "dalle", "chatgpt")) {
+                    aiRiskScore += 4;
+                } else {
+                    aiRiskScore += 3;
+                }
+                authenticityScore++;
+            } else if ("NOT_FOUND".equals(c2paStatus)) {
+                metadataSignals.add("C2PA 内容凭证检测：未发现可用内容凭证，不能据此证明图片来源。");
+            } else if ("NOT_CONFIGURED".equals(c2paStatus) || "FAILED".equals(c2paStatus)) {
+                metadataSignals.add("C2PA 内容凭证检测不可用：" + nullToEmpty(c2paResult.getSignal()));
+            } else if ("SKIPPED".equals(c2paStatus) && hasText(c2paResult.getSignal())) {
+                metadataSignals.add("C2PA 内容凭证检测跳过：" + c2paResult.getSignal());
+            }
         }
         if (contentLength < 16) {
             required.add("补充图片说明，说明故障现象、出现时间和期望处理方式");
@@ -141,6 +166,10 @@ public class ChatImageRiskService {
         risk.setMetadataSignal(joinOrDefault(metadataSignals, "未发现明确元数据异常信号，聊天预审未读取真实 EXIF/C2PA。"));
         risk.setVisualSignal(joinOrDefault(visualSignals, "图片说明与售后问题未发现明显冲突，仍需客服结合原始文件判断。"));
         risk.setWatermarkSignal(joinOrDefault(watermarkSignals, "未发现明确水印或生成平台来源信号。"));
+        risk.setC2paStatus(c2paResult == null ? "SKIPPED" : c2paResult.getStatus());
+        risk.setC2paProvider(c2paResult == null ? null : c2paResult.getProvider());
+        risk.setC2paGenerator(c2paResult == null ? null : c2paResult.getGenerator());
+        risk.setC2paSignal(c2paResult == null ? "未执行 C2PA 内容凭证检测。" : c2paResult.getSignal());
         risk.setVisionStatus(visionDecision == null ? "SKIPPED" : visionDecision.status());
         risk.setVisionModel(visionDecision == null ? null : visionDecision.modelName());
         risk.setVisionSignal(visionDecision == null ? "未调用视觉模型或模型不可用，已使用本地规则兜底。" : visionDecision.rawSummary());
@@ -165,6 +194,9 @@ public class ChatImageRiskService {
         detail.put("authenticityRisk", risk.getAuthenticityRisk());
         detail.put("aiGeneratedRisk", risk.getAiGeneratedRisk());
         detail.put("tamperRisk", risk.getTamperRisk());
+        detail.put("c2paStatus", risk.getC2paStatus());
+        detail.put("c2paProvider", risk.getC2paProvider());
+        detail.put("c2paGenerator", risk.getC2paGenerator());
         detail.put("visionStatus", risk.getVisionStatus());
         detail.put("visionModel", risk.getVisionModel());
         detail.put("imageRisk", risk);
@@ -241,6 +273,9 @@ public class ChatImageRiskService {
 
     private String summary(ChatImageRisk risk) {
         if ("RISKY".equals(risk.getAuditStatus())) {
+            if ("DETECTED".equals(risk.getC2paStatus())) {
+                return "C2PA 内容凭证或视觉模型识别到聊天图片存在疑似 AI 生成、平台来源或二次处理风险，建议要求用户补充原始实拍材料并人工复核。";
+            }
             if ("SUCCESS".equals(risk.getVisionStatus())) {
                 return "视觉模型识别到聊天图片存在疑似 AI 生成、平台水印或二次处理风险，建议要求用户补充原始实拍材料并人工复核。";
             }

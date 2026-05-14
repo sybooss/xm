@@ -14,6 +14,10 @@ public class ChatImageRisk {
     private String metadataSignal;
     private String visualSignal;
     private String watermarkSignal;
+    private String c2paStatus;
+    private String c2paProvider;
+    private String c2paGenerator;
+    private String c2paSignal;
     private String visionStatus;
     private String visionModel;
     private String visionSignal;

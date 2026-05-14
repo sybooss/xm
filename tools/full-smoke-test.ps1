@@ -720,9 +720,10 @@ try {
                    $null -ne $chatImageMessage.imageRisk -and
                    $chatImageMessage.imageRisk.auditStatus -eq "RISKY" -and
                    $chatImageMessage.imageRisk.aiGeneratedRisk -eq "HIGH" -and
+                   -not [string]::IsNullOrWhiteSpace([string]$chatImageMessage.imageRisk.c2paStatus) -and
                    (-not $aiEnabled -or $chatImageMessage.imageRisk.visionStatus -eq "SUCCESS") -and
                    $chatImageMessage.imageRisk.watermarkSignal -like "*AI*"
-    Add-Result "chat image upload/message risk scan" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType),risk=$($chatImageMessage.imageRisk.auditStatus)/$($chatImageMessage.imageRisk.aiGeneratedRisk),vision=$($chatImageMessage.imageRisk.visionStatus)"
+    Add-Result "chat image upload/message risk scan" $chatImageOk "url=$($uploadedChatImage.fileUrl),type=$($chatImageMessage.userMessage.messageType),risk=$($chatImageMessage.imageRisk.auditStatus)/$($chatImageMessage.imageRisk.aiGeneratedRisk),c2pa=$($chatImageMessage.imageRisk.c2paStatus),vision=$($chatImageMessage.imageRisk.visionStatus)"
 
     $largeChatImagePath = Join-Path $uploadDir "chat-product-photo-large-$stamp.png"
     $largePngBytes = New-Object byte[] (2 * 1024 * 1024)

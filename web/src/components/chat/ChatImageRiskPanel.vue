@@ -36,6 +36,7 @@
     </div>
 
     <div v-if="showSignals" class="signal-list">
+      <p><strong>C2PA 内容凭证：</strong>{{ c2paLine }}</p>
       <p><strong>视觉模型：</strong>{{ visionLine }}</p>
       <p><strong>元数据：</strong>{{ risk.metadataSignal || '-' }}</p>
       <p><strong>视觉：</strong>{{ risk.visualSignal || '-' }}</p>
@@ -75,6 +76,14 @@ const visionLine = computed(() => {
   const model = props.risk?.visionModel ? ` · ${props.risk.visionModel}` : ''
   const signal = props.risk?.visionSignal ? ` · ${props.risk.visionSignal}` : ''
   return `${status}${model}${signal}`
+})
+
+const c2paLine = computed(() => {
+  const status = props.risk?.c2paStatus || 'SKIPPED'
+  const provider = props.risk?.c2paProvider ? ` · ${props.risk.c2paProvider}` : ''
+  const generator = props.risk?.c2paGenerator ? ` · ${props.risk.c2paGenerator}` : ''
+  const signal = props.risk?.c2paSignal ? ` · ${props.risk.c2paSignal}` : ''
+  return `${status}${provider}${generator}${signal}`
 })
 
 function splitText(value) {

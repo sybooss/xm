@@ -505,6 +505,7 @@ try {
   await expectText(page, '豆包AI生成坏损照片.png', 'chat image filename visible')
   await expectText(page, '图片真实性预审', 'chat image risk panel visible')
   await expectText(page, /AI 生成风险|风险较高|HIGH|高/, 'chat image risk result visible')
+  await expectText(page, 'C2PA 内容凭证', 'chat image C2PA provenance visible')
   await expectText(page, '视觉模型', 'chat image vision model visible')
   await expectText(page, 'RETURN_APPLY', 'chat intent visible')
   await expectText(page, 'AI 决策摘要', 'chat decision summary visible')
