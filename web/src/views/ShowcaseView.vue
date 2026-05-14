@@ -1,97 +1,124 @@
 <template>
-  <section class="showcase-page">
-    <div class="showcase-shell">
-      <main class="showcase-main">
-        <section class="hero-panel">
-          <div class="hero-copy">
-            <h2>电商退换货 AI 客服系统</h2>
+  <section class="operations-page">
+    <div class="operations-shell">
+      <main class="operations-main">
+        <section class="ops-hero">
+          <div class="ops-copy">
+            <span class="ops-kicker">售后运营首页</span>
+            <h2>退换货客服处理台</h2>
             <p>
-              把用户咨询、意图识别、知识依据、订单上下文、AI 增强、工单升级和日志追踪压进一条可演示闭环，
-              答辩时先跑通真实链路，再讲代码、数据和验证证据。
+              聚合咨询接待、售后审核、SLA 跟进、人工工单、知识库和服务日志，
+              帮助客服按真实退换货流程处理每日问题。
             </p>
-            <div class="hero-actions">
-              <el-button type="primary" :icon="ChatDotRound" size="large" @click="$router.push('/chat')">
-                开始演示链路
+            <div class="ops-actions">
+              <el-button type="primary" :icon="View" size="large" @click="$router.push('/admin/after-sales/review')">
+                进入待处理队列
               </el-button>
-              <el-button :icon="DocumentChecked" size="large" @click="$router.push('/logs')">
-                查看验证证据
+              <el-button :icon="ChatDotRound" size="large" @click="$router.push('/chat')">
+                打开咨询接待
               </el-button>
             </div>
           </div>
 
-          <div class="hero-visual" aria-hidden="true">
-            <div class="glass-stack stack-back"></div>
-            <div class="glass-stack stack-mid">
-              <el-icon><Tickets /></el-icon>
+          <div class="ops-status-card">
+            <div class="status-card-head">
+              <span>运行状态</span>
+              <el-button :icon="Refresh" circle :loading="systemStore.loading" @click="loadStatus" />
             </div>
-            <div class="glass-cube">
-              <el-icon><RefreshRight /></el-icon>
-            </div>
-            <div class="glass-stack stack-front">
-              <el-icon><ChatDotRound /></el-icon>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel flow-panel">
-          <div class="panel-header">
-            <h3 class="panel-title">流程</h3>
-            <span class="panel-caption">从用户问题到证据留痕，形成能现场跑通的售后闭环。</span>
-          </div>
-          <div class="closed-loop-flow">
-            <article v-for="(step, index) in demoSteps" :key="step.title" class="flow-node">
-              <span class="node-index">{{ index + 1 }}</span>
-              <el-icon><component :is="step.icon" /></el-icon>
-              <h4>{{ step.title }}</h4>
-              <p>{{ step.detail }}</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="panel roadmap-panel">
-          <div class="panel-header">
-            <h3 class="panel-title">闭环特色功能</h3>
-          </div>
-          <div class="feature-board">
-            <article v-for="item in featureRoadmap" :key="item.title" class="feature-card" :class="`feature-${item.state}`">
-              <div class="feature-icon">
-                <el-icon><component :is="item.icon" /></el-icon>
+            <div class="status-list">
+              <div class="status-row">
+                <span>数据库</span>
+                <StatusTag :value="systemStore.database.status" />
               </div>
-              <div class="feature-copy">
-                <div class="feature-title-row">
-                  <h4>{{ item.title }}</h4>
-                  <span class="feature-state">{{ item.stateLabel }}</span>
+              <div class="status-row">
+                <span>AI 辅助</span>
+                <StatusTag :value="systemStore.ai.status" />
+              </div>
+              <div class="status-row">
+                <span>当前模型</span>
+                <strong>{{ systemStore.ai.modelName || 'local-rule-template' }}</strong>
+              </div>
+              <div class="status-row">
+                <span>本地兜底</span>
+                <strong>{{ systemStore.ai.fallbackEnabled ? '已启用' : '未开启' }}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="metric-grid ops-metrics">
+          <div v-for="metric in queueMetrics" :key="metric.label" class="metric">
+            <div class="metric-label">{{ metric.label }}</div>
+            <div class="metric-value">{{ metric.value }}</div>
+            <p class="metric-note">{{ metric.note }}</p>
+          </div>
+        </section>
+
+        <section class="ops-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">客服处理流</h3>
+                <p class="panel-note">从用户咨询到售后完成，每一步都保留业务依据和服务记录。</p>
+              </div>
+            </div>
+            <div class="workflow-list">
+              <article v-for="(step, index) in workflowSteps" :key="step.title" class="workflow-step">
+                <span class="step-index">{{ index + 1 }}</span>
+                <div>
+                  <h4>{{ step.title }}</h4>
+                  <p>{{ step.detail }}</p>
                 </div>
-                <p>{{ item.detail }}</p>
-                <span class="evidence">{{ item.evidence }}</span>
+                <el-button link type="primary" @click="$router.push(step.path)">处理</el-button>
+              </article>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">今日关注</h3>
+                <p class="panel-note">优先处理会影响顾客体验和 SLA 的事项。</p>
               </div>
-            </article>
+            </div>
+            <div class="focus-list">
+              <article v-for="item in focusItems" :key="item.title" class="focus-item">
+                <div class="focus-icon">
+                  <el-icon><component :is="item.icon" /></el-icon>
+                </div>
+                <div>
+                  <h4>{{ item.title }}</h4>
+                  <p>{{ item.detail }}</p>
+                  <span>{{ item.action }}</span>
+                </div>
+              </article>
+            </div>
           </div>
         </section>
       </main>
 
-      <aside class="showcase-side">
-        <section class="panel status-panel">
-          <div class="panel-header compact">
-            <h3 class="panel-title">系统状态</h3>
-            <el-button :icon="Refresh" circle :loading="systemStore.loading" @click="loadStatus" />
+      <aside class="operations-side">
+        <section class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">快捷入口</h3>
           </div>
-          <div class="status-list">
-            <div class="status-row">
-              <span>数据库</span>
-              <StatusTag :value="systemStore.database.status" />
-            </div>
-            <div class="status-row">
-              <span>AI 服务</span>
-              <StatusTag :value="systemStore.ai.status" />
-            </div>
-            <div class="status-row">
-              <span>当前模型</span>
-              <strong>{{ systemStore.ai.modelName || 'local-rule-template' }}</strong>
-            </div>
-            <div class="status-row">
-              <span>兜底策略</span>
-              <strong>{{ systemStore.ai.fallbackEnabled ? '已启用' : '未开启' }}</strong>
+          <div class="quick-entry-list">
+            <button v-for="entry in quickEntries" :key="entry.path" type="button" @click="$router.push(entry.path)">
+              <el-icon><component :is="entry.icon" /></el-icon>
+              <span>{{ entry.label }}</span>
+              <small>{{ entry.desc }}</small>
+            </button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">质检依据</h3>
+          </div>
+          <div class="quality-list">
+            <div v-for="item in qualityItems" :key="item.title" class="quality-item">
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.detail }}</span>
             </div>
           </div>
         </section>
@@ -105,107 +132,57 @@ import { onMounted } from 'vue'
 import {
   ChatDotRound,
   Collection,
-  Connection,
   Cpu,
-  Document,
+  DataAnalysis,
   DocumentChecked,
-  Finished,
-  Lock,
-  Operation,
   Refresh,
-  RefreshRight,
-  Search,
   Service,
   Tickets,
-  TrendCharts
+  TrendCharts,
+  UserFilled,
+  View
 } from '@element-plus/icons-vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import { useSystemStore } from '../stores/systemStore'
 
 const systemStore = useSystemStore()
 
-const demoSteps = [
-  { title: '用户咨询', detail: '绑定订单并提出退货、退款、物流或投诉问题。', icon: ChatDotRound },
-  { title: '意图识别', detail: '结合本轮问题、历史上下文和订单状态判断售后意图。', icon: Cpu },
-  { title: '知识依据', detail: '检索退换货规则，展示命中文档和排序依据。', icon: Collection },
-  { title: '方案生成', detail: 'LangChain4j 增强回复，本地规则随时兜底。', icon: Operation },
-  { title: '工单升级', detail: '投诉、人工客服和异常物流自动进入处理队列。', icon: Service },
-  { title: '日志留痕', detail: 'AI 调用、检索记录和处理轨迹可复查。', icon: DocumentChecked }
+const queueMetrics = [
+  { label: '待处理售后', value: '队列', note: '集中处理退货、换货、退款和投诉申请' },
+  { label: 'SLA 风险', value: '预警', note: '优先跟进待补材料、超时和高优先级事项' },
+  { label: '人工工单', value: '接管', note: '承接投诉、物流异常和复杂协商场景' },
+  { label: '知识质检', value: '留痕', note: '回复依据、AI 状态和处理轨迹可追溯' }
 ]
 
-const featureRoadmap = [
-  {
-    title: 'AI 流式客服',
-    detail: 'SSE 进度事件 + 前端逐字回复，让等待过程可感知。',
-    evidence: 'POST /chat-sessions/{id}/message-stream',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: ChatDotRound
-  },
-  {
-    title: 'RAG 知识增强',
-    detail: '回复前检索知识文档，页面展示命中依据和排序原因。',
-    evidence: 'GET /knowledge-docs/search',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Search
-  },
-  {
-    title: '多轮上下文承接',
-    detail: '追问退款、投诉时承接上轮订单和售后语境。',
-    evidence: 'CONTEXT_RESOLVE 处理轨迹',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Connection
-  },
-  {
-    title: 'LangChain4j 工具调用',
-    detail: '订单查询、知识检索、工单创建封装为业务工具。',
-    evidence: 'AiBusinessToolService',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Operation
-  },
-  {
-    title: '智能工单升级',
-    detail: '投诉、物流异常和人工客服诉求自动生成工单。',
-    evidence: 'GET /service-tickets',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Service
-  },
-  {
-    title: '本地规则兜底',
-    detail: '模型不可用时仍能稳定回答退换货核心问题。',
-    evidence: 'FALLBACK / SKIPPED 状态',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Finished
-  },
-  {
-    title: '权限与安全控制',
-    detail: '客户和管理员入口分离，后台写操作需要管理员身份。',
-    evidence: 'AuthInterceptor + @OperatorAnno',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Lock
-  },
-  {
-    title: '日志诊断中心',
-    detail: 'AI 调用、知识检索和处理轨迹聚合成可答辩证据。',
-    evidence: 'AI 调用日志 / 检索日志 / 轨迹',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: Document
-  },
-  {
-    title: '售后流程可视化',
-    detail: '工单页展示 SLA 风险、时间线和下一步动作。',
-    evidence: 'ServiceTicketView 时间线',
-    state: 'done',
-    stateLabel: '已完成',
-    icon: TrendCharts
-  }
+const workflowSteps = [
+  { title: '咨询接待', detail: '绑定订单、识别退换货意图，给出处理建议和知识依据。', path: '/chat' },
+  { title: '售后审核', detail: '检查申请原因、凭证、风险等级和可通过金额。', path: '/admin/after-sales/review' },
+  { title: 'SLA 跟进', detail: '跟踪待补材料、即将超时和高优先级售后。', path: '/admin/sla' },
+  { title: '人工工单', detail: '处理投诉升级、物流异常和需要人工接管的会话。', path: '/service-tickets' },
+  { title: '知识沉淀', detail: '维护退换货规则，复盘命中依据和客服回复质量。', path: '/knowledge' }
+]
+
+const focusItems = [
+  { title: '优先处理高风险申请', detail: '金额较高、凭证不足或重复投诉的售后需要先复核。', action: '查看售后审核工作台', icon: View },
+  { title: '监控商品质量预警', detail: '同一商品重复出现断连、破损、错发等问题时及时跟进。', action: '查看商品质量预警', icon: TrendCharts },
+  { title: '复盘服务日志', detail: '检查 AI 辅助、知识命中和人工接管是否形成完整记录。', action: '查看服务日志', icon: DocumentChecked }
+]
+
+const quickEntries = [
+  { label: '售后审核', desc: '待处理队列', path: '/admin/after-sales/review', icon: View },
+  { label: '咨询接待', desc: '实时会话', path: '/chat', icon: ChatDotRound },
+  { label: '人工工单', desc: '投诉接管', path: '/service-tickets', icon: Service },
+  { label: '订单管理', desc: '订单上下文', path: '/orders', icon: Tickets },
+  { label: '客户画像', desc: '历史风险', path: '/admin/customers/profile', icon: UserFilled },
+  { label: '知识库', desc: '规则依据', path: '/knowledge', icon: Collection },
+  { label: 'AI 质检', desc: '模型与兜底', path: '/ai-test', icon: Cpu },
+  { label: '系统状态', desc: '接口与日志', path: '/dashboard', icon: DataAnalysis }
+]
+
+const qualityItems = [
+  { title: '回复有依据', detail: '客服回复要能对应知识命中、订单状态或人工备注。' },
+  { title: '风险不自动放行', detail: '图片风险、凭证不足和高额退款只做提醒，由人工确认。' },
+  { title: '状态可追踪', detail: '审核、补材料、工单接管和完成动作都写入处理记录。' }
 ]
 
 function loadStatus() {
@@ -216,307 +193,99 @@ onMounted(loadStatus)
 </script>
 
 <style scoped>
-.showcase-page {
+.operations-page {
   min-height: calc(100vh - var(--header-height));
   padding: 22px;
 }
 
-.showcase-shell {
+.operations-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
 }
 
-.showcase-main,
-.showcase-side {
+.operations-main,
+.operations-side {
   display: grid;
   align-content: start;
   gap: 16px;
   min-width: 0;
 }
 
-.hero-panel {
-  position: relative;
+.ops-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.72fr);
-  gap: 18px;
-  min-height: 326px;
-  overflow: hidden;
-  padding: 48px;
-  border: 1px solid rgb(229 229 234 / 86%);
-  border-radius: 8px;
-  background:
-    linear-gradient(112deg, rgb(255 255 255 / 96%) 0%, rgb(255 255 255 / 82%) 54%, rgb(239 246 255 / 82%) 100%),
-    radial-gradient(circle at 76% 42%, rgb(10 132 255 / 14%), transparent 32%);
-  box-shadow:
-    0 24px 68px rgb(0 0 0 / 7%),
-    inset 0 1px 0 rgb(255 255 255 / 92%);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.42fr);
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid rgb(229 229 234 / 90%);
+  border-radius: var(--radius);
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 18px 46px rgb(0 0 0 / 5%);
 }
 
-.hero-copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.ops-copy {
+  display: grid;
+  align-content: center;
   min-width: 0;
 }
 
-.hero-copy h2 {
-  max-width: 760px;
-  margin: 0;
-  color: #1d1d1f;
-  font-size: 44px;
+.ops-kicker {
+  color: var(--brand);
+  font-size: 13px;
   font-weight: 800;
-  line-height: 1.08;
 }
 
-.hero-copy p {
+.ops-copy h2 {
+  margin: 8px 0 0;
+  color: #1d1d1f;
+  font-size: 34px;
+  line-height: 1.15;
+}
+
+.ops-copy p {
   max-width: 720px;
-  margin: 20px 0 0;
+  margin: 14px 0 0;
   color: #515154;
-  font-size: 16px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.8;
 }
 
-.hero-actions {
+.ops-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 30px;
+  gap: 10px;
+  margin-top: 24px;
 }
 
-.hero-actions :deep(.el-button) {
-  min-width: 150px;
-  height: 44px;
-}
-
-.hero-visual {
-  position: relative;
-  min-height: 270px;
-}
-
-.glass-stack,
-.glass-cube {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgb(255 255 255 / 76%);
-  background: linear-gradient(145deg, rgb(255 255 255 / 74%), rgb(234 243 255 / 54%));
-  box-shadow:
-    0 28px 64px rgb(0 102 204 / 14%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
-  backdrop-filter: blur(16px);
-}
-
-.stack-back {
-  inset: 16px 40px 46px 86px;
-  border-radius: 8px;
-  opacity: 0.56;
-}
-
-.stack-mid {
-  right: 178px;
-  bottom: 76px;
-  width: 132px;
-  height: 104px;
-  border-radius: 8px;
-  color: #7aa7e6;
-  font-size: 38px;
-}
-
-.stack-front {
-  right: 24px;
-  bottom: 42px;
-  width: 122px;
-  height: 92px;
-  border-radius: 8px;
-  color: #0a84ff;
-  font-size: 34px;
-}
-
-.glass-cube {
-  right: 84px;
-  bottom: 92px;
-  width: 112px;
-  height: 112px;
-  border-radius: 8px;
-  background: linear-gradient(145deg, #2f9bff, #0066cc);
-  color: #ffffff;
-  font-size: 48px;
-  transform: rotate(-3deg);
-}
-
-.closed-loop-flow {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0;
-  padding: 20px;
-}
-
-.flow-node {
-  position: relative;
-  display: grid;
-  align-content: start;
-  justify-items: center;
-  min-height: 154px;
-  padding: 10px 12px;
-  text-align: center;
-}
-
-.flow-node:not(:last-child)::after {
-  position: absolute;
-  top: 39px;
-  right: -18px;
-  width: 36px;
-  height: 1px;
-  background: linear-gradient(90deg, rgb(0 102 204 / 24%), rgb(0 102 204 / 48%));
-  content: "";
-}
-
-.node-index {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.flow-node .el-icon {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  margin-top: 10px;
-  border: 1px solid rgb(0 102 204 / 12%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 82%);
-  color: var(--brand);
-  font-size: 24px;
-  box-shadow: 0 12px 28px rgb(0 102 204 / 8%);
-}
-
-.flow-node h4,
-.feature-card h4 {
-  margin: 12px 0 0;
-  color: #1d1d1f;
-  font-size: 15px;
-  line-height: 1.3;
-}
-
-.flow-node p,
-.feature-card p {
-  margin: 8px 0 0;
-  color: #6e6e73;
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.feature-board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+.ops-status-card {
+  min-width: 0;
   padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
 }
 
-.feature-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  min-height: 148px;
-  padding: 16px;
-  border: 1px solid rgb(229 229 234 / 90%);
-  border-radius: 8px;
-  background: rgb(255 255 255 / 78%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 84%);
-}
-
-.feature-card.feature-active {
-  border-color: rgb(0 102 204 / 32%);
-  background: linear-gradient(180deg, rgb(255 255 255 / 88%), rgb(232 242 255 / 72%));
-}
-
-.feature-card.feature-planned {
-  background: rgb(250 250 252 / 78%);
-}
-
-.feature-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid rgb(0 102 204 / 12%);
-  border-radius: 8px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  font-size: 20px;
-}
-
-.feature-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.feature-title-row h4 {
-  margin-top: 0;
-}
-
-.feature-state {
-  flex: 0 0 auto;
-  padding: 3px 7px;
-  border-radius: 6px;
-  background: rgb(52 199 89 / 11%);
-  color: #16833a;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.feature-active .feature-state {
-  background: rgb(0 102 204 / 12%);
-  color: var(--brand);
-}
-
-.feature-planned .feature-state {
-  background: rgb(134 134 139 / 13%);
-  color: #6e6e73;
-}
-
-.evidence {
-  display: block;
-  margin-top: 10px;
-  overflow: hidden;
-  color: var(--brand);
-  font-size: 12px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.panel-caption {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.compact {
-  min-height: 46px;
-}
-
-.status-list {
-  display: grid;
-  gap: 0;
-  padding: 8px 16px 14px;
-}
-
+.status-card-head,
 .status-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 48px;
+}
+
+.status-card-head {
+  margin-bottom: 8px;
+  color: #1d1d1f;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.status-list {
+  display: grid;
+}
+
+.status-row {
+  min-height: 42px;
   border-bottom: 1px solid rgb(229 229 234 / 72%);
   color: #515154;
   font-size: 13px;
@@ -530,66 +299,205 @@ onMounted(loadStatus)
   min-width: 0;
   overflow: hidden;
   color: #1d1d1f;
-  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-@media (max-width: 1280px) {
-  .showcase-shell,
-  .hero-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .showcase-side {
-    grid-template-columns: 1fr;
-  }
+.ops-metrics .metric {
+  min-height: 112px;
 }
 
-@media (max-width: 1080px) {
-  .feature-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.metric-note {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
 
-  .closed-loop-flow {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-  }
+.ops-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.74fr);
+  gap: 16px;
+}
 
-  .flow-node:not(:last-child)::after {
-    display: none;
-  }
+.panel-note {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
 
-  .showcase-side {
+.workflow-list,
+.focus-list,
+.quality-list {
+  display: grid;
+  gap: 0;
+  padding: 8px 14px 14px;
+}
+
+.workflow-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 82px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.workflow-step:last-child {
+  border-bottom: 0;
+}
+
+.step-index {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.workflow-step h4,
+.focus-item h4 {
+  margin: 0;
+  color: #1d1d1f;
+  font-size: 14px;
+}
+
+.workflow-step p,
+.focus-item p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.focus-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.focus-item:last-child {
+  border-bottom: 0;
+}
+
+.focus-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.focus-item span {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quick-entry-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.quick-entry-list button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.quick-entry-list button:hover {
+  border-color: #bfdbfe;
+  background: var(--brand-soft);
+}
+
+.quick-entry-list .el-icon {
+  grid-row: span 2;
+  color: var(--brand);
+}
+
+.quick-entry-list span {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-entry-list small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.quality-item {
+  display: grid;
+  gap: 5px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.quality-item:last-child {
+  border-bottom: 0;
+}
+
+.quality-item strong {
+  color: #1d1d1f;
+  font-size: 13px;
+}
+
+.quality-item span {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .operations-shell,
+  .ops-hero,
+  .ops-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .showcase-page {
+  .operations-page {
     padding: 14px;
   }
 
-  .hero-panel {
-    padding: 28px 22px;
+  .ops-hero {
+    padding: 22px;
   }
 
-  .hero-copy h2 {
-    font-size: 32px;
+  .ops-copy h2 {
+    font-size: 28px;
   }
 
-  .hero-visual {
-    min-height: 210px;
+  .workflow-step {
+    grid-template-columns: 28px minmax(0, 1fr);
   }
 
-  .feature-board,
-  .closed-loop-flow {
-    grid-template-columns: 1fr;
-  }
-
-  .panel-header {
-    align-items: flex-start;
-    flex-direction: column;
+  .workflow-step .el-button {
+    grid-column: 2;
+    justify-self: start;
   }
 }
 </style>

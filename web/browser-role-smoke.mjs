@@ -39,19 +39,19 @@ try {
   await expectText(page, '我的订单', 'customer order panel visible')
   await expectText(page, '客户', 'customer role tag visible')
 
-  const customerMenuTexts = ['我的售后', '在线咨询']
+  const customerMenuTexts = ['我的售后', '咨询接待']
   for (const text of customerMenuTexts) {
     const visible = await page.getByRole('menuitem', { name: text }).count()
     record(`customer menu shows ${text}`, visible >= 1, `count=${visible}`)
   }
 
-  const adminMenuTexts = ['答辩展示', '系统总览', '售后审核', 'SLA 中心', '客户画像', '知识库', '订单管理', '人工工单', '日志中心', 'AI 测试']
+  const adminMenuTexts = ['运营首页', '系统状态', '售后审核', 'SLA 跟进', '客户画像', '知识库', '订单管理', '人工工单', '服务日志', 'AI 质检']
   for (const text of adminMenuTexts) {
     const visible = await page.getByRole('menuitem', { name: text }).count()
     record(`customer menu hides ${text}`, visible === 0, `count=${visible}`)
   }
 
-  for (const text of ['运营指挥', '特色闭环']) {
+  for (const text of ['运营指挥', '特色闭环', '答辩展示']) {
     const visible = await page.getByRole('menuitem', { name: text }).count()
     record(`customer menu has no removed ${text}`, visible === 0, `count=${visible}`)
   }
@@ -78,7 +78,7 @@ try {
     record(`admin menu shows ${text}`, visible >= 1, `count=${visible}`)
   }
 
-  for (const text of ['运营指挥', '特色闭环']) {
+  for (const text of ['运营指挥', '特色闭环', '答辩展示']) {
     const visible = await page.getByRole('menuitem', { name: text }).count()
     record(`admin menu has no removed ${text}`, visible === 0, `count=${visible}`)
   }

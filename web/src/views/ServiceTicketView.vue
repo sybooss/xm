@@ -57,7 +57,7 @@
       <div class="panel-header">
         <div>
           <h3 class="panel-title">工单详情：{{ selected.ticketNo }}</h3>
-          <p class="detail-subtitle">把投诉转接、AI 摘要、处理建议和 SLA 风险集中到一个可演示闭环。</p>
+          <p class="detail-subtitle">把投诉转接、AI 摘要、处理建议和 SLA 风险集中到一个可跟进的服务记录。</p>
         </div>
         <div class="detail-actions">
           <el-select v-model="selected.status" size="small" style="width: 120px">
@@ -150,7 +150,7 @@
           <div class="flow-header">
             <div>
               <div class="eyebrow">售后处理时间线</div>
-              <h4>从 AI 转人工到闭环处理</h4>
+              <h4>从 AI 转人工到完结处理</h4>
             </div>
             <StatusTag :value="selected.status" />
           </div>
@@ -206,7 +206,7 @@ const slaRisk = computed(() => {
   const priority = selected.value?.priority
   const status = selected.value?.status
   if (['RESOLVED', 'CLOSED'].includes(status)) {
-    return { label: '已闭环', detail: '工单已完成处理，可作为答辩闭环证据。', level: 'closed' }
+    return { label: '已完结', detail: '工单已完成处理，可作为服务复盘记录。', level: 'closed' }
   }
   if (priority === 'URGENT') {
     return { label: '高风险', detail: '紧急工单需要优先分配客服并持续跟踪。', level: 'danger' }
@@ -242,7 +242,7 @@ const nextAction = computed(() => {
     }
   }
   return {
-    title: '归档闭环证据',
+    title: '归档处理证据',
     detail: '工单已关闭，可在日志中心和会话记录中追溯处理过程。'
   }
 })
@@ -279,7 +279,7 @@ const timelineSteps = computed(() => {
       key: 'closed',
       title: ticket.status === 'CLOSED' ? '工单关闭' : '结果确认',
       time: rank >= 2 ? resolvedAt : '待完成',
-      description: rank >= 2 ? '处理结果已记录，可回到日志中心追溯证据。' : '完成退款、换货或投诉处理后关闭闭环。',
+      description: rank >= 2 ? '处理结果已记录，可回到日志中心追溯证据。' : '完成退款、换货或投诉处理后关闭工单。',
       state: rank >= 2 ? 'done' : 'pending'
     }
   ]

@@ -2,6 +2,7 @@
   <section class="page">
     <div class="page-header">
       <div>
+        <h2 class="page-title">系统状态</h2>
         <p class="page-subtitle">查看后端、数据库和真实模型接入状态。</p>
       </div>
       <el-button type="primary" :icon="Refresh" :loading="systemStore.loading" @click="load">
@@ -51,14 +52,14 @@
 
       <section class="panel">
         <div class="panel-header">
-          <h3 class="panel-title">演示入口</h3>
+          <h3 class="panel-title">常用入口</h3>
         </div>
         <div class="panel-body quick-actions">
           <el-button type="primary" :icon="ChatDotRound" @click="$router.push('/chat')">咨询工作台</el-button>
           <el-button :icon="TrendCharts" @click="$router.push('/admin/product-issues')">商品预警</el-button>
-          <el-button :icon="Cpu" @click="$router.push('/ai-test')">AI 测试</el-button>
+          <el-button :icon="Cpu" @click="$router.push('/ai-test')">AI 质检</el-button>
           <el-button :icon="Collection" @click="$router.push('/knowledge')">知识库</el-button>
-          <el-button :icon="Document" @click="$router.push('/logs')">日志中心</el-button>
+          <el-button :icon="Document" @click="$router.push('/logs')">服务日志</el-button>
         </div>
       </section>
     </div>

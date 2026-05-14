@@ -163,127 +163,151 @@
     </main>
 
     <aside class="insight-panel panel">
-      <div class="panel-header">
-        <h3 class="panel-title">处理洞察</h3>
+      <div class="panel-header insight-header">
+        <div>
+          <h3 class="panel-title">客服处理面板</h3>
+          <p class="panel-note">当前客户、订单、建议和服务记录集中处理</p>
+        </div>
         <StatusTag :value="chatStore.insight?.ai?.status" />
       </div>
       <div class="panel-body insight-body">
-        <section class="decision-summary">
-          <div class="decision-title">
-            <div>
-              <span class="eyebrow">AI 决策摘要</span>
-              <h4>{{ decisionSummary.title }}</h4>
-            </div>
-            <StatusTag :value="decisionSummary.status" />
-          </div>
-          <p>{{ decisionSummary.detail }}</p>
-          <div class="decision-metrics">
-            <div>
-              <span>知识依据</span>
-              <strong>{{ decisionSummary.knowledgeCount }}</strong>
-            </div>
-            <div>
-              <span>流程步骤</span>
-              <strong>{{ decisionSummary.traceCount }}</strong>
-            </div>
-            <div>
-              <span>转人工</span>
-              <strong>{{ decisionSummary.ticketText }}</strong>
-            </div>
-          </div>
+        <section class="service-summary">
+          <article v-for="item in serviceSummaryCards" :key="item.label" class="service-summary-card">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <p>{{ item.detail }}</p>
+          </article>
         </section>
 
-        <section v-if="chatStore.insight?.stream" class="stream-card">
-          <h4>实时进度</h4>
-          <p>{{ chatStore.insight.stream.message || '正在处理当前咨询' }}</p>
-        </section>
+        <el-tabs v-model="activeInsightTab" class="insight-tabs" stretch>
+          <el-tab-pane label="客户与订单" name="customer">
+            <section class="insight-section">
+              <h4>当前订单</h4>
+              <el-descriptions v-if="chatStore.insight?.orderContext?.hasOrder" :column="1" size="small" border>
+                <el-descriptions-item label="订单号">{{ chatStore.insight.orderContext.orderNo }}</el-descriptions-item>
+                <el-descriptions-item label="商品">{{ chatStore.insight.orderContext.productName }}</el-descriptions-item>
+                <el-descriptions-item label="订单状态">{{ chatStore.insight.orderContext.orderStatus }}</el-descriptions-item>
+                <el-descriptions-item label="售后状态">{{ chatStore.insight.orderContext.afterSaleStatus }}</el-descriptions-item>
+                <el-descriptions-item label="签收天数">{{ chatStore.insight.orderContext.signedDays }}</el-descriptions-item>
+              </el-descriptions>
+              <p v-else class="muted">暂未绑定订单，可在左侧输入订单号或打开“我的订单”选择。</p>
+            </section>
 
-        <section v-if="businessTools.length">
-          <h4>业务工具</h4>
-          <div class="tool-list">
-            <div v-for="tool in businessTools" :key="tool" class="tool-item">{{ tool }}</div>
-          </div>
-        </section>
+            <section class="insight-section">
+              <h4>上下文承接</h4>
+              <el-descriptions v-if="chatStore.insight?.context" :column="1" size="small" border>
+                <el-descriptions-item label="追问">{{ chatStore.insight.context.followUp ? '是' : '否' }}</el-descriptions-item>
+                <el-descriptions-item label="上轮意图">{{ chatStore.insight.context.inheritedIntent || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="本轮意图">{{ chatStore.insight.context.resolvedIntent || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="摘要">{{ chatStore.insight.context.summary }}</el-descriptions-item>
+              </el-descriptions>
+              <p v-else class="muted">暂无上下文，系统会在多轮追问后自动汇总。</p>
+            </section>
 
-        <section v-if="suggestedQuestions.length">
-          <h4>建议追问</h4>
-          <div class="suggestion-list">
-            <button v-for="question in suggestedQuestions" :key="question" type="button" @click="draft = question">
-              {{ question }}
-            </button>
-          </div>
-        </section>
+            <section class="insight-section">
+              <ProductInsightPanel :insight="chatStore.insight?.productInsight" />
+            </section>
+          </el-tab-pane>
 
-        <section>
-          <h4>意图</h4>
-          <el-tag v-if="chatStore.insight?.intent" type="primary">
-            {{ chatStore.insight.intent.intentCode }} · {{ chatStore.insight.intent.intentName }}
-          </el-tag>
-          <span v-else class="muted">暂无</span>
-        </section>
-
-        <section>
-          <h4>上下文承接</h4>
-          <el-descriptions v-if="chatStore.insight?.context" :column="1" size="small" border>
-            <el-descriptions-item label="追问">{{ chatStore.insight.context.followUp ? '是' : '否' }}</el-descriptions-item>
-            <el-descriptions-item label="上轮意图">{{ chatStore.insight.context.inheritedIntent || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="本轮意图">{{ chatStore.insight.context.resolvedIntent || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="摘要">{{ chatStore.insight.context.summary }}</el-descriptions-item>
-          </el-descriptions>
-          <p v-else class="muted">暂无上下文</p>
-        </section>
-
-        <section>
-          <h4>订单上下文</h4>
-          <el-descriptions v-if="chatStore.insight?.orderContext?.hasOrder" :column="1" size="small" border>
-            <el-descriptions-item label="订单号">{{ chatStore.insight.orderContext.orderNo }}</el-descriptions-item>
-            <el-descriptions-item label="商品">{{ chatStore.insight.orderContext.productName }}</el-descriptions-item>
-            <el-descriptions-item label="订单状态">{{ chatStore.insight.orderContext.orderStatus }}</el-descriptions-item>
-            <el-descriptions-item label="售后状态">{{ chatStore.insight.orderContext.afterSaleStatus }}</el-descriptions-item>
-            <el-descriptions-item label="签收天数">{{ chatStore.insight.orderContext.signedDays }}</el-descriptions-item>
-          </el-descriptions>
-          <p v-else class="muted">暂未绑定订单</p>
-        </section>
-
-        <section>
-          <ProductInsightPanel :insight="chatStore.insight?.productInsight" />
-        </section>
-
-        <section v-if="chatStore.insight?.imageRisk">
-          <ChatImageRiskPanel :risk="chatStore.insight.imageRisk" />
-        </section>
-
-        <section>
-          <h4>知识命中</h4>
-          <div v-if="chatStore.insight?.knowledgeHits?.length" class="hit-list">
-            <div v-for="doc in chatStore.insight.knowledgeHits" :key="doc.id" class="hit-item">
-              <div class="hit-title">
-                <strong>{{ doc.title }}</strong>
-                <span>{{ doc.score ? Number(doc.score).toFixed(2) : '0.80' }}</span>
+          <el-tab-pane label="AI 建议" name="assistant">
+            <section class="decision-summary">
+              <div class="decision-title">
+                <div>
+                  <span class="eyebrow">处理建议</span>
+                  <h4>{{ decisionSummary.title }}</h4>
+                </div>
+                <StatusTag :value="decisionSummary.status" />
               </div>
-              <p>{{ doc.contentPreview || doc.answer || doc.content }}</p>
-              <small>{{ doc.hitReason || '按标题、问题、正文或关键词召回' }}</small>
-            </div>
-          </div>
-          <p v-else class="muted">暂无命中</p>
-        </section>
+              <p>{{ decisionSummary.detail }}</p>
+              <div class="decision-metrics">
+                <div>
+                  <span>知识依据</span>
+                  <strong>{{ decisionSummary.knowledgeCount }}</strong>
+                </div>
+                <div>
+                  <span>流程步骤</span>
+                  <strong>{{ decisionSummary.traceCount }}</strong>
+                </div>
+                <div>
+                  <span>转人工</span>
+                  <strong>{{ decisionSummary.ticketText }}</strong>
+                </div>
+              </div>
+            </section>
 
-        <section>
-          <h4>人工转接</h4>
-          <TicketPanel
-            :ticket="chatStore.insight?.ticket"
-            :session-id="chatStore.currentSessionId"
-            :order-no="orderNo"
-            :last-question="chatStore.lastUserQuestion"
-            :intent-code="chatStore.insight?.intent?.intentCode"
-            @created="chatStore.mergeTicket"
-          />
-        </section>
+            <section v-if="chatStore.insight?.stream" class="stream-card">
+              <h4>实时进度</h4>
+              <p>{{ chatStore.insight.stream.message || '正在处理当前咨询' }}</p>
+            </section>
 
-        <section>
-          <h4>回答过程</h4>
-          <ProcessFlowPanel :traces="chatStore.insight?.trace || []" />
-        </section>
+            <section class="insight-section">
+              <h4>意图</h4>
+              <el-tag v-if="chatStore.insight?.intent" type="primary">
+                {{ chatStore.insight.intent.intentCode }} · {{ chatStore.insight.intent.intentName }}
+              </el-tag>
+              <span v-else class="muted">暂无</span>
+            </section>
+
+            <section v-if="businessTools.length" class="insight-section">
+              <h4>业务工具</h4>
+              <div class="tool-list">
+                <div v-for="tool in businessTools" :key="tool" class="tool-item">{{ tool }}</div>
+              </div>
+            </section>
+
+            <section v-if="suggestedQuestions.length" class="insight-section">
+              <h4>建议追问</h4>
+              <div class="suggestion-list">
+                <button v-for="question in suggestedQuestions" :key="question" type="button" @click="draft = question">
+                  {{ question }}
+                </button>
+              </div>
+            </section>
+          </el-tab-pane>
+
+          <el-tab-pane label="知识依据" name="knowledge">
+            <section class="insight-section">
+              <h4>知识命中</h4>
+              <div v-if="chatStore.insight?.knowledgeHits?.length" class="hit-list">
+                <div v-for="doc in chatStore.insight.knowledgeHits" :key="doc.id" class="hit-item">
+                  <div class="hit-title">
+                    <strong>{{ doc.title }}</strong>
+                    <span>{{ doc.score ? Number(doc.score).toFixed(2) : '0.80' }}</span>
+                  </div>
+                  <p>{{ doc.contentPreview || doc.answer || doc.content }}</p>
+                  <small>{{ doc.hitReason || '按标题、问题、正文或关键词召回' }}</small>
+                </div>
+              </div>
+              <p v-else class="muted">暂无命中，客服可继续核实订单状态或补充知识库规则。</p>
+            </section>
+          </el-tab-pane>
+
+          <el-tab-pane label="图片/凭证风险" name="risk">
+            <section class="insight-section">
+              <ChatImageRiskPanel v-if="chatStore.insight?.imageRisk" :risk="chatStore.insight.imageRisk" />
+              <p v-else class="muted">当前会话暂无图片凭证风险。用户发送商品照片后，系统会在这里展示真实性预审和补证建议。</p>
+            </section>
+          </el-tab-pane>
+
+          <el-tab-pane label="工单与流程" name="flow">
+            <section class="insight-section">
+              <h4>人工转接</h4>
+              <TicketPanel
+                :ticket="chatStore.insight?.ticket"
+                :session-id="chatStore.currentSessionId"
+                :order-no="orderNo"
+                :last-question="chatStore.lastUserQuestion"
+                :intent-code="chatStore.insight?.intent?.intentCode"
+                @created="chatStore.mergeTicket"
+              />
+            </section>
+
+            <section class="insight-section">
+              <h4>回答过程</h4>
+              <ProcessFlowPanel :traces="chatStore.insight?.trace || []" />
+            </section>
+          </el-tab-pane>
+        </el-tabs>
       </div>
     </aside>
   </section>
@@ -319,6 +343,7 @@ const useAi = ref(true)
 const messageScrollRef = ref(null)
 const chatImageInputRef = ref(null)
 const showOrderPanel = ref(false)
+const activeInsightTab = ref('customer')
 const selectedModel = ref('')
 const imageUploading = ref(false)
 const pendingImage = ref({})
@@ -347,6 +372,35 @@ const suggestedQuestions = computed(() => {
     return questions
   }
   return fallbackQuestions(chatStore.insight?.intent?.intentCode)
+})
+const serviceSummaryCards = computed(() => {
+  const insight = chatStore.insight || {}
+  const hasOrder = Boolean(insight.orderContext?.hasOrder)
+  const ticketNeeded = Boolean(insight.ticket?.needed || insight.ticket?.id)
+  const intentName = insight.intent?.intentName || insight.intent?.intentCode || '待识别'
+  const source = insight.assistantMessage?.sourceType === 'AI_ENHANCED' ? 'AI 建议' : (chatStore.sending ? '处理中' : '本地兜底')
+  return [
+    {
+      label: '当前客户',
+      value: authStore.user?.displayName || authStore.user?.username || '-',
+      detail: authStore.isAdmin ? '客服侧接待视角' : '顾客自助咨询'
+    },
+    {
+      label: '当前订单',
+      value: hasOrder ? insight.orderContext.orderNo : (orderNo.value || '未绑定'),
+      detail: hasOrder ? (insight.orderContext.afterSaleStatus || '订单已关联') : '先绑定订单再处理售后'
+    },
+    {
+      label: '处理建议',
+      value: intentName,
+      detail: source
+    },
+    {
+      label: '下一步动作',
+      value: ticketNeeded ? '转人工' : (insight.intent ? '按建议回复' : '等待问题'),
+      detail: ticketNeeded ? '已进入工单处理' : '结合知识依据确认'
+    }
+  ]
 })
 const decisionSummary = computed(() => {
   const insight = chatStore.insight || {}
@@ -953,15 +1007,80 @@ onMounted(async () => {
   display: none;
 }
 
+.insight-header {
+  align-items: flex-start;
+}
+
 .insight-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
   height: calc(100% - 49px);
+  overflow: hidden;
+}
+
+.service-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.service-summary-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.service-summary-card span,
+.service-summary-card p {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.service-summary-card strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: #1d1d1f;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-summary-card p {
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
+
+.insight-tabs {
+  min-height: 0;
+}
+
+.insight-tabs :deep(.el-tabs__header) {
+  margin-bottom: 10px;
+}
+
+.insight-tabs :deep(.el-tabs__content) {
+  height: calc(100% - 48px);
   overflow: auto;
+  padding-right: 2px;
 }
 
-.insight-body section + section {
-  margin-top: 18px;
+.insight-tabs :deep(.el-tab-pane) {
+  min-height: 100%;
 }
 
+.insight-section + .insight-section,
+.stream-card + .insight-section,
+.decision-summary + .stream-card,
+.decision-summary + .insight-section {
+  margin-top: 14px;
+}
+
+.insight-section h4,
+.stream-card h4,
 .insight-body h4 {
   margin: 0 0 8px;
   font-size: 14px;
@@ -1129,6 +1248,10 @@ onMounted(async () => {
     grid-column: 1 / -1;
     min-height: 360px;
   }
+
+  .insight-body {
+    max-height: 640px;
+  }
 }
 
 @media (max-width: 820px) {
@@ -1138,6 +1261,10 @@ onMounted(async () => {
 
   .bubble {
     max-width: 92%;
+  }
+
+  .service-summary {
+    grid-template-columns: 1fr;
   }
 }
 </style>

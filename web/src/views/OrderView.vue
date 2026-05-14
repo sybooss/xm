@@ -2,7 +2,7 @@
   <section class="page">
     <div class="page-header">
       <div>
-        <p class="page-subtitle">维护演示订单和售后记录，为客服工作台提供可靠订单上下文。</p>
+        <p class="page-subtitle">维护订单和售后记录，为客服工作台提供可靠订单上下文。</p>
       </div>
       <div class="header-buttons">
         <el-button v-if="authStore.isAdmin" type="primary" :icon="Plus" @click="openOrderDialog()">新增订单</el-button>

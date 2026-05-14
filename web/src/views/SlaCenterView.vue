@@ -2,6 +2,7 @@
   <section class="page sla-page">
     <div class="page-header">
       <div>
+        <h2 class="page-title">SLA 跟进</h2>
         <p class="page-subtitle">按 SLA 截止时间、优先级和补材料状态识别需要优先处理的售后申请。</p>
       </div>
       <el-button :icon="Refresh" @click="loadTasks">刷新</el-button>

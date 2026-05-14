@@ -2,8 +2,8 @@
   <section class="log-page page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">日志诊断中心</h2>
-        <p class="page-subtitle">把 AI 调用、知识命中和处理轨迹整理成答辩可讲的证据链。</p>
+        <h2 class="page-title">服务日志</h2>
+        <p class="page-subtitle">把 AI 调用、知识命中和处理轨迹整理成客服质检与服务复盘记录。</p>
       </div>
       <el-button type="primary" :icon="Refresh" @click="refreshAll">刷新诊断</el-button>
     </div>
@@ -13,7 +13,7 @@
         <span>最近 {{ aiLogs.length }} 条 AI 调用样本</span>
         <h3>AI 稳定性、RAG 命中与流程可解释性一屏核验</h3>
         <p>
-          答辩时可以先看总览，再切到原始日志。成功、跳过和失败都会保留证据，
+          可以先看总览，再切到原始日志。成功、跳过和失败都会保留证据，
           方便说明系统既能接入真实模型，也能在模型不可用时稳定兜底。
         </p>
       </div>
@@ -400,7 +400,7 @@ const healthRationale = computed(() => {
   if (!aiLogs.value.length) return '日志页会在真实调用后自动形成健康判断。'
   if (healthLevel.value === '需要关注') return `最近样本中有 ${failedCount.value} 次失败，应优先检查模型网关和密钥配置。`
   if (healthLevel.value === '可用但有波动') return `存在 ${failedCount.value} 次失败，但主链路仍保留本地兜底。`
-  if (healthLevel.value === '兜底稳定') return '当前全部走本地兜底，适合无模型环境稳定演示。'
+  if (healthLevel.value === '兜底稳定') return '当前全部走本地兜底，适合无模型环境稳定处理。'
   return '最近调用成功率和检索证据都可用于支撑系统稳定性说明。'
 })
 
@@ -477,21 +477,21 @@ const riskSignals = computed(() => {
   if (aiLogs.value.length && skippedCount.value === aiLogs.value.length) {
     signals.push({
       title: '全部本地兜底',
-      detail: '系统可稳定演示，但当前样本不能证明真实模型链路已经打通。',
+      detail: '系统可稳定处理，但当前样本不能证明真实模型链路已经打通。',
       tone: 'warning'
     })
   }
   if (avgLatencyValue.value > 6000) {
     signals.push({
       title: '响应偏慢',
-      detail: `平均耗时 ${avgLatencyValue.value} ms，演示时建议先确认 sub2api 或模型服务状态。`,
+      detail: `平均耗时 ${avgLatencyValue.value} ms，建议先确认 sub2api 或模型服务状态。`,
       tone: 'warning'
     })
   }
   if (!retrievalLogs.value.length) {
     signals.push({
       title: '缺少 RAG 证据',
-      detail: '当前没有知识检索日志，答辩时难以展示回答依据链路。',
+      detail: '当前没有知识检索日志，客服质检时难以追踪回答依据链路。',
       tone: 'info'
     })
   } else if (retrievalLogs.value.length >= 5 && uniqueDocCount.value <= 1) {
@@ -504,7 +504,7 @@ const riskSignals = computed(() => {
   if (!signals.length) {
     signals.push({
       title: '暂无明显风险',
-      detail: '最近样本中模型调用、知识命中和日志证据处于可演示状态。',
+      detail: '最近样本中模型调用、知识命中和日志证据处于可复盘状态。',
       tone: 'success'
     })
   }
@@ -521,12 +521,12 @@ const actionItems = computed(() => {
     items.push('优先检查 OPENAI_BASE_URL、OPENAI_API_KEY、模型名和 sub2api 健康状态。')
   }
   if (skippedCount.value === aiLogs.value.length && aiLogs.value.length) {
-    items.push('如果要展示真实模型能力，开启 AI 配置后重新执行 AI 测试和聊天烟测。')
+    items.push('如果要验证真实模型能力，开启 AI 配置后重新执行 AI 测试和聊天烟测。')
   }
   if (!retrievalLogs.value.length || uniqueDocCount.value <= 1) {
     items.push('用知识库调试面板检索退货、退款、物流、投诉等问题，确认多类规则都能留下命中日志。')
   }
-  items.push('演示时先展示健康趋势，再切到 AI 调用日志、知识检索日志和处理轨迹三类原始证据。')
+  items.push('复盘时先查看健康趋势，再切到 AI 调用日志、知识检索日志和处理轨迹三类原始证据。')
   return items.slice(0, 4)
 })
 

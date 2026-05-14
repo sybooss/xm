@@ -2,6 +2,7 @@
   <section class="page admin-after-sale-page">
     <div class="page-header">
       <div>
+        <h2 class="page-title">售后审核工作台</h2>
         <p class="page-subtitle">集中处理顾客提交的真实售后申请，审核动作会写入处理日志。</p>
       </div>
       <el-button :icon="Refresh" @click="reload">刷新</el-button>
@@ -11,25 +12,33 @@
       <div class="metric">
         <div class="metric-label">待审核</div>
         <div class="metric-value">{{ pendingCount }}</div>
+        <p class="metric-note">提交后等待客服确认</p>
       </div>
       <div class="metric">
         <div class="metric-label">待补材料</div>
         <div class="metric-value">{{ moreEvidenceCount }}</div>
+        <p class="metric-note">需要顾客继续上传凭证</p>
       </div>
       <div class="metric">
         <div class="metric-label">高优先级</div>
         <div class="metric-value">{{ highPriorityCount }}</div>
+        <p class="metric-note">优先处理风险和投诉</p>
       </div>
       <div class="metric">
-        <div class="metric-label">今日可处理</div>
+        <div class="metric-label">队列总量</div>
         <div class="metric-value">{{ total }}</div>
+        <p class="metric-note">当前筛选条件下的售后单</p>
       </div>
     </section>
 
     <section class="workspace-grid">
       <div class="panel">
         <div class="panel-header">
-          <div class="toolbar">
+          <div>
+            <h3 class="panel-title">待处理队列</h3>
+            <p class="panel-note">按状态、优先级和 SLA 找到需要跟进的售后申请。</p>
+          </div>
+          <div class="toolbar queue-toolbar">
             <el-input v-model="query.keyword" clearable placeholder="售后单号、订单号或商品名" style="width: 240px" @keyup.enter="loadApplications" />
             <el-select v-model="query.status" clearable placeholder="状态" style="width: 150px" @change="loadApplications">
               <el-option label="已提交" value="SUBMITTED" />
@@ -77,7 +86,7 @@
       <section v-if="selected" class="panel review-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">审核处理台：{{ selected.applicationNo }}</h3>
+            <h3 class="panel-title">售后处理台：{{ selected.applicationNo }}</h3>
             <p class="panel-note">{{ selected.orderNo }} · {{ selected.productName }}</p>
           </div>
           <StatusTag :value="selected.status" />
@@ -228,6 +237,9 @@
           </div>
         </div>
       </section>
+      <section v-else class="panel review-panel empty-review-panel">
+        <EmptyState text="选择一条售后申请后开始处理" />
+      </section>
     </section>
   </section>
 </template>
@@ -240,6 +252,7 @@ import { Check, Close, Promotion, Refresh, Search, Ticket } from '@element-plus/
 import AfterSaleDiagnosisPanel from '../components/after-sale/AfterSaleDiagnosisPanel.vue'
 import AfterSaleRiskPanel from '../components/after-sale/AfterSaleRiskPanel.vue'
 import EvidenceAuditPanel from '../components/after-sale/EvidenceAuditPanel.vue'
+import EmptyState from '../components/common/EmptyState.vue'
 import StatusTag from '../components/common/StatusTag.vue'
 import {
   assessAfterSaleRisk,
@@ -528,6 +541,29 @@ onMounted(() => {
   margin-bottom: 14px;
 }
 
+.review-metrics .metric {
+  position: relative;
+  overflow: hidden;
+}
+
+.review-metrics .metric::after {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  content: "";
+}
+
+.metric-note {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
@@ -545,6 +581,27 @@ onMounted(() => {
   font-size: 12px;
 }
 
+.queue-toolbar {
+  justify-content: flex-end;
+}
+
+.review-panel {
+  align-self: start;
+  max-height: calc(100vh - var(--header-height) - 116px);
+  overflow: hidden;
+}
+
+.review-panel > .panel-body {
+  max-height: calc(100vh - var(--header-height) - 178px);
+  overflow: auto;
+}
+
+.empty-review-panel {
+  display: grid;
+  min-height: 420px;
+  place-items: center;
+}
+
 .decision-box,
 .ticket-box,
 .ai-copilot-box,
@@ -556,6 +613,26 @@ onMounted(() => {
   padding: 14px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
+  background: #fff;
+}
+
+.decision-box {
+  border-color: rgb(37 99 235 / 22%);
+  background: #f8fbff;
+}
+
+.ticket-box {
+  border-color: rgb(217 119 6 / 20%);
+  background: #fffbeb;
+}
+
+.ai-copilot-box {
+  border-color: rgb(16 185 129 / 20%);
+  background: #f7fefb;
+}
+
+.audit-box,
+.risk-box {
   background: #fff;
 }
 
@@ -770,6 +847,11 @@ onMounted(() => {
 @media (max-width: 1180px) {
   .workspace-grid {
     grid-template-columns: 1fr;
+  }
+
+  .review-panel,
+  .review-panel > .panel-body {
+    max-height: none;
   }
 }
 </style>

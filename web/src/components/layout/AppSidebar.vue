@@ -9,14 +9,20 @@
     </div>
 
     <el-menu :default-active="route.path" router class="menu">
-      <el-menu-item
-        v-for="item in visibleMenus"
-        :key="item.path"
-        :index="item.path"
+      <el-menu-item-group
+        v-for="section in visibleMenuSections"
+        :key="section.title"
       >
-        <el-icon><component :is="item.icon" /></el-icon>
-        <span>{{ item.label }}</span>
-      </el-menu-item>
+        <template #title>{{ section.title }}</template>
+        <el-menu-item
+          v-for="item in section.items"
+          :key="item.path"
+          :index="item.path"
+        >
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ item.label }}</span>
+        </el-menu-item>
+      </el-menu-item-group>
     </el-menu>
   </aside>
 </template>
@@ -29,22 +35,50 @@ import { useAuthStore } from '../../stores/authStore'
 
 const route = useRoute()
 const authStore = useAuthStore()
-const menus = [
-  { path: '/showcase', label: '答辩展示', icon: Monitor, adminOnly: true },
-  { path: '/dashboard', label: '系统总览', icon: DataAnalysis, adminOnly: true },
-  { path: '/admin/after-sales/review', label: '售后审核', icon: View, adminOnly: true },
-  { path: '/admin/sla', label: 'SLA 中心', icon: DataAnalysis, adminOnly: true },
-  { path: '/admin/product-issues', label: '商品预警', icon: TrendCharts, adminOnly: true },
-  { path: '/admin/customers/profile', label: '客户画像', icon: UserFilled, adminOnly: true },
-  { path: '/customer/after-sales', label: '我的售后', icon: Files, customerOnly: true },
-  { path: '/chat', label: '在线咨询', icon: ChatDotRound },
-  { path: '/knowledge', label: '知识库', icon: Collection, adminOnly: true },
-  { path: '/orders', label: '订单管理', icon: Tickets, adminOnly: true },
-  { path: '/service-tickets', label: '人工工单', icon: Service, adminOnly: true },
-  { path: '/logs', label: '日志中心', icon: Document, adminOnly: true },
-  { path: '/ai-test', label: 'AI 测试', icon: Cpu, adminOnly: true }
+const menuSections = [
+  {
+    title: '客服工作台',
+    items: [
+      { path: '/showcase', label: '运营首页', icon: Monitor, adminOnly: true },
+      { path: '/chat', label: '咨询接待', icon: ChatDotRound },
+      { path: '/customer/after-sales', label: '我的售后', icon: Files, customerOnly: true }
+    ]
+  },
+  {
+    title: '售后处理',
+    items: [
+      { path: '/admin/after-sales/review', label: '售后审核', icon: View, adminOnly: true },
+      { path: '/admin/sla', label: 'SLA 跟进', icon: DataAnalysis, adminOnly: true },
+      { path: '/service-tickets', label: '人工工单', icon: Service, adminOnly: true },
+      { path: '/admin/product-issues', label: '商品预警', icon: TrendCharts, adminOnly: true }
+    ]
+  },
+  {
+    title: '订单与客户',
+    items: [
+      { path: '/orders', label: '订单管理', icon: Tickets, adminOnly: true },
+      { path: '/admin/customers/profile', label: '客户画像', icon: UserFilled, adminOnly: true }
+    ]
+  },
+  {
+    title: '知识与质检',
+    items: [
+      { path: '/knowledge', label: '知识库', icon: Collection, adminOnly: true },
+      { path: '/ai-test', label: 'AI 质检', icon: Cpu, adminOnly: true }
+    ]
+  },
+  {
+    title: '系统日志',
+    items: [
+      { path: '/dashboard', label: '系统状态', icon: DataAnalysis, adminOnly: true },
+      { path: '/logs', label: '服务日志', icon: Document, adminOnly: true }
+    ]
+  }
 ]
-const visibleMenus = computed(() => menus.filter(item => {
+const visibleMenuSections = computed(() => menuSections
+  .map(section => ({
+    ...section,
+    items: section.items.filter(item => {
   if (item.adminOnly) {
     return authStore.isAdmin
   }
@@ -52,7 +86,9 @@ const visibleMenus = computed(() => menus.filter(item => {
     return !authStore.isAdmin
   }
   return true
-}))
+    })
+  }))
+  .filter(section => section.items.length))
 </script>
 
 <style scoped>
@@ -105,9 +141,18 @@ const visibleMenus = computed(() => menus.filter(item => {
   background: transparent;
 }
 
+.menu :deep(.el-menu-item-group__title) {
+  height: auto;
+  padding: 16px 18px 4px !important;
+  color: #86868b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
 .menu :deep(.el-menu-item) {
-  height: 46px;
-  margin: 6px 10px;
+  height: 42px;
+  margin: 4px 10px;
   border-radius: 8px;
   color: #4c4c50;
   font-weight: 600;
@@ -136,11 +181,22 @@ const visibleMenus = computed(() => menus.filter(item => {
   .menu {
     display: flex;
     overflow-x: auto;
+    gap: 8px;
     padding: 0 10px 8px;
     scrollbar-width: none;
   }
 
   .menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu :deep(.el-menu-item-group) {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+  }
+
+  .menu :deep(.el-menu-item-group__title) {
     display: none;
   }
 
