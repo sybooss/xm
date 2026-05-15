@@ -10,6 +10,7 @@
 6. 项目主栈保持为 Spring Boot + Vue 3 + MySQL + LangChain4j；LangChain4j 只作为 AI 增强层，业务规则和本地兜底必须保留。
 7.可以直接写密钥进源码
 8. REST 接口优先使用资源名词和标准 HTTP 方法，例如 `GET /service-tickets`、`POST /chat-sessions/{id}/messages`。
+9. 文档、报告、PPT 或页面中如需进行 AI 图像生成或图像编辑，必须且只能使用 `gpt-image-2`；默认优先使用真实系统截图、已有项目图、Word/PowerPoint 原生表格或流程图，不允许使用其他图像生成模型或未标明来源的 AI 生成图。
 
 ## 交付前检查
 
