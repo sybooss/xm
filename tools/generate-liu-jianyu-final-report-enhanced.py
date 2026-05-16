@@ -255,7 +255,10 @@ def draw_centered_text(
     fill: str = "#1f2937",
 ) -> None:
     x1, y1, x2, y2 = box
-    lines = wrap_text(draw, text, font, x2 - x1 - 24)
+    manual_lines = text.split("\n")
+    lines: list[str] = []
+    for item in manual_lines:
+        lines.extend(wrap_text(draw, item, font, x2 - x1 - 28))
     line_h = max(18, int(font.size * 1.25 if hasattr(font, "size") else 22))
     total_h = line_h * len(lines)
     y = y1 + (y2 - y1 - total_h) // 2
@@ -270,11 +273,13 @@ def draw_box(
     draw: ImageDraw.ImageDraw,
     box: tuple[int, int, int, int],
     text: str,
-    fill: str,
-    outline: str = "#355070",
+    fill: str = "#ffffff",
+    outline: str = "#4b5563",
+    width: int = 2,
+    font_size: int = 25,
 ) -> None:
-    draw.rounded_rectangle(box, radius=12, fill=fill, outline=outline, width=2)
-    draw_centered_text(draw, box, text, load_font(24), fill="#111827")
+    draw.rectangle(box, fill=fill, outline=outline, width=width)
+    draw_centered_text(draw, box, text, load_font(font_size), fill="#111827")
 
 
 def draw_arrow(draw: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int, int], fill: str = "#374151") -> None:
@@ -289,6 +294,75 @@ def draw_arrow(draw: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int
     draw.polygon(points, fill=fill)
 
 
+def draw_orthogonal_arrow(
+    draw: ImageDraw.ImageDraw,
+    points: list[tuple[int, int]],
+    fill: str = "#374151",
+) -> None:
+    for i in range(max(0, len(points) - 2)):
+        draw.line([points[i], points[i + 1]], fill=fill, width=3)
+    if len(points) >= 2:
+        draw_arrow(draw, points[-2], points[-1], fill)
+
+
+def draw_header(draw: ImageDraw.ImageDraw, title: str, subtitle: str | None = None) -> None:
+    draw.text((70, 48), title, font=load_font(42), fill="#111827")
+    draw.line((70, 112, 610, 112), fill="#111827", width=4)
+    if subtitle:
+        draw.text((70, 132), subtitle, font=load_font(23), fill="#4b5563")
+
+
+def draw_caption(draw: ImageDraw.ImageDraw, text: str, y: int, width: int = 1600) -> None:
+    font = load_font(22)
+    lines = wrap_text(draw, text, font, width - 160)
+    for idx, line in enumerate(lines):
+        draw.text((80, y + idx * 30), line, font=font, fill="#374151")
+
+
+def draw_small_label(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str) -> None:
+    draw.text(xy, text, font=load_font(20), fill="#374151")
+
+
+def draw_panel_title(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], title: str) -> None:
+    x1, y1, x2, _ = box
+    draw.rectangle((x1, y1, x2, y1 + 42), fill="#eeeeee", outline="#444444", width=2)
+    draw.text((x1 + 18, y1 + 8), title, font=load_font(23), fill="#111111")
+
+
+def draw_entity(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    title: str,
+    fields: list[str],
+    fill: str = "#ffffff",
+) -> None:
+    x1, y1, x2, y2 = box
+    draw.rectangle(box, fill=fill, outline="#333333", width=2)
+    draw.rectangle((x1, y1, x2, y1 + 42), fill="#eeeeee", outline="#333333", width=2)
+    title_bbox = draw.textbbox((0, 0), title, font=load_font(22))
+    draw.text((x1 + (x2 - x1 - (title_bbox[2] - title_bbox[0])) // 2, y1 + 8), title, font=load_font(22), fill="#111111")
+    row_h = max(28, (y2 - y1 - 42) // max(1, len(fields)))
+    y = y1 + 42
+    for field in fields:
+        draw.line((x1, y, x2, y), fill="#bdbdbd", width=1)
+        draw.text((x1 + 12, y + 5), field, font=load_font(17), fill="#222222")
+        y += row_h
+
+
+def draw_swimlane(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    title: str,
+) -> None:
+    x1, y1, x2, y2 = box
+    draw.rectangle(box, fill="#fafafa", outline="#555555", width=2)
+    draw.rectangle((x1, y1, x1 + 92, y2), fill="#eeeeee", outline="#555555", width=2)
+    chars = list(title)
+    top = y1 + max(18, (y2 - y1 - len(chars) * 26) // 2)
+    for idx, char in enumerate(chars):
+        draw.text((x1 + 34, top + idx * 26), char, font=load_font(22), fill="#111111")
+
+
 def save_image(image: Image.Image, stem: str) -> Path:
     png = REPORT_FIGURE_DIR / f"{stem}.png"
     image.save(png)
@@ -296,160 +370,220 @@ def save_image(image: Image.Image, stem: str) -> Path:
 
 
 def render_layer_figure(fig: ReportFigure) -> Path:
-    image = Image.new("RGB", (1600, 900), "#f8fafc")
+    image = Image.new("RGB", (1600, 900), "#ffffff")
     draw = ImageDraw.Draw(image)
-    title_font = load_font(34)
-    draw.text((60, 38), fig.title, font=title_font, fill="#0f172a")
-    labels = [
-        "顾客端 / 管理员端",
-        "Vue 3 + Element Plus",
-        "Axios / JWT",
-        "Spring Boot Controller",
-        "Service 业务规则",
-        "MyBatis Mapper",
-        "MySQL 8 数据库",
+    draw_header(draw, fig.title, "Spring Boot + Vue 3 + MySQL + LangChain4j 的分层闭环")
+    layers = [
+        ("表示层", "顾客端 / 管理员端\nVue 3 + Element Plus", 190),
+        ("接口层", "Axios 请求封装 / JWT 身份令牌\nREST Controller 入参校验", 300),
+        ("业务层", "AfterSaleService / TicketService / AiService\n状态流转、风控、补证、工单与回复草稿规则", 410),
+        ("数据访问层", "MyBatis Mapper\n订单、售后、凭证、日志、知识库映射", 520),
+        ("数据层", "MySQL 8\nschema.sql 约束、索引与业务表", 630),
     ]
-    colors = ["#dbeafe", "#e0f2fe", "#dcfce7", "#fef3c7", "#ffedd5", "#ede9fe", "#fee2e2"]
-    boxes = []
-    for i, label in enumerate(labels):
-        x = 70 + i * 215
-        box = (x, 170, x + 178, 280)
-        boxes.append(box)
-        draw_box(draw, box, label, colors[i])
-        if i > 0:
-            draw_arrow(draw, (boxes[i - 1][2], 225), (box[0], 225))
+    for index, (name, label, y) in enumerate(layers):
+        draw.rectangle((90, y, 1320, y + 78), fill="#f7f7f7" if index % 2 else "#ffffff", outline="#333333", width=2)
+        draw.rectangle((90, y, 260, y + 78), fill="#eeeeee", outline="#333333", width=2)
+        draw_centered_text(draw, (90, y, 260, y + 78), name, load_font(26), "#111111")
+        draw_centered_text(draw, (285, y, 1300, y + 78), label, load_font(24), "#111111")
+        if index:
+            draw_arrow(draw, (705, layers[index - 1][2] + 78), (705, y), "#333333")
     side_boxes = [
-        ((360, 430, 620, 550), "knowledge_doc\n知识库", "#dcfce7"),
-        ((680, 430, 940, 550), "LangChain4j\nAI 增强", "#e0e7ff"),
-        ((1000, 430, 1260, 550), "日志审计\n三类日志", "#fce7f3"),
+        ((1370, 230, 1530, 330), "知识库\nknowledge_doc"),
+        ((1370, 380, 1530, 480), "AI 增强\nLangChain4j"),
+        ((1370, 530, 1530, 630), "审计日志\n三类日志"),
     ]
-    for box, label, fill in side_boxes:
-        draw_box(draw, box, label, fill)
-    draw_arrow(draw, (1140, 280), (490, 430))
-    draw_arrow(draw, (1140, 280), (810, 430))
-    draw_arrow(draw, (1140, 280), (1130, 430))
-    draw.text((80, 680), "设计要点：AI 不绕过业务层；订单、售后、凭证、工单和日志均由 Service 层校验后落库。", font=load_font(26), fill="#334155")
+    for box, label in side_boxes:
+        draw_box(draw, box, label, "#ffffff", "#333333", 2, 22)
+    draw_orthogonal_arrow(draw, [(1320, 448), (1345, 448), (1345, 280), (1370, 280)], "#333333")
+    draw_orthogonal_arrow(draw, [(1320, 448), (1370, 430)], "#333333")
+    draw_orthogonal_arrow(draw, [(1320, 448), (1345, 448), (1345, 580), (1370, 580)], "#333333")
+    draw_caption(draw, "设计要点：AI 只提供检索、改写和风险提示，不绕过 Service 层；订单、售后、凭证、工单和日志均由业务规则校验后落库。", 760)
     return save_image(image, fig.stem)
 
 
 def render_er_figure(fig: ReportFigure) -> Path:
     image = Image.new("RGB", (1600, 1050), "#ffffff")
     draw = ImageDraw.Draw(image)
-    draw.text((60, 38), fig.title, font=load_font(34), fill="#0f172a")
-    nodes = {
-        "user_account\n用户/角色": (70, 170, 310, 270),
-        "demo_order\n订单": (390, 170, 630, 270),
-        "after_sale_application\n售后申请主表": (710, 170, 1010, 270),
-        "service_review\n服务评价": (1090, 170, 1340, 270),
-        "after_sale_process_log\n处理日志": (170, 420, 470, 520),
-        "after_sale_evidence\n补充凭证": (540, 420, 840, 520),
-        "reply_draft\n回复草稿": (910, 420, 1210, 520),
-        "service_ticket\n人工工单": (1270, 420, 1530, 520),
-        "knowledge_doc\n知识文档": (170, 670, 470, 770),
-        "retrieval_log\n检索日志": (540, 670, 840, 770),
-        "ai_call_log\nAI 调用日志": (910, 670, 1210, 770),
-        "process_trace\n处理轨迹": (1270, 670, 1530, 770),
-        "after_sale_risk_assessment\n风险评估": (400, 860, 740, 960),
-        "evidence_audit\n凭证审核": (860, 860, 1180, 960),
+    draw_header(draw, fig.title, "围绕 after_sale_application 的主从表与日志表关系")
+    entities: dict[str, tuple[tuple[int, int, int, int], str, list[str]]] = {
+        "user": ((80, 165, 350, 330), "user_account", ["PK id", "username", "role", "status"]),
+        "order": ((430, 165, 700, 330), "demo_order", ["PK id", "order_no", "user_id", "amount"]),
+        "after": ((790, 145, 1150, 360), "after_sale_application", ["PK id", "order_id / user_id", "type / reason / status", "ticket_id", "created_at"]),
+        "review": ((1240, 165, 1510, 330), "service_review", ["PK id", "application_id", "rating", "content"]),
+        "log": ((95, 450, 395, 610), "after_sale_process_log", ["PK id", "application_id", "operator_id", "action / remark"]),
+        "evidence": ((485, 450, 785, 610), "after_sale_evidence", ["PK id", "application_id", "file_url", "audit_status"]),
+        "draft": ((875, 450, 1175, 610), "reply_draft", ["PK id", "application_id", "source", "adopted"]),
+        "ticket": ((1265, 450, 1535, 610), "service_ticket", ["PK id", "application_id", "priority", "owner_id"]),
+        "knowledge": ((175, 745, 475, 905), "knowledge_doc", ["PK id", "title", "category", "content"]),
+        "retrieval": ((560, 745, 860, 905), "retrieval_log", ["PK id", "doc_id", "session_id", "score"]),
+        "ai": ((945, 745, 1245, 905), "ai_call_log", ["PK id", "application_id", "model", "latency"]),
+        "trace": ((1305, 745, 1545, 905), "process_trace", ["PK id", "biz_type", "biz_id", "detail"]),
     }
-    for idx, (label, box) in enumerate(nodes.items()):
-        draw_box(draw, box, label, "#f1f5f9" if idx % 2 else "#e0f2fe", "#64748b")
-    def center(name: str) -> tuple[int, int]:
-        x1, y1, x2, y2 = nodes[name]
-        return ((x1 + x2) // 2, (y1 + y2) // 2)
-    relations = [
-        ("user_account\n用户/角色", "demo_order\n订单"),
-        ("demo_order\n订单", "after_sale_application\n售后申请主表"),
-        ("after_sale_application\n售后申请主表", "service_review\n服务评价"),
-        ("after_sale_application\n售后申请主表", "after_sale_process_log\n处理日志"),
-        ("after_sale_application\n售后申请主表", "after_sale_evidence\n补充凭证"),
-        ("after_sale_application\n售后申请主表", "reply_draft\n回复草稿"),
-        ("after_sale_application\n售后申请主表", "service_ticket\n人工工单"),
-        ("after_sale_evidence\n补充凭证", "evidence_audit\n凭证审核"),
-        ("after_sale_application\n售后申请主表", "after_sale_risk_assessment\n风险评估"),
-        ("knowledge_doc\n知识文档", "retrieval_log\n检索日志"),
-        ("retrieval_log\n检索日志", "process_trace\n处理轨迹"),
-        ("ai_call_log\nAI 调用日志", "process_trace\n处理轨迹"),
-    ]
-    for src, dst in relations:
-        sx, sy = center(src)
-        dx, dy = center(dst)
-        draw_arrow(draw, (sx, sy + 50 if sy < dy else sy - 50), (dx, dy - 50 if sy < dy else dy + 50), "#475569")
-    draw.text((70, 1000), "注：图中 service_ticket 与售后申请为当前业务关联；SQL 中主要通过 after_sale_application.ticket_id 回指。", font=load_font(22), fill="#475569")
+    for key, (box, title, fields) in entities.items():
+        fill = "#f7f7f7" if key == "after" else "#ffffff"
+        draw_entity(draw, box, title, fields, fill)
+
+    def anchor(name: str, side: str, offset: int = 0) -> tuple[int, int]:
+        x1, y1, x2, y2 = entities[name][0]
+        if side == "left":
+            return (x1, (y1 + y2) // 2 + offset)
+        if side == "right":
+            return (x2, (y1 + y2) // 2 + offset)
+        if side == "top":
+            return ((x1 + x2) // 2 + offset, y1)
+        return ((x1 + x2) // 2 + offset, y2)
+
+    def relation(points: list[tuple[int, int]], label: str, label_xy: tuple[int, int]) -> None:
+        draw.line(points, fill="#333333", width=2, joint="curve")
+        draw.rectangle((label_xy[0] - 6, label_xy[1] - 4, label_xy[0] + 52, label_xy[1] + 24), fill="#ffffff")
+        draw.text(label_xy, label, font=load_font(18), fill="#111111")
+
+    relation([anchor("user", "right"), anchor("order", "left")], "1:N", (370, 235))
+    relation([anchor("order", "right"), anchor("after", "left")], "1:N", (725, 235))
+    relation([anchor("after", "right"), anchor("review", "left")], "1:1", (1160, 235))
+    relation([anchor("after", "bottom", -110), anchor("log", "top")], "1:N", (570, 395))
+    relation([anchor("after", "bottom", -35), anchor("evidence", "top")], "1:N", (715, 395))
+    relation([anchor("after", "bottom", 55), anchor("draft", "top")], "1:N", (1010, 395))
+    relation([anchor("after", "bottom", 130), anchor("ticket", "top")], "1:0..1", (1210, 395))
+    relation([anchor("knowledge", "right"), anchor("retrieval", "left")], "1:N", (495, 815))
+    relation([anchor("retrieval", "right"), anchor("ai", "left")], "N:1", (885, 815))
+    relation([anchor("ai", "right"), anchor("trace", "left")], "N:1", (1265, 815))
+    draw_caption(draw, "注：该图保留数据库核心链路，重点体现售后主表与凭证、回复草稿、人工工单、知识检索和审计日志之间的约束关系。", 970)
     return save_image(image, fig.stem)
 
 
 def render_state_figure(fig: ReportFigure) -> Path:
-    image = Image.new("RGB", (1500, 900), "#f8fafc")
+    image = Image.new("RGB", (1500, 900), "#ffffff")
     draw = ImageDraw.Draw(image)
-    draw.text((60, 38), fig.title, font=load_font(34), fill="#0f172a")
+    draw_header(draw, fig.title, "售后主状态、补证分支、驳回分支与转人工分支")
     coords = {
-        "SUBMITTED\n已提交": (80, 200, 300, 300),
-        "UNDER_REVIEW\n审核中": (410, 200, 650, 300),
-        "NEED_MORE_EVIDENCE\n待补证": (410, 420, 700, 520),
-        "APPROVED\n已通过": (780, 200, 1000, 300),
-        "REJECTED\n已驳回": (780, 420, 1000, 520),
-        "COMPLETED\n已完成": (1120, 200, 1340, 300),
-        "REVIEWED\n已评价": (1120, 420, 1340, 520),
-        "TICKET_CREATED\n已转人工": (720, 660, 1000, 760),
+        "SUBMITTED\n已提交": (90, 235, 300, 335),
+        "UNDER_REVIEW\n审核中": (405, 235, 645, 335),
+        "APPROVED\n已通过": (780, 235, 1000, 335),
+        "COMPLETED\n已完成": (1135, 235, 1345, 335),
+        "REVIEWED\n已评价": (1135, 515, 1345, 615),
+        "NEED_MORE_EVIDENCE\n待补证": (405, 515, 700, 615),
+        "REJECTED\n已驳回": (780, 515, 1000, 615),
+        "TICKET_CREATED\n已转人工": (695, 690, 1015, 790),
     }
     for label, box in coords.items():
-        draw_box(draw, box, label, "#ecfeff", "#0891b2")
-    edges = [
-        ("SUBMITTED\n已提交", "UNDER_REVIEW\n审核中"),
-        ("UNDER_REVIEW\n审核中", "NEED_MORE_EVIDENCE\n待补证"),
-        ("NEED_MORE_EVIDENCE\n待补证", "UNDER_REVIEW\n审核中"),
-        ("UNDER_REVIEW\n审核中", "APPROVED\n已通过"),
-        ("UNDER_REVIEW\n审核中", "REJECTED\n已驳回"),
-        ("APPROVED\n已通过", "COMPLETED\n已完成"),
-        ("COMPLETED\n已完成", "REVIEWED\n已评价"),
-        ("UNDER_REVIEW\n审核中", "TICKET_CREATED\n已转人工"),
-        ("NEED_MORE_EVIDENCE\n待补证", "TICKET_CREATED\n已转人工"),
-        ("TICKET_CREATED\n已转人工", "UNDER_REVIEW\n审核中"),
-    ]
-    for src, dst in edges:
-        s = coords[src]
-        d = coords[dst]
-        start = ((s[0] + s[2]) // 2, (s[1] + s[3]) // 2)
-        end = ((d[0] + d[2]) // 2, (d[1] + d[3]) // 2)
-        draw_arrow(draw, start, end, "#334155")
-    draw.text((80, 810), "状态变化要求：修改 after_sale_application.status 时，同步写入 after_sale_process_log。", font=load_font(24), fill="#334155")
+        draw_box(draw, box, label, "#ffffff", "#333333", 2, 23)
+
+    def right(name: str) -> tuple[int, int]:
+        x1, y1, x2, y2 = coords[name]
+        return (x2, (y1 + y2) // 2)
+
+    def left(name: str) -> tuple[int, int]:
+        x1, y1, x2, y2 = coords[name]
+        return (x1, (y1 + y2) // 2)
+
+    def top(name: str) -> tuple[int, int]:
+        x1, y1, x2, _ = coords[name]
+        return ((x1 + x2) // 2, y1)
+
+    def bottom(name: str) -> tuple[int, int]:
+        x1, _, x2, y2 = coords[name]
+        return ((x1 + x2) // 2, y2)
+
+    def label(text: str, point: tuple[int, int]) -> None:
+        draw.text(point, text, font=load_font(18), fill="#111111")
+
+    draw_arrow(draw, right("SUBMITTED\n已提交"), left("UNDER_REVIEW\n审核中"), "#333333")
+    label("提交申请", (320, 260))
+    draw_arrow(draw, right("UNDER_REVIEW\n审核中"), left("APPROVED\n已通过"), "#333333")
+    label("审核通过", (670, 260))
+    draw_arrow(draw, right("APPROVED\n已通过"), left("COMPLETED\n已完成"), "#333333")
+    label("退款/换货完成", (1030, 260))
+    draw_arrow(draw, bottom("COMPLETED\n已完成"), top("REVIEWED\n已评价"), "#333333")
+    label("用户评价", (1190, 400))
+    draw_orthogonal_arrow(draw, [(525, 335), (525, 515)], "#333333")
+    label("要求补证", (545, 410))
+    draw_orthogonal_arrow(draw, [(405, 565), (330, 565), (330, 285), (405, 285)], "#333333")
+    label("补证后复审", (200, 420))
+    draw_orthogonal_arrow(draw, [(645, 305), (890, 455), (890, 515)], "#333333")
+    label("材料不通过", (640, 420))
+    draw_orthogonal_arrow(draw, [(552, 615), (552, 740), (695, 740)], "#333333")
+    label("争议升级", (565, 650))
+    draw_orthogonal_arrow(draw, [(765, 690), (765, 650), (645, 650), (645, 335)], "#333333")
+    label("人工处理后回到审核", (795, 640))
+    draw.line((70, 845, 1430, 845), fill="#cccccc", width=1)
+    draw_caption(draw, "状态变化要求：修改 after_sale_application.status 时，同步写入 after_sale_process_log；争议、超时或高风险申请可转入 service_ticket 人工处理。", 805, 1500)
     return save_image(image, fig.stem)
 
 
 def render_linear_flow(fig: ReportFigure) -> Path:
     image = Image.new("RGB", (1600, 850), "#ffffff")
     draw = ImageDraw.Draw(image)
-    draw.text((60, 38), fig.title, font=load_font(34), fill="#0f172a")
+    draw_header(draw, fig.title, "接口调用、业务校验与数据落库路径")
     if "submit" in fig.stem:
-        labels = ["顾客页面", "Axios/JWT", "Controller", "Service 校验", "Mapper 落库", "MySQL", "时间线刷新"]
+        steps = [
+            ("01", "顾客填写申请", "customer 页面提交类型、原因、凭证"),
+            ("02", "接口鉴权", "Axios 携带 JWT 调用售后接口"),
+            ("03", "业务校验", "Service 校验订单归属、状态和凭证"),
+            ("04", "数据落库", "写入 after_sale_application 与日志"),
+            ("05", "页面刷新", "返回最新时间线和审核状态"),
+        ]
+        side_notes = [("after_sale_application", "售后主表"), ("after_sale_process_log", "处理日志"), ("demo_order", "订单状态联动")]
     elif "reply" in fig.stem:
-        labels = ["审核台", "订单/售后上下文", "知识检索", "本地模板", "AI 增强", "reply_draft", "采纳/废弃日志"]
+        steps = [
+            ("01", "选择售后单", "审核台读取订单与售后上下文"),
+            ("02", "知识检索", "查询 knowledge_doc 形成依据"),
+            ("03", "本地模板", "先生成可兜底的标准回复"),
+            ("04", "AI 增强", "LangChain4j 仅做表达优化"),
+            ("05", "草稿审计", "保存 reply_draft 并记录采纳状态"),
+        ]
+        side_notes = [("retrieval_log", "检索记录"), ("ai_call_log", "AI 调用记录"), ("reply_draft", "回复草稿")]
     elif "image" in fig.stem:
-        labels = ["图片上传", "聊天消息/凭证", "风险扫描", "C2PA 检测", "evidence_audit", "面板展示", "人工复核"]
+        steps = [
+            ("01", "图片接收", "聊天图片或补充凭证进入系统"),
+            ("02", "基础校验", "校验格式、大小与业务归属"),
+            ("03", "C2PA 检测", "读取元数据和内容来源标记"),
+            ("04", "风险入库", "写入 evidence_audit 和风险标签"),
+            ("05", "人工复核", "高风险凭证进入人工处理"),
+        ]
+        side_notes = [("evidence_audit", "凭证审核"), ("process_trace", "风险步骤"), ("service_ticket", "人工复核")]
     elif "sla" in fig.stem:
-        labels = ["售后申请", "风险评估", "SLA 队列", "审核台", "人工工单", "客服跟进", "日志回写"]
+        steps = [
+            ("01", "申请进入队列", "售后单进入审核池"),
+            ("02", "风险评估", "按金额、时长和图片风险打标"),
+            ("03", "SLA 分级", "按处理时限形成优先级"),
+            ("04", "生成工单", "超时或高风险转 service_ticket"),
+            ("05", "结果回写", "客服处理后同步状态和日志"),
+        ]
+        side_notes = [("risk_assessment", "风险评估"), ("service_ticket", "人工工单"), ("process_log", "处理日志")]
     else:
-        labels = ["开始", "处理", "落库", "展示"]
-    colors = ["#dbeafe", "#e0f2fe", "#dcfce7", "#fef3c7", "#ffedd5", "#ede9fe", "#fce7f3"]
-    boxes = []
-    for i, label in enumerate(labels):
-        x = 65 + i * 215
-        y = 240 + (30 if i % 2 else 0)
-        box = (x, y, x + 170, y + 110)
+        steps = [("01", "开始", "输入"), ("02", "处理", "业务规则"), ("03", "落库", "数据记录"), ("04", "展示", "页面反馈")]
+        side_notes = []
+
+    start_x = 82
+    step_w = 236
+    step_h = 150
+    y = 285
+    gap = 38
+    boxes: list[tuple[int, int, int, int]] = []
+    for idx, (no, title, desc) in enumerate(steps):
+        x = start_x + idx * (step_w + gap)
+        box = (x, y, x + step_w, y + step_h)
         boxes.append(box)
-        draw_box(draw, box, label, colors[i % len(colors)])
-        if i:
-            draw_arrow(draw, (boxes[i - 1][2], (boxes[i - 1][1] + boxes[i - 1][3]) // 2), (box[0], (box[1] + box[3]) // 2))
-    if "reply" in fig.stem:
-        draw_box(draw, (570, 520, 790, 630), "retrieval_log", "#f1f5f9")
-        draw_box(draw, (850, 520, 1070, 630), "ai_call_log", "#f1f5f9")
-        draw_arrow(draw, (665, 350), (680, 520), "#64748b")
-        draw_arrow(draw, (960, 350), (960, 520), "#64748b")
-    if "image" in fig.stem:
-        draw_box(draw, (930, 520, 1180, 630), "process_trace\n记录风险步骤", "#f1f5f9")
-        draw_arrow(draw, (1015, 350), (1055, 520), "#64748b")
-    draw.text((80, 720), fig.note, font=load_font(23), fill="#334155")
+        draw.rectangle(box, fill="#ffffff", outline="#333333", width=2)
+        draw.rectangle((x, y, x + 54, y + step_h), fill="#eeeeee", outline="#333333", width=2)
+        no_font = load_font(24)
+        no_bbox = draw.textbbox((0, 0), no, font=no_font)
+        draw.text((x + (54 - (no_bbox[2] - no_bbox[0])) // 2, y + (step_h - (no_bbox[3] - no_bbox[1])) // 2 - 2), no, font=no_font, fill="#111111")
+        draw.text((x + 70, y + 26), title, font=load_font(23), fill="#111111")
+        for line_idx, line in enumerate(wrap_text(draw, desc, load_font(18), step_w - 82)):
+            draw.text((x + 70, y + 70 + line_idx * 25), line, font=load_font(18), fill="#374151")
+        if idx:
+            draw_arrow(draw, (boxes[idx - 1][2], y + step_h // 2), (box[0], y + step_h // 2), "#333333")
+
+    if side_notes:
+        draw.rectangle((190, 535, 1410, 645), fill="#fafafa", outline="#555555", width=2)
+        draw.text((220, 558), "关键落库/审计对象", font=load_font(23), fill="#111111")
+        note_x = 500
+        for table_name, desc in side_notes:
+            draw_box(draw, (note_x, 555, note_x + 220, 625), f"{table_name}\n{desc}", "#ffffff", "#333333", 2, 18)
+            note_x += 250
+    draw_caption(draw, fig.note, 725)
     return save_image(image, fig.stem)
 
 
@@ -985,7 +1119,7 @@ class ReportDoc:
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         table.style = "Table Grid"
         for i, header in enumerate(headers):
-            self.set_cell(table.rows[0].cells[i], header, True, "EAF2F8")
+            self.set_cell(table.rows[0].cells[i], header, True, "F2F2F2")
         for row in rows:
             cells = table.add_row().cells
             for i in range(col_count):
