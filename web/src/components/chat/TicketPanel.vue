@@ -103,6 +103,7 @@ async function manualCreate() {
 .ticket-panel {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .ticket-head {
@@ -110,10 +111,17 @@ async function manualCreate() {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+}
+
+.ticket-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .ticket-tags {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -123,6 +131,7 @@ async function manualCreate() {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .ticket-action {
@@ -136,5 +145,6 @@ async function manualCreate() {
 .muted {
   margin: 0;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 </style>

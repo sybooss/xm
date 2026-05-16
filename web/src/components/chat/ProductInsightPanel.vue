@@ -143,14 +143,20 @@ function takeList(value, limit) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid rgb(16 185 129 / 20%);
   border-radius: var(--radius);
   background: #f0fdf4;
 }
 
+.product-head > div {
+  min-width: 0;
+}
+
 .product-head h4 {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .product-head p,
@@ -161,6 +167,7 @@ function takeList(value, limit) {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .eyebrow {
@@ -182,6 +189,7 @@ function takeList(value, limit) {
 }
 
 .mini-block {
+  min-width: 0;
   padding: 10px;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
@@ -205,10 +213,12 @@ function takeList(value, limit) {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .compare-box,
 .advice-box {
+  min-width: 0;
   padding: 10px;
   border-radius: 6px;
 }

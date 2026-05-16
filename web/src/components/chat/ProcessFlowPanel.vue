@@ -101,9 +101,11 @@ function defaultSummary(trace) {
 .flow-list {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .flow-item {
+  min-width: 0;
   padding: 8px 0;
   border-bottom: 1px solid var(--line-soft);
 }
@@ -114,8 +116,12 @@ function defaultSummary(trace) {
 
 .flow-line {
   display: grid;
-  grid-template-columns: 16px 1fr;
+  grid-template-columns: 16px minmax(0, 1fr);
   gap: 8px;
+}
+
+.flow-main {
+  min-width: 0;
 }
 
 .flow-dot {
@@ -143,10 +149,13 @@ function defaultSummary(trace) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .flow-title-row strong {
+  min-width: 0;
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .flow-summary {
@@ -154,6 +163,7 @@ function defaultSummary(trace) {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .flow-meta {
@@ -164,15 +174,18 @@ function defaultSummary(trace) {
 }
 
 .flow-meta span {
+  max-width: 100%;
   padding: 2px 6px;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   background: var(--surface-soft);
   color: var(--text-muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .muted {
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 </style>

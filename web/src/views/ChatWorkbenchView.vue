@@ -179,7 +179,7 @@
           </article>
         </section>
 
-        <el-tabs v-model="activeInsightTab" class="insight-tabs" stretch>
+        <el-tabs v-model="activeInsightTab" class="insight-tabs">
           <el-tab-pane label="客户与订单" name="customer">
             <section class="insight-section">
               <h4>当前订单</h4>
@@ -649,7 +649,7 @@ onMounted(async () => {
 <style scoped>
 .chat-page {
   display: grid;
-  grid-template-columns: 260px minmax(420px, 1fr) 360px;
+  grid-template-columns: 260px minmax(420px, 1fr) minmax(420px, 460px);
   gap: 12px;
   height: calc(100vh - var(--header-height));
   padding: 12px;
@@ -671,6 +671,7 @@ onMounted(async () => {
   margin: 2px 0 0;
   color: var(--text-muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .session-create {
@@ -1011,6 +1012,10 @@ onMounted(async () => {
   align-items: flex-start;
 }
 
+.insight-header > div {
+  min-width: 0;
+}
+
 .insight-body {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1037,16 +1042,16 @@ onMounted(async () => {
 .service-summary-card p {
   color: var(--text-muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .service-summary-card strong {
   display: block;
-  overflow: hidden;
   margin-top: 4px;
   color: #1d1d1f;
   font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .service-summary-card p {
@@ -1056,10 +1061,28 @@ onMounted(async () => {
 
 .insight-tabs {
   min-height: 0;
+  overflow: hidden;
 }
 
 .insight-tabs :deep(.el-tabs__header) {
   margin-bottom: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.insight-tabs :deep(.el-tabs__nav-wrap) {
+  min-width: max-content;
+}
+
+.insight-tabs :deep(.el-tabs__nav-scroll) {
+  overflow: visible;
+}
+
+.insight-tabs :deep(.el-tabs__item) {
+  flex: 0 0 auto;
+  min-width: max-content;
+  padding: 0 16px;
 }
 
 .insight-tabs :deep(.el-tabs__content) {
@@ -1070,6 +1093,19 @@ onMounted(async () => {
 
 .insight-tabs :deep(.el-tab-pane) {
   min-height: 100%;
+  min-width: 0;
+}
+
+.insight-section {
+  min-width: 0;
+}
+
+.insight-section :deep(.el-descriptions__cell),
+.insight-section :deep(.el-descriptions__content),
+.insight-section :deep(.el-descriptions__label) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .insight-section + .insight-section,
@@ -1098,6 +1134,15 @@ onMounted(async () => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+}
+
+.decision-title > div {
+  min-width: 0;
+}
+
+.decision-title h4 {
+  overflow-wrap: anywhere;
 }
 
 .eyebrow {
@@ -1114,6 +1159,7 @@ onMounted(async () => {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .decision-metrics {
@@ -1142,11 +1188,10 @@ onMounted(async () => {
 }
 
 .decision-metrics strong {
-  overflow: hidden;
   margin-top: 5px;
   font-size: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .stream-card {
@@ -1162,6 +1207,7 @@ onMounted(async () => {
 }
 
 .hit-item {
+  min-width: 0;
   padding: 10px;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
@@ -1173,6 +1219,7 @@ onMounted(async () => {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .hit-title {
@@ -1184,9 +1231,7 @@ onMounted(async () => {
 
 .hit-title strong {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .hit-title span {
@@ -1205,6 +1250,7 @@ onMounted(async () => {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .tool-list,
@@ -1212,6 +1258,7 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .tool-item,
@@ -1221,6 +1268,7 @@ onMounted(async () => {
   background: #fff;
   color: var(--text);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .tool-item {
@@ -1228,6 +1276,7 @@ onMounted(async () => {
 }
 
 .suggestion-list button {
+  max-width: 100%;
   padding: 7px 10px;
   cursor: pointer;
 }
@@ -1238,7 +1287,7 @@ onMounted(async () => {
   color: var(--brand);
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1320px) {
   .chat-page {
     grid-template-columns: 240px 1fr;
     height: auto;
@@ -1251,6 +1300,16 @@ onMounted(async () => {
 
   .insight-body {
     max-height: 640px;
+  }
+}
+
+@media (max-width: 960px) {
+  .service-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .decision-metrics {
+    grid-template-columns: 1fr;
   }
 }
 

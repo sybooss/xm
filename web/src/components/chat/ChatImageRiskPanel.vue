@@ -101,6 +101,7 @@ function splitText(value) {
 .image-risk-panel {
   display: grid;
   gap: 10px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid #fed7aa;
   border-radius: 6px;
@@ -112,6 +113,11 @@ function splitText(value) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+}
+
+.risk-head > div {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -127,6 +133,7 @@ function splitText(value) {
   color: var(--text);
   font-size: 13px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .risk-tags,
@@ -135,6 +142,7 @@ function splitText(value) {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+  min-width: 0;
 }
 
 .risk-grid {
@@ -145,6 +153,7 @@ function splitText(value) {
 
 .risk-grid > div,
 .risk-block {
+  min-width: 0;
   padding: 8px;
   border: 1px solid rgb(251 146 60 / 26%);
   border-radius: 6px;
@@ -169,6 +178,7 @@ function splitText(value) {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .signal-list strong {
