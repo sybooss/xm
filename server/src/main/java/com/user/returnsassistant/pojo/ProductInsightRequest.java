@@ -7,5 +7,5 @@ public class ProductInsightRequest {
     private Long orderId;
     private String orderNo;
     private String issueText;
-    private Boolean useAi;
+    private Boolean useAi = true;
 }

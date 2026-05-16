@@ -59,7 +59,7 @@ public class AfterSaleDiagnosisServiceImpl implements AfterSaleDiagnosisService 
         ensureOrderAccess(order, user);
         ensureSessionAccess(request.getSessionId(), order.getId(), user);
 
-        ProductInsight productInsight = productInsightService.build(order, issueText, null, false);
+        ProductInsight productInsight = productInsightService.build(order, issueText, null, request.getUseAi());
         String suggestedServiceType = suggestServiceType(issueText, request.getServiceType(), productInsight);
         String decisionLevel = decideLevel(order, issueText, suggestedServiceType, request.getRefundAmount());
         List<String> requiredEvidence = requiredEvidence(order, issueText, suggestedServiceType, decisionLevel, request.getRefundAmount());
@@ -311,7 +311,7 @@ public class AfterSaleDiagnosisServiceImpl implements AfterSaleDiagnosisService 
     }
 
     private String buildAiSummary(AfterSaleDiagnosis diagnosis, ProductInsight productInsight, Boolean useAi) {
-        if (useAi == null || !useAi) {
+        if (Boolean.FALSE.equals(useAi)) {
             diagnosis.setAiStatus("SKIPPED");
             diagnosis.setAiErrorMessage("本轮使用本地规则生成诊断");
             return localAiSummary(diagnosis);

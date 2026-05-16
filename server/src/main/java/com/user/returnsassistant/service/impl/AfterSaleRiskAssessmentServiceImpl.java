@@ -244,7 +244,7 @@ public class AfterSaleRiskAssessmentServiceImpl implements AfterSaleRiskAssessme
     }
 
     private String buildSummary(AfterSaleRiskAssessment assessment, AfterSaleApplication application, AfterSaleRiskAssessmentRequest request) {
-        if (request != null && Boolean.TRUE.equals(request.getUseAi())) {
+        if (request == null || !Boolean.FALSE.equals(request.getUseAi())) {
             AiService.AiResult result = aiService.generate(buildPrompt(assessment, application));
             assessment.setAiStatus(result.status());
             assessment.setAiErrorMessage(result.errorMessage());

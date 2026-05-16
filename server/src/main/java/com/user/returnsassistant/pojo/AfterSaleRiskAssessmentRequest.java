@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class AfterSaleRiskAssessmentRequest {
-    private Boolean useAi;
+    private Boolean useAi = true;
 }

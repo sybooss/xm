@@ -229,7 +229,7 @@ public class EvidenceAuditServiceImpl implements EvidenceAuditService {
     }
 
     private String buildSummary(EvidenceAudit audit, AfterSaleApplication application, AfterSaleEvidence evidence, EvidenceAuditRequest request) {
-        if (request != null && Boolean.TRUE.equals(request.getUseAi())) {
+        if (request == null || !Boolean.FALSE.equals(request.getUseAi())) {
             AiService.AiResult result = aiService.generate(buildPrompt(audit, application, evidence));
             audit.setAiStatus(result.status());
             audit.setAiErrorMessage(result.errorMessage());

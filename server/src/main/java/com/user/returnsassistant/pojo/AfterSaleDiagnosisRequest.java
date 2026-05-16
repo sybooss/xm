@@ -12,5 +12,5 @@ public class AfterSaleDiagnosisRequest {
     private String issueText;
     private String serviceType;
     private BigDecimal refundAmount;
-    private Boolean useAi;
+    private Boolean useAi = true;
 }

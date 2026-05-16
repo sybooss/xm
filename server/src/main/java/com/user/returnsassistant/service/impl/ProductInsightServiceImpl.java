@@ -74,7 +74,7 @@ public class ProductInsightServiceImpl implements ProductInsightService {
         }
         insight.setLocalSummary(buildLocalSummary(insight, userIssue, intentCode));
 
-        boolean enabledAi = useAi != null && useAi;
+        boolean enabledAi = !Boolean.FALSE.equals(useAi);
         if (enabledAi) {
             AiService.AiResult result = aiService.generate(buildPrompt(insight, userIssue, intentCode));
             insight.setAiStatus(result.status());

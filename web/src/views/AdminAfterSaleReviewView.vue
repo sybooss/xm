@@ -415,7 +415,7 @@ async function auditEvidence(evidence) {
   }
   auditingEvidenceId.value = evidence.id
   try {
-    await createEvidenceAudit(evidence.id, { useAi: false })
+    await createEvidenceAudit(evidence.id, { useAi: true })
     ElMessage.success('凭证审核已生成')
     selected.value = await getAdminAfterSale(selected.value.id)
   } finally {
@@ -431,7 +431,7 @@ async function auditAllEvidence() {
   auditingAll.value = true
   try {
     for (const evidence of selected.value.evidences) {
-      await createEvidenceAudit(evidence.id, { useAi: false })
+      await createEvidenceAudit(evidence.id, { useAi: true })
     }
     ElMessage.success('全部凭证已完成审核')
     selected.value = await getAdminAfterSale(selected.value.id)
@@ -446,7 +446,7 @@ async function assessRisk() {
   }
   assessingRisk.value = true
   try {
-    await assessAfterSaleRisk(selected.value.id, { useAi: false })
+    await assessAfterSaleRisk(selected.value.id, { useAi: true })
     ElMessage.success('售后风险评估已更新')
     selected.value = await getAdminAfterSale(selected.value.id)
     await loadApplications()

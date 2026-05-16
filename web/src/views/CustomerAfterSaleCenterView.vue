@@ -443,7 +443,7 @@ async function runDiagnosis() {
       issueText: applyForm.reasonText,
       serviceType: applyForm.serviceType,
       refundAmount: applyForm.refundAmount,
-      useAi: false
+      useAi: true
     })
     if (currentDiagnosis.value?.suggestedServiceType && currentDiagnosis.value.suggestedServiceType !== 'REPAIR') {
       applyForm.serviceType = currentDiagnosis.value.suggestedServiceType
@@ -508,7 +508,7 @@ async function submitEvidence() {
   evidenceSubmitting.value = true
   try {
     const evidence = await addCustomerAfterSaleEvidence(selectedAfterSale.value.id, { ...evidenceForm })
-    await createEvidenceAudit(evidence.id, { useAi: false })
+    await createEvidenceAudit(evidence.id, { useAi: true })
     ElMessage.success('凭证已提交')
     evidenceDialogVisible.value = false
     selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
@@ -560,7 +560,7 @@ async function auditEvidence(evidence) {
   }
   auditingEvidenceId.value = evidence.id
   try {
-    await createEvidenceAudit(evidence.id, { useAi: false })
+    await createEvidenceAudit(evidence.id, { useAi: true })
     ElMessage.success('凭证审核已生成')
     selectedAfterSale.value = await getCustomerAfterSale(selectedAfterSale.value.id)
   } finally {
