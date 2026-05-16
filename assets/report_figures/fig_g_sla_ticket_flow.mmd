@@ -1,0 +1,11 @@
+flowchart LR
+    Application[售后申请]
+    Risk[风险评估 / 优先级]
+    SLA[SLA 队列]
+    Review[管理员审核台]
+    Ticket[人工工单]
+    Follow[客服跟进]
+    Log[after_sale_process_log 回写]
+    Application --> Risk --> SLA --> Review --> Ticket --> Follow --> Log
+    Review --> Log
+    Ticket --> Review

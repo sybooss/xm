@@ -1,0 +1,13 @@
+flowchart LR
+    Admin[管理员审核台]
+    Context[订单 / 售后 / 凭证 / 日志]
+    Knowledge[知识检索]
+    Template[本地模板草稿]
+    AI[LangChain4j 表达增强]
+    Draft[reply_draft 保存草稿]
+    Log[retrieval_log / ai_call_log / process_log]
+    Action[采纳或废弃]
+    Admin --> Context --> Knowledge --> Template --> AI --> Draft --> Action
+    Knowledge --> Log
+    AI --> Log
+    Action --> Log

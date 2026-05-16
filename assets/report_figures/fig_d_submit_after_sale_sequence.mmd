@@ -1,0 +1,19 @@
+sequenceDiagram
+    actor Customer as 顾客
+    participant Vue as Vue 顾客端页面
+    participant API as Axios/API 封装
+    participant Controller as CustomerAfterSaleController
+    participant Service as AfterSaleApplicationService
+    participant Mapper as MyBatis Mapper
+    participant DB as MySQL
+    Customer->>Vue: 填写售后类型、原因、金额和说明
+    Vue->>API: POST /customer/after-sales
+    API->>Controller: 携带 JWT 与请求体
+    Controller->>Service: submit(request, currentUser)
+    Service->>DB: 校验订单归属与状态
+    Service->>Mapper: 写入 after_sale_application
+    Service->>Mapper: 写入 after_sale_process_log
+    Service->>DB: 更新订单售后状态
+    Service-->>Controller: 返回售后详情
+    Controller-->>Vue: Result.success(data)
+    Vue-->>Customer: 刷新列表和时间线

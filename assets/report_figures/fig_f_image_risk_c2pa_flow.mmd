@@ -1,0 +1,12 @@
+flowchart LR
+    Upload[图片上传]
+    Message[聊天消息 / 凭证记录]
+    Risk[图片风险扫描]
+    C2PA[C2PA 内容凭证检测]
+    Audit[evidence_audit 风险结果]
+    Panel[聊天面板风险展示]
+    Trace[process_trace 处理轨迹]
+    Manual[人工复核 / 补证建议]
+    Upload --> Message --> Risk --> C2PA --> Audit --> Panel --> Manual
+    Risk --> Trace
+    Audit --> Trace

@@ -1,0 +1,17 @@
+flowchart LR
+    User[顾客端 / 管理员端]
+    Vue[Vue 3 + Element Plus]
+    API[Axios API 封装 / JWT]
+    Spring[Spring Boot Controller]
+    Service[Service 业务编排]
+    Mapper[MyBatis Mapper]
+    MySQL[(MySQL 8)]
+    AI[LangChain4j / OpenAI-Compatible]
+    KB[knowledge_doc 知识库]
+    Logs[retrieval_log / ai_call_log / process_trace]
+    User --> Vue --> API --> Spring --> Service --> Mapper --> MySQL
+    Service --> AI
+    Service --> KB
+    Service --> Logs
+    KB --> MySQL
+    Logs --> MySQL

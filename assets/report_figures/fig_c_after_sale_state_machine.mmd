@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> SUBMITTED: 顾客提交售后
+    SUBMITTED --> UNDER_REVIEW: 管理员开始审核
+    UNDER_REVIEW --> NEED_MORE_EVIDENCE: 要求补充材料
+    NEED_MORE_EVIDENCE --> UNDER_REVIEW: 顾客补充凭证
+    UNDER_REVIEW --> APPROVED: 审核通过
+    UNDER_REVIEW --> REJECTED: 审核驳回
+    APPROVED --> COMPLETED: 管理员确认完成
+    UNDER_REVIEW --> TICKET_CREATED: 创建人工工单
+    NEED_MORE_EVIDENCE --> TICKET_CREATED: 复杂问题转人工
+    TICKET_CREATED --> UNDER_REVIEW: 工单处理后继续审核
+    COMPLETED --> REVIEWED: 顾客评价
