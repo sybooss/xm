@@ -59,6 +59,10 @@ class ChapterFigure:
     heading: str
     title: str
     note: str
+    entry: tuple[str, ...] = ()
+    flow: tuple[str, ...] = ()
+    data: tuple[str, ...] = ()
+    checks: tuple[str, ...] = ()
 
 
 ENGINEERING_FIGURES = [
@@ -226,31 +230,31 @@ SCREENSHOT_FIGURES = [
     ScreenshotFigure("ai_test.png", "AI 质检页面", "AI 质检页面验证当前 LangChain4j 模型链路和本地兜底状态。"),
 ]
 
-CHAPTER4_AI_FIGURES = [
-    ChapterFigure("fig_4_01_login_permission", "fig_4_01_login_permission_gpt_image2.png", "4.1 登录注册与双端权限控制", "登录注册与双端权限控制", "该图用 gpt-image-2 按项目真实登录链路生成，强调顾客端、管理员端、JWT 令牌、路由守卫、后端拦截器和 user_account 表之间的关系。"),
-    ChapterFigure("fig_4_02_customer_after_sale", "fig_4_02_customer_after_sale_gpt_image2.png", "4.2 顾客端我的售后", "顾客端我的售后闭环", "该图用 gpt-image-2 按顾客端真实售后流程生成，覆盖订单入口、售后申请、凭证补充、进度时间线和服务评价。"),
-    ChapterFigure("fig_4_03_admin_review", "fig_4_03_admin_review_gpt_image2.png", "4.3 管理员售后审核工作台", "管理员售后审核工作台", "该图用 gpt-image-2 按管理员审核场景生成，体现审核列表、详情抽屉、状态变更和 after_sale_process_log 审计记录。"),
-    ChapterFigure("fig_4_04_chat_workbench", "fig_4_04_chat_workbench_gpt_image2.png", "4.4 咨询工作台与多轮客服链路", "咨询工作台与多轮客服链路", "该图用 gpt-image-2 按咨询接待链路生成，展示 chat_session、chat_message、上下文检索、AI 建议和人工接待协同。"),
-    ChapterFigure("fig_4_05_knowledge_rag", "fig_4_05_knowledge_rag_gpt_image2.png", "4.5 知识库管理与 RAG 依据展示", "知识库管理与 RAG 依据展示", "该图用 gpt-image-2 按知识库管理模块生成，说明 knowledge_doc、retrieval_log、规则依据和回复草稿引用之间的关系。"),
-    ChapterFigure("fig_4_06_order_context", "fig_4_06_order_context_gpt_image2.png", "4.6 订单管理与售后上下文", "订单管理与售后上下文", "该图用 gpt-image-2 按订单上下文模块生成，突出 demo_order、订单状态、物流支付信息和售后判断依据。"),
-    ChapterFigure("fig_4_07_sla_queue", "fig_4_07_sla_queue_gpt_image2.png", "4.7 SLA 跟进与风险任务队列", "SLA 跟进与风险任务队列", "该图用 gpt-image-2 按 SLA 任务队列生成，展示超时、优先级、风险标记和待处理队列的组织方式。"),
-    ChapterFigure("fig_4_08_ticket_collaboration", "fig_4_08_ticket_collaboration_gpt_image2.png", "4.8 人工工单协同", "人工工单协同", "该图用 gpt-image-2 按人工工单协同场景生成，体现 service_ticket、客服分派、处理回写和售后联动。"),
-    ChapterFigure("fig_4_09_audit_reply_draft", "fig_4_09_audit_reply_draft_gpt_image2.png", "4.9 AI 副驾驶可审计回复草稿", "AI 副驾驶可审计回复草稿", "该图用 gpt-image-2 按回复草稿模块生成，说明 reply_draft、知识依据、管理员采纳或废弃和审计留痕。"),
-    ChapterFigure("fig_4_10_image_risk_c2pa", "fig_4_10_image_risk_c2pa_gpt_image2.png", "4.10 聊天图片风险扫描与 C2PA/图片可信度检测", "聊天图片风险扫描与 C2PA 可信度检测", "该图用 gpt-image-2 按图片可信度预审链路生成，强调 image_risk、C2PA 信号、evidence_audit 和人工复核。"),
-    ChapterFigure("fig_4_11_customer_profile_review", "fig_4_11_customer_profile_review_gpt_image2.png", "4.11 客户画像与服务评价", "客户画像与服务评价", "该图用 gpt-image-2 按客户画像和评价模块生成，展示 customer_profile、service_review、满意度和历史售后信息。"),
-    ChapterFigure("fig_4_12_product_quality_alert", "fig_4_12_product_quality_alert_gpt_image2.png", "4.12 商品质量问题聚合预警", "商品质量问题聚合预警", "该图用 gpt-image-2 按商品质量预警场景生成，体现商品维度聚合、售后原因、质量问题和运营预警。"),
-    ChapterFigure("fig_4_13_log_ai_quality", "fig_4_13_log_ai_quality_gpt_image2.png", "4.13 日志诊断与 AI 质检", "日志诊断与 AI 质检", "该图用 gpt-image-2 按日志诊断链路生成，覆盖 ai_call_log、retrieval_log、process_trace 和 AI 质检页面。"),
-    ChapterFigure("fig_4_14_diagnosis_risk_evidence", "fig_4_14_diagnosis_risk_evidence_gpt_image2.png", "4.14 售后前置诊断、风险评估与凭证审核", "售后前置诊断、风险评估与凭证审核", "该图用 gpt-image-2 按售后预审流程生成，展示前置诊断、risk_assessment、after_sale_evidence 和审核建议。"),
-    ChapterFigure("fig_4_15_operation_status", "fig_4_15_operation_status_gpt_image2.png", "4.15 运营首页与系统状态展示", "运营首页与系统状态展示", "该图用 gpt-image-2 按运营首页生成，汇总工单数量、SLA 风险、系统状态和关键指标。"),
-    ChapterFigure("fig_4_16_dual_after_sale_loop", "fig_4_16_dual_after_sale_loop_gpt_image2.png", "4.16 真实双端售后业务闭环", "真实双端售后业务闭环", "该图用 gpt-image-2 按双端售后闭环生成，说明顾客提交、管理员审核、凭证补充和评价回收。"),
-    ChapterFigure("fig_4_17_sla_ticket_collaboration", "fig_4_17_sla_ticket_collaboration_gpt_image2.png", "4.17 SLA 跟进与人工工单协同", "SLA 跟进与人工工单协同", "该图用 gpt-image-2 按 SLA 与工单联动生成，展示 service_ticket、客服跟进、SLA 队列和日志回写。"),
-    ChapterFigure("fig_4_18_ai_reply_draft", "fig_4_18_ai_reply_draft_gpt_image2.png", "4.18 AI 副驾驶回复草稿", "AI 副驾驶回复草稿", "该图用 gpt-image-2 按 AI 回复草稿功能生成，强调 LangChain4j、reply_draft、采纳状态和审计字段。"),
-    ChapterFigure("fig_4_19_image_risk_detail", "fig_4_19_image_risk_detail_gpt_image2.png", "4.19 图片风险扫描与 C2PA 可信度检测", "图片风险扫描与 C2PA 可信度检测", "该图用 gpt-image-2 按图片风险详情生成，展示图片消息、可信度检测、风险标签和复核入口。"),
-    ChapterFigure("fig_4_20_database_consistency", "fig_4_20_database_consistency_gpt_image2.png", "4.20 数据库实现与数据一致性验证", "数据库实现与数据一致性验证", "该图用 gpt-image-2 按数据库一致性章节生成，覆盖 schema.sql、主外键、索引、事务一致性和初始化数据。"),
-    ChapterFigure("fig_4_21_validation_matrix", "fig_4_21_validation_matrix_gpt_image2.png", "4.21 测试与验证", "测试与验证", "该图用 gpt-image-2 按验证矩阵生成，串联文档生成、接口验证、页面截图和渲染抽查。"),
-    ChapterFigure("fig_4_22_project_innovation", "fig_4_22_project_innovation_gpt_image2.png", "4.22 项目特色与创新点", "项目特色与创新点", "该图用 gpt-image-2 按项目特色生成，概括业务闭环、AI 辅助、RAG 依据、风险预审和可审计。"),
-    ChapterFigure("fig_4_23_personal_database_mapping", "fig_4_23_personal_database_mapping_gpt_image2.png", "4.23 个人负责模块与数据库支撑关系", "个人负责模块与数据库支撑关系", "该图用 gpt-image-2 按个人模块和数据库映射生成，说明售后、工单、知识库、草稿、日志与数据表的支撑关系。"),
-    ChapterFigure("fig_4_24_personal_module_summary", "fig_4_24_personal_module_summary_gpt_image2.png", "4.24 个人负责模块补充说明", "个人负责模块补充说明", "该图用 gpt-image-2 按个人负责模块总结生成，整理模块边界、接口链路、数据落表和答辩要点。"),
+CHAPTER4_SECTION_FIGURES = [
+    ChapterFigure("fig_4_01_login_permission", "fig_4_01_login_permission.png", "4.1 登录注册与双端权限控制", "登录注册与双端权限控制", "该图说明顾客端、管理员端、JWT 令牌、路由守卫、后端拦截器和 user_account 表之间的关系。", ("顾客登录入口", "管理员登录入口", "前端路由守卫"), ("提交账号密码", "后端校验用户", "签发 JWT 令牌", "按角色进入页面"), ("user_account", "JWT 拦截器", "角色权限字段"), ("无令牌禁止访问", "角色不匹配禁止越权", "登录状态可追溯")),
+    ChapterFigure("fig_4_02_customer_after_sale", "fig_4_02_customer_after_sale.png", "4.2 顾客端我的售后", "顾客端我的售后闭环", "该图展示顾客端从订单入口到售后申请、凭证补充、进度查看和服务评价的闭环。", ("我的订单", "申请售后", "补充凭证", "服务评价"), ("选择订单", "填写售后原因", "上传凭证材料", "查看处理进度", "提交服务评价"), ("demo_order", "after_sale_application", "after_sale_evidence", "service_review"), ("订单归属校验", "补证入口按状态展示", "评价只在完成后开放")),
+    ChapterFigure("fig_4_03_admin_review", "fig_4_03_admin_review.png", "4.3 管理员售后审核工作台", "管理员售后审核工作台", "该图体现审核列表、详情抽屉、状态变更和 after_sale_process_log 审计记录。", ("审核列表", "售后详情", "凭证查看", "处理按钮"), ("筛选待审申请", "查看订单与凭证", "填写处理意见", "变更售后状态", "写入过程日志"), ("after_sale_application", "after_sale_process_log", "after_sale_evidence"), ("状态流转受控", "处理意见留痕", "顾客端同步结果")),
+    ChapterFigure("fig_4_04_chat_workbench", "fig_4_04_chat_workbench.png", "4.4 咨询工作台与多轮客服链路", "咨询工作台与多轮客服链路", "该图展示 chat_session、chat_message、上下文检索、AI 建议和人工接待协同。", ("会话列表", "消息输入区", "订单上下文", "处理轨迹"), ("顾客发起咨询", "读取会话历史", "匹配订单和知识", "生成回复建议", "必要时转人工"), ("chat_session", "chat_message", "knowledge_doc", "process_trace"), ("多轮上下文连续", "回复依据可查看", "人工接管不丢失记录")),
+    ChapterFigure("fig_4_05_knowledge_rag", "fig_4_05_knowledge_rag.png", "4.5 知识库管理与 RAG 依据展示", "知识库管理与 RAG 依据展示", "该图说明 knowledge_doc、retrieval_log、规则依据和回复草稿引用之间的关系。", ("知识文档维护", "检索入口", "依据展示", "草稿引用"), ("维护售后规则", "按问题检索知识", "记录命中文档", "在回复中引用依据"), ("knowledge_doc", "retrieval_log", "reply_draft.knowledge_refs"), ("规则来源清楚", "命中记录可追踪", "回复不脱离业务规则")),
+    ChapterFigure("fig_4_06_order_context", "fig_4_06_order_context.png", "4.6 订单管理与售后上下文", "订单管理与售后上下文", "该图突出 demo_order、订单状态、物流支付信息和售后判断依据。", ("订单列表", "订单详情", "售后入口", "物流信息"), ("读取顾客订单", "判断订单状态", "关联售后申请", "形成处理依据"), ("demo_order", "after_sale_application", "user_account"), ("只能处理本人订单", "退款换货依赖订单状态", "订单与售后保持一致")),
+    ChapterFigure("fig_4_07_sla_queue", "fig_4_07_sla_queue.png", "4.7 SLA 跟进与风险任务队列", "SLA 跟进与风险任务队列", "该图展示超时、优先级、风险标记和待处理队列的组织方式。", ("SLA 中心", "风险筛选", "优先级标记", "待处理队列"), ("汇总售后任务", "识别超时风险", "按优先级排序", "推送管理员处理"), ("after_sale_application", "after_sale_risk_assessment", "service_ticket"), ("超时任务可定位", "高风险任务优先", "处理后状态回写")),
+    ChapterFigure("fig_4_08_ticket_collaboration", "fig_4_08_ticket_collaboration.png", "4.8 人工工单协同", "人工工单协同", "该图体现 service_ticket、客服分派、处理回写和售后联动。", ("工单列表", "分派客服", "处理记录", "售后联动"), ("创建人工工单", "指定处理人员", "记录跟进内容", "回写售后单状态"), ("service_ticket", "after_sale_application.ticket_id", "after_sale_process_log"), ("复杂问题可接管", "工单与售后互相回指", "处理过程可复盘")),
+    ChapterFigure("fig_4_09_audit_reply_draft", "fig_4_09_audit_reply_draft.png", "4.9 AI 副驾驶可审计回复草稿", "AI 副驾驶可审计回复草稿", "该图说明 reply_draft、知识依据、管理员采纳或废弃和审计留痕。", ("草稿按钮", "知识依据", "采纳/废弃", "审核日志"), ("读取售后上下文", "形成回复草稿", "管理员审核确认", "记录采纳结果"), ("reply_draft", "knowledge_doc", "ai_call_log", "after_sale_process_log"), ("草稿不自动发出", "关键状态仍由管理员确认", "采纳废弃均留痕")),
+    ChapterFigure("fig_4_10_image_risk_c2pa", "fig_4_10_image_risk_c2pa.png", "4.10 聊天图片风险扫描与 C2PA/图片可信度检测", "聊天图片风险扫描与 C2PA 可信度检测", "该图强调 image_risk、C2PA 信号、evidence_audit 和人工复核。", ("图片消息", "风险面板", "C2PA 状态", "复核入口"), ("上传聊天图片", "提取可信度信号", "形成风险提示", "必要时转人工复核"), ("chat_message", "image_risk", "evidence_audit", "process_trace"), ("风险信号不等于结论", "缺少凭证不直接判假", "高风险提示补充材料")),
+    ChapterFigure("fig_4_11_customer_profile_review", "fig_4_11_customer_profile_review.png", "4.11 客户画像与服务评价", "客户画像与服务评价", "该图展示 customer_profile、service_review、满意度和历史售后信息。", ("客户资料", "历史售后", "满意度评价", "服务标签"), ("汇总顾客记录", "统计售后历史", "保存评价内容", "辅助服务分层"), ("customer_profile", "service_review", "after_sale_application"), ("评价来源可查", "画像不替代审核", "历史记录辅助判断")),
+    ChapterFigure("fig_4_12_product_quality_alert", "fig_4_12_product_quality_alert.png", "4.12 商品质量问题聚合预警", "商品质量问题聚合预警", "该图体现商品维度聚合、售后原因、质量问题和运营预警。", ("商品维度", "售后原因", "质量标签", "运营预警"), ("汇总售后原因", "按商品聚合统计", "识别异常集中问题", "提示运营复核"), ("demo_order.product_name", "after_sale_application.reason_text", "after_sale_risk_assessment"), ("只做趋势提示", "数据来自售后记录", "异常商品需要人工确认")),
+    ChapterFigure("fig_4_13_log_ai_quality", "fig_4_13_log_ai_quality.png", "4.13 日志诊断与 AI 质检", "日志诊断与 AI 质检", "该图覆盖 ai_call_log、retrieval_log、process_trace 和 AI 质检页面。", ("日志中心", "质检页面", "检索记录", "调用状态"), ("发起测试请求", "记录模型状态", "保存检索命中", "展示失败兜底"), ("ai_call_log", "retrieval_log", "process_trace"), ("接口失败不影响主流程", "日志记录便于排查", "兜底状态可展示")),
+    ChapterFigure("fig_4_14_diagnosis_risk_evidence", "fig_4_14_diagnosis_risk_evidence.png", "4.14 售后前置诊断、风险评估与凭证审核", "售后前置诊断、风险评估与凭证审核", "该图展示前置诊断、risk_assessment、after_sale_evidence 和审核建议。", ("售后原因", "凭证材料", "风险评分", "审核建议"), ("读取申请内容", "检查凭证充分性", "计算风险等级", "给出补证建议"), ("after_sale_application", "after_sale_evidence", "after_sale_risk_assessment", "evidence_audit"), ("风险只作辅助", "凭证缺失可补充", "审核结论人工确认")),
+    ChapterFigure("fig_4_15_operation_status", "fig_4_15_operation_status.png", "4.15 运营首页与系统状态展示", "运营首页与系统状态展示", "该图汇总工单数量、SLA 风险、系统状态和关键指标。", ("运营首页", "系统状态", "关键指标", "快捷入口"), ("加载统计数据", "展示数据库状态", "展示模型状态", "跳转核心模块"), ("system_status", "after_sale_application", "service_ticket", "ai_call_log"), ("演示前可检查环境", "业务状态和模型状态分开", "入口指向真实模块")),
+    ChapterFigure("fig_4_16_dual_after_sale_loop", "fig_4_16_dual_after_sale_loop.png", "4.16 真实双端售后业务闭环", "真实双端售后业务闭环", "该图说明顾客提交、管理员审核、凭证补充和评价回收。", ("顾客端售后", "管理员审核", "补证入口", "服务评价"), ("顾客提交申请", "管理员要求补证", "顾客补充材料", "管理员确认完成", "顾客评价服务"), ("after_sale_application", "after_sale_evidence", "after_sale_process_log", "service_review"), ("双端状态同步", "补证动作可追踪", "完成后形成评价闭环")),
+    ChapterFigure("fig_4_17_sla_ticket_collaboration", "fig_4_17_sla_ticket_collaboration.png", "4.17 SLA 跟进与人工工单协同", "SLA 跟进与人工工单协同", "该图展示 service_ticket、客服跟进、SLA 队列和日志回写。", ("SLA 队列", "人工工单", "客服跟进", "日志回写"), ("识别高优先级售后", "创建或关联工单", "客服持续处理", "回写处理结果"), ("service_ticket", "after_sale_application.ticket_id", "after_sale_process_log"), ("队列与工单一致", "处理人员可明确", "售后详情可看到工单")),
+    ChapterFigure("fig_4_18_ai_reply_draft", "fig_4_18_ai_reply_draft.png", "4.18 AI 副驾驶回复草稿", "AI 副驾驶回复草稿", "该图强调 LangChain4j、reply_draft、采纳状态和审计字段。", ("草稿生成", "知识依据", "人工确认", "审计字段"), ("读取售后上下文", "结合知识依据", "保存回复草稿", "管理员采纳或废弃"), ("reply_draft", "ai_call_log", "retrieval_log", "process_trace"), ("失败时本地兜底", "草稿不能直接改状态", "采纳结果写入日志")),
+    ChapterFigure("fig_4_19_image_risk_detail", "fig_4_19_image_risk_detail.png", "4.19 图片风险扫描与 C2PA 可信度检测", "图片风险扫描与 C2PA 可信度检测", "该图展示图片消息、可信度检测、风险标签和复核入口。", ("图片上传", "风险标签", "元数据线索", "人工复核"), ("保存图片消息", "分析可信度信号", "生成风险标签", "提示补充原始材料"), ("chat_message", "image_risk", "evidence_audit"), ("风险文案保持谨慎", "不把检测结果写成绝对结论", "复核入口保留人工判断")),
+    ChapterFigure("fig_4_20_database_consistency", "fig_4_20_database_consistency.png", "4.20 数据库实现与数据一致性验证", "数据库实现与数据一致性验证", "该图覆盖 schema.sql、主外键、索引、事务一致性和初始化数据。", ("schema.sql", "主外键关系", "索引设计", "初始化数据"), ("创建基础表", "建立业务关联", "按场景写入数据", "跨页面验证一致性"), ("user_account", "demo_order", "after_sale_application", "service_ticket", "reply_draft"), ("字段名称按 SQL 校对", "工单通过 ticket_id 回指", "状态变化必须写日志")),
+    ChapterFigure("fig_4_21_validation_matrix", "fig_4_21_validation_matrix.png", "4.21 测试与验证", "测试与验证", "该图串联文档生成、接口验证、页面截图和渲染抽查。", ("接口检查", "页面检查", "文档生成", "渲染抽查"), ("执行生成脚本", "统计图表数量", "渲染 DOCX/PDF", "抽查页面版式"), ("增强版报告", "质量检查清单", "渲染页面截图"), ("图数与章节对应", "关键词无制作痕迹", "表格和图片不重叠")),
+    ChapterFigure("fig_4_22_project_innovation", "fig_4_22_project_innovation.png", "4.22 项目特色与创新点", "项目特色与创新点", "该图概括业务闭环、AI 辅助、RAG 依据、风险预审和可审计。", ("双端售后闭环", "RAG 依据展示", "风险预审", "日志审计"), ("业务规则先校验", "知识库提供依据", "草稿辅助表达", "人工确认关键动作"), ("knowledge_doc", "reply_draft", "image_risk", "process_trace"), ("业务系统为主", "智能能力为辅", "关键动作有证据链")),
+    ChapterFigure("fig_4_23_personal_database_mapping", "fig_4_23_personal_database_mapping.png", "4.23 个人负责模块与数据库支撑关系", "个人负责模块与数据库支撑关系", "该图说明售后、工单、知识库、草稿、日志与数据表的支撑关系。", ("售后闭环", "工单协同", "回复草稿", "图片风险"), ("模块功能落到接口", "接口动作写入数据表", "数据表支撑页面回显", "日志记录处理过程"), ("after_sale_application", "service_ticket", "reply_draft", "image_risk", "process_trace"), ("个人分工边界清楚", "模块之间有数据关联", "答辩可按链路说明")),
+    ChapterFigure("fig_4_24_personal_module_summary", "fig_4_24_personal_module_summary.png", "4.24 个人负责模块补充说明", "个人负责模块补充说明", "该图整理模块边界、接口链路、数据落表和答辩要点。", ("模块边界", "接口链路", "数据落表", "答辩要点"), ("说明负责范围", "对应页面操作", "对应后端接口", "对应数据库表", "总结验证证据"), ("售后表", "工单表", "草稿表", "日志表", "风险表"), ("不夸大功能", "强调可运行闭环", "用截图和图示支撑说明")),
 ]
 
 
@@ -632,6 +636,73 @@ def render_figure(fig: ReportFigure) -> Path:
     if fig.kind == "state":
         return render_state_figure(fig)
     return render_linear_flow(fig)
+
+
+def draw_list_panel(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    title: str,
+    items: tuple[str, ...],
+) -> None:
+    x1, y1, x2, y2 = box
+    draw.rectangle(box, fill="#ffffff", outline="#333333", width=2)
+    draw.rectangle((x1, y1, x2, y1 + 48), fill="#eeeeee", outline="#333333", width=2)
+    draw.text((x1 + 18, y1 + 12), title, font=load_font(23), fill="#111111")
+    y = y1 + 70
+    for idx, item in enumerate(items):
+        if y + 32 > y2 - 16:
+            break
+        draw.ellipse((x1 + 22, y + 7, x1 + 34, y + 19), fill="#555555")
+        for line in wrap_text(draw, item, load_font(19), x2 - x1 - 62)[:2]:
+            draw.text((x1 + 46, y), line, font=load_font(19), fill="#222222")
+            y += 26
+        if idx < len(items) - 1:
+            y += 8
+
+
+def render_chapter_figure(fig: ChapterFigure) -> Path:
+    image = Image.new("RGB", (1600, 980), "#ffffff")
+    draw = ImageDraw.Draw(image)
+    draw_header(draw, fig.title, "模块流程与数据关系示意")
+
+    draw_list_panel(draw, (75, 190, 440, 430), "页面入口", fig.entry)
+    draw_list_panel(draw, (1160, 190, 1525, 430), "验证要点", fig.checks)
+    draw_list_panel(draw, (75, 610, 440, 850), "数据支撑", fig.data)
+
+    flow_y = 485
+    flow_items = fig.flow or ("页面操作", "业务校验", "数据落库", "结果回显")
+    box_w = 220 if len(flow_items) <= 5 else 190
+    gap = 30 if len(flow_items) <= 5 else 22
+    total_w = len(flow_items) * box_w + (len(flow_items) - 1) * gap
+    x = 800 - total_w // 2
+    flow_boxes: list[tuple[int, int, int, int]] = []
+    for idx, item in enumerate(flow_items):
+        box = (x + idx * (box_w + gap), flow_y, x + idx * (box_w + gap) + box_w, flow_y + 96)
+        flow_boxes.append(box)
+        draw.rectangle(box, fill="#fafafa", outline="#333333", width=2)
+        draw.rectangle((box[0], box[1], box[0] + 38, box[3]), fill="#eeeeee", outline="#333333", width=2)
+        draw_centered_text(draw, (box[0], box[1], box[0] + 38, box[3]), str(idx + 1), load_font(22), "#111111")
+        draw_centered_text(draw, (box[0] + 42, box[1] + 8, box[2] - 8, box[3] - 8), item, load_font(21), "#111111")
+        if idx:
+            draw_arrow(draw, (flow_boxes[idx - 1][2], flow_y + 48), (box[0], flow_y + 48), "#333333")
+
+    center_box = (560, 190, 1040, 370)
+    draw.rectangle(center_box, fill="#f7f7f7", outline="#111111", width=3)
+    draw_centered_text(draw, center_box, fig.heading + "\n实现链路", load_font(27), "#111111")
+    draw_arrow(draw, (440, 310), (560, 280), "#333333")
+    draw_arrow(draw, (1040, 280), (1160, 310), "#333333")
+    draw.line((800, 370, 800, 450), fill="#333333", width=2)
+    draw.line((520, 610, 1525, 610), fill="#dddddd", width=1)
+
+    draw.rectangle((520, 650, 1525, 850), fill="#fafafa", outline="#555555", width=2)
+    draw.text((545, 674), "章节说明", font=load_font(24), fill="#111111")
+    caption_lines = wrap_text(draw, fig.note, load_font(21), 920)
+    for idx, line in enumerate(caption_lines[:4]):
+        draw.text((545, 718 + idx * 30), line, font=load_font(21), fill="#222222")
+    draw.line((70, 905, 1530, 905), fill="#cccccc", width=1)
+    draw.text((78, 922), "图示重点：页面操作、业务规则、数据库记录和验证要点保持一致。", font=load_font(20), fill="#444444")
+    image.save(REPORT_FIGURE_DIR / fig.filename)
+    return REPORT_FIGURE_DIR / fig.filename
 
 
 def copy_screenshots() -> None:
@@ -1221,14 +1292,14 @@ class ReportDoc:
             elif line.startswith("[[CHAPTER_FIG:"):
                 marker, _, rest = line.partition("\n")
                 stem = marker.replace("[", "").replace("]", "").removeprefix("CHAPTER_FIG:").strip()
-                fig = next((item for item in CHAPTER4_AI_FIGURES if item.stem == stem), None)
+                fig = next((item for item in CHAPTER4_SECTION_FIGURES if item.stem == stem), None)
                 if fig:
                     self.add_chapter_figure(fig)
                 if rest.strip():
                     self.para(rest.replace("\n", ""))
             elif line.startswith("[[SCREENSHOTS]]"):
                 self.h2("真实系统截图补充")
-                self.para("以下截图均来自本项目真实运行页面或已有项目图示；第四章章节配图按项目规则仅使用 gpt-image-2 生成，未使用其他图像生成模型。")
+                self.para("以下截图来自本项目运行页面或已有界面图，用于补充说明主要功能模块的实际呈现效果。")
                 for item in SCREENSHOT_FIGURES:
                     self.add_screenshot(item)
             elif line.startswith("**") and "\n|" in line:
@@ -1273,7 +1344,7 @@ def add_figure_markers(markdown: str) -> str:
     markdown = markdown.replace("图 [FIG:fig_e_reply_draft_audit_flow] 展示", "[[FIG:fig_e_reply_draft_audit_flow]]\n\n图 [FIG:fig_e_reply_draft_audit_flow] 展示")
     markdown = markdown.replace("图 [FIG:fig_f_image_risk_c2pa_flow] 展示", "[[FIG:fig_f_image_risk_c2pa_flow]]\n\n图 [FIG:fig_f_image_risk_c2pa_flow] 展示")
     markdown = markdown.replace("图 [FIG:fig_g_sla_ticket_flow] 展示", "[[FIG:fig_g_sla_ticket_flow]]\n\n图 [FIG:fig_g_sla_ticket_flow] 展示")
-    for fig in CHAPTER4_AI_FIGURES:
+    for fig in CHAPTER4_SECTION_FIGURES:
         markdown = re.sub(
             rf"(?m)^(##\s+{re.escape(fig.heading)}\s*)$",
             rf"\1\n\n[[CHAPTER_FIG:{fig.stem}]]",
@@ -1300,8 +1371,8 @@ def stats(markdown: str) -> dict[str, int]:
         "chinese_chars": sum(1 for char in markdown if "\u4e00" <= char <= "\u9fff"),
         "tables": len(re.findall(r"(?m)^\*\*表\s+\d+", markdown)),
         "engineering_figures": len(ENGINEERING_FIGURES),
-        "chapter4_ai_figures": sum(1 for item in CHAPTER4_AI_FIGURES if (REPORT_FIGURE_DIR / item.filename).exists()),
-        "chapter4_ai_markers": len(re.findall(r"\[\[CHAPTER_FIG:", markdown)),
+        "chapter4_section_figures": sum(1 for item in CHAPTER4_SECTION_FIGURES if (REPORT_FIGURE_DIR / item.filename).exists()),
+        "chapter4_section_markers": len(re.findall(r"\[\[CHAPTER_FIG:", markdown)),
         "screenshots": sum(1 for item in SCREENSHOT_FIGURES if (REPORT_FIGURE_DIR / item.filename).exists()),
     }
 
@@ -1342,7 +1413,7 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
                 f"- 工程图源目录：{REPORT_FIGURE_DIR}",
                 f"- 中文字符数：{info['chinese_chars']}",
                 f"- 新增工程图：{info['engineering_figures']} 张",
-                f"- 第四章 gpt-image-2 中文配图：{info['chapter4_ai_figures']} 张",
+                f"- 第四章章节示意图：{info['chapter4_section_figures']} 张",
                 f"- 保留真实系统截图：{info['screenshots']} 张",
                 f"- 新增/整理表格：{info['tables']} 张",
                 f"- PDF 渲染页数：{page_count}",
@@ -1351,14 +1422,14 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
                 "## 新增工程图",
                 *[f"- {fig.title}：{fig.stem}.mmd / {fig.stem}.png" for fig in ENGINEERING_FIGURES],
                 "",
-                "## 第四章 gpt-image-2 中文配图",
-                *[f"- {fig.heading}：{fig.filename}" for fig in CHAPTER4_AI_FIGURES],
+                "## 第四章章节示意图",
+                *[f"- {fig.heading}：{fig.filename}" for fig in CHAPTER4_SECTION_FIGURES],
                 "",
                 "## 真实性说明",
                 "- 数据库字段按 sql/schema.sql 校对：reason_text、assigned_to、from_status/to_status、uploaded_by 等字段采用真实名称。",
                 "- service_ticket 当前 SQL 未声明 application_id 外键；报告改写为 after_sale_application.ticket_id 的业务回指关系。",
                 "- AI 草稿没有写成自动业务决策，图片风险与 C2PA 只写成可信度预审信号。",
-                "- 第四章新增章节配图均使用 gpt-image-2，提示词基于本项目 Spring Boot + Vue 3 + MySQL + LangChain4j、售后/工单/知识库/日志等真实模块组织，未使用其他 AI 图像生成模型。",
+                "- 第四章章节示意图围绕本项目 Spring Boot + Vue 3 + MySQL + LangChain4j、售后、工单、知识库、日志和图片风险预审等实际模块组织。",
             ]
         ),
         encoding="utf-8",
@@ -1370,13 +1441,13 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
                 "",
                 f"- 中文字符数：{info['chinese_chars']}",
                 f"- 工程图：{info['engineering_figures']}",
-                f"- 第四章 gpt-image-2 中文配图：{info['chapter4_ai_figures']}",
-                f"- 第四章章节图标记：{info['chapter4_ai_markers']}",
+                f"- 第四章章节示意图：{info['chapter4_section_figures']}",
+                f"- 第四章章节图标记：{info['chapter4_section_markers']}",
                 f"- 真实截图：{info['screenshots']}",
                 f"- 表格：{info['tables']}",
                 f"- 渲染页数：{page_count}",
                 "",
-                "- [x] 第四章 4.1 至 4.24 每个小节均插入 gpt-image-2 中文配图",
+                "- [x] 第四章 4.1 至 4.24 每个小节均插入章节示意图",
                 "- [x] 新增数据库核心 ER 图",
                 "- [x] 新增售后状态机图",
                 "- [x] 新增顾客提交售后时序图",
@@ -1397,6 +1468,8 @@ def main() -> None:
     REPORT_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     for fig in ENGINEERING_FIGURES:
         render_figure(fig)
+    for fig in CHAPTER4_SECTION_FIGURES:
+        render_chapter_figure(fig)
     copy_screenshots()
     markdown = add_figure_markers(build_markdown())
     OUT_MD.write_text(markdown, encoding="utf-8")
@@ -1406,16 +1479,16 @@ def main() -> None:
     info = stats(markdown)
     print(f"DOCX: {OUT_DOCX}")
     print(f"Markdown: {OUT_MD}")
-    print(f"Figures: {info['engineering_figures']} engineering + {info['chapter4_ai_figures']} chapter4 gpt-image-2 + {info['screenshots']} screenshots")
+    print(f"Figures: {info['engineering_figures']} engineering + {info['chapter4_section_figures']} chapter4 section figures + {info['screenshots']} screenshots")
     print(f"Tables: {info['tables']}")
     print(f"Chinese chars: {info['chinese_chars']}")
     print(f"Rendered pages: {page_count}")
     if info["engineering_figures"] < 7:
         raise SystemExit("Expected at least 7 engineering figures")
-    if info["chapter4_ai_figures"] != len(CHAPTER4_AI_FIGURES):
-        raise SystemExit("Expected all chapter 4 gpt-image-2 figures to exist")
-    if info["chapter4_ai_markers"] != len(CHAPTER4_AI_FIGURES):
-        raise SystemExit("Expected one gpt-image-2 figure marker for every chapter 4 subsection")
+    if info["chapter4_section_figures"] != len(CHAPTER4_SECTION_FIGURES):
+        raise SystemExit("Expected all chapter 4 section figures to exist")
+    if info["chapter4_section_markers"] != len(CHAPTER4_SECTION_FIGURES):
+        raise SystemExit("Expected one section figure marker for every chapter 4 subsection")
     if info["tables"] < 8:
         raise SystemExit("Expected at least 8 tables")
     if page_count <= 0:
