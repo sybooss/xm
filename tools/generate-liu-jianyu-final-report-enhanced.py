@@ -52,6 +52,15 @@ class ScreenshotFigure:
     note: str
 
 
+@dataclass(frozen=True)
+class ChapterFigure:
+    stem: str
+    filename: str
+    heading: str
+    title: str
+    note: str
+
+
 ENGINEERING_FIGURES = [
     ReportFigure(
         "fig_a_system_architecture",
@@ -215,6 +224,33 @@ SCREENSHOT_FIGURES = [
     ScreenshotFigure("orders.png", "订单与售后上下文", "订单管理页面保存商品、物流、支付和售后状态，是业务判断依据。"),
     ScreenshotFigure("logs.png", "服务日志诊断", "日志中心集中呈现 AI 调用、知识检索和处理轨迹，支撑可解释性。"),
     ScreenshotFigure("ai_test.png", "AI 质检页面", "AI 质检页面验证当前 LangChain4j 模型链路和本地兜底状态。"),
+]
+
+CHAPTER4_AI_FIGURES = [
+    ChapterFigure("fig_4_01_login_permission", "fig_4_01_login_permission_gpt_image2.png", "4.1 登录注册与双端权限控制", "登录注册与双端权限控制", "该图用 gpt-image-2 按项目真实登录链路生成，强调顾客端、管理员端、JWT 令牌、路由守卫、后端拦截器和 user_account 表之间的关系。"),
+    ChapterFigure("fig_4_02_customer_after_sale", "fig_4_02_customer_after_sale_gpt_image2.png", "4.2 顾客端我的售后", "顾客端我的售后闭环", "该图用 gpt-image-2 按顾客端真实售后流程生成，覆盖订单入口、售后申请、凭证补充、进度时间线和服务评价。"),
+    ChapterFigure("fig_4_03_admin_review", "fig_4_03_admin_review_gpt_image2.png", "4.3 管理员售后审核工作台", "管理员售后审核工作台", "该图用 gpt-image-2 按管理员审核场景生成，体现审核列表、详情抽屉、状态变更和 after_sale_process_log 审计记录。"),
+    ChapterFigure("fig_4_04_chat_workbench", "fig_4_04_chat_workbench_gpt_image2.png", "4.4 咨询工作台与多轮客服链路", "咨询工作台与多轮客服链路", "该图用 gpt-image-2 按咨询接待链路生成，展示 chat_session、chat_message、上下文检索、AI 建议和人工接待协同。"),
+    ChapterFigure("fig_4_05_knowledge_rag", "fig_4_05_knowledge_rag_gpt_image2.png", "4.5 知识库管理与 RAG 依据展示", "知识库管理与 RAG 依据展示", "该图用 gpt-image-2 按知识库管理模块生成，说明 knowledge_doc、retrieval_log、规则依据和回复草稿引用之间的关系。"),
+    ChapterFigure("fig_4_06_order_context", "fig_4_06_order_context_gpt_image2.png", "4.6 订单管理与售后上下文", "订单管理与售后上下文", "该图用 gpt-image-2 按订单上下文模块生成，突出 demo_order、订单状态、物流支付信息和售后判断依据。"),
+    ChapterFigure("fig_4_07_sla_queue", "fig_4_07_sla_queue_gpt_image2.png", "4.7 SLA 跟进与风险任务队列", "SLA 跟进与风险任务队列", "该图用 gpt-image-2 按 SLA 任务队列生成，展示超时、优先级、风险标记和待处理队列的组织方式。"),
+    ChapterFigure("fig_4_08_ticket_collaboration", "fig_4_08_ticket_collaboration_gpt_image2.png", "4.8 人工工单协同", "人工工单协同", "该图用 gpt-image-2 按人工工单协同场景生成，体现 service_ticket、客服分派、处理回写和售后联动。"),
+    ChapterFigure("fig_4_09_audit_reply_draft", "fig_4_09_audit_reply_draft_gpt_image2.png", "4.9 AI 副驾驶可审计回复草稿", "AI 副驾驶可审计回复草稿", "该图用 gpt-image-2 按回复草稿模块生成，说明 reply_draft、知识依据、管理员采纳或废弃和审计留痕。"),
+    ChapterFigure("fig_4_10_image_risk_c2pa", "fig_4_10_image_risk_c2pa_gpt_image2.png", "4.10 聊天图片风险扫描与 C2PA/图片可信度检测", "聊天图片风险扫描与 C2PA 可信度检测", "该图用 gpt-image-2 按图片可信度预审链路生成，强调 image_risk、C2PA 信号、evidence_audit 和人工复核。"),
+    ChapterFigure("fig_4_11_customer_profile_review", "fig_4_11_customer_profile_review_gpt_image2.png", "4.11 客户画像与服务评价", "客户画像与服务评价", "该图用 gpt-image-2 按客户画像和评价模块生成，展示 customer_profile、service_review、满意度和历史售后信息。"),
+    ChapterFigure("fig_4_12_product_quality_alert", "fig_4_12_product_quality_alert_gpt_image2.png", "4.12 商品质量问题聚合预警", "商品质量问题聚合预警", "该图用 gpt-image-2 按商品质量预警场景生成，体现商品维度聚合、售后原因、质量问题和运营预警。"),
+    ChapterFigure("fig_4_13_log_ai_quality", "fig_4_13_log_ai_quality_gpt_image2.png", "4.13 日志诊断与 AI 质检", "日志诊断与 AI 质检", "该图用 gpt-image-2 按日志诊断链路生成，覆盖 ai_call_log、retrieval_log、process_trace 和 AI 质检页面。"),
+    ChapterFigure("fig_4_14_diagnosis_risk_evidence", "fig_4_14_diagnosis_risk_evidence_gpt_image2.png", "4.14 售后前置诊断、风险评估与凭证审核", "售后前置诊断、风险评估与凭证审核", "该图用 gpt-image-2 按售后预审流程生成，展示前置诊断、risk_assessment、after_sale_evidence 和审核建议。"),
+    ChapterFigure("fig_4_15_operation_status", "fig_4_15_operation_status_gpt_image2.png", "4.15 运营首页与系统状态展示", "运营首页与系统状态展示", "该图用 gpt-image-2 按运营首页生成，汇总工单数量、SLA 风险、系统状态和关键指标。"),
+    ChapterFigure("fig_4_16_dual_after_sale_loop", "fig_4_16_dual_after_sale_loop_gpt_image2.png", "4.16 真实双端售后业务闭环", "真实双端售后业务闭环", "该图用 gpt-image-2 按双端售后闭环生成，说明顾客提交、管理员审核、凭证补充和评价回收。"),
+    ChapterFigure("fig_4_17_sla_ticket_collaboration", "fig_4_17_sla_ticket_collaboration_gpt_image2.png", "4.17 SLA 跟进与人工工单协同", "SLA 跟进与人工工单协同", "该图用 gpt-image-2 按 SLA 与工单联动生成，展示 service_ticket、客服跟进、SLA 队列和日志回写。"),
+    ChapterFigure("fig_4_18_ai_reply_draft", "fig_4_18_ai_reply_draft_gpt_image2.png", "4.18 AI 副驾驶回复草稿", "AI 副驾驶回复草稿", "该图用 gpt-image-2 按 AI 回复草稿功能生成，强调 LangChain4j、reply_draft、采纳状态和审计字段。"),
+    ChapterFigure("fig_4_19_image_risk_detail", "fig_4_19_image_risk_detail_gpt_image2.png", "4.19 图片风险扫描与 C2PA 可信度检测", "图片风险扫描与 C2PA 可信度检测", "该图用 gpt-image-2 按图片风险详情生成，展示图片消息、可信度检测、风险标签和复核入口。"),
+    ChapterFigure("fig_4_20_database_consistency", "fig_4_20_database_consistency_gpt_image2.png", "4.20 数据库实现与数据一致性验证", "数据库实现与数据一致性验证", "该图用 gpt-image-2 按数据库一致性章节生成，覆盖 schema.sql、主外键、索引、事务一致性和初始化数据。"),
+    ChapterFigure("fig_4_21_validation_matrix", "fig_4_21_validation_matrix_gpt_image2.png", "4.21 测试与验证", "测试与验证", "该图用 gpt-image-2 按验证矩阵生成，串联文档生成、接口验证、页面截图和渲染抽查。"),
+    ChapterFigure("fig_4_22_project_innovation", "fig_4_22_project_innovation_gpt_image2.png", "4.22 项目特色与创新点", "项目特色与创新点", "该图用 gpt-image-2 按项目特色生成，概括业务闭环、AI 辅助、RAG 依据、风险预审和可审计。"),
+    ChapterFigure("fig_4_23_personal_database_mapping", "fig_4_23_personal_database_mapping_gpt_image2.png", "4.23 个人负责模块与数据库支撑关系", "个人负责模块与数据库支撑关系", "该图用 gpt-image-2 按个人模块和数据库映射生成，说明售后、工单、知识库、草稿、日志与数据表的支撑关系。"),
+    ChapterFigure("fig_4_24_personal_module_summary", "fig_4_24_personal_module_summary_gpt_image2.png", "4.24 个人负责模块补充说明", "个人负责模块补充说明", "该图用 gpt-image-2 按个人负责模块总结生成，整理模块边界、接口链路、数据落表和答辩要点。"),
 ]
 
 
@@ -1078,6 +1114,27 @@ class ReportDoc:
         r = note.add_run(item.note)
         self.font(r, size=9)
 
+    def add_chapter_figure(self, item: ChapterFigure) -> None:
+        path = REPORT_FIGURE_DIR / item.filename
+        if not path.exists():
+            return
+        p = self.doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.keep_with_next = True
+        p.add_run().add_picture(str(path), width=Cm(15.25))
+        cap = self.doc.add_paragraph()
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cap.paragraph_format.space_after = Pt(2)
+        self.figure_numbers[item.stem] = self.figure_no
+        r = cap.add_run(f"图 {self.figure_no} {item.title}")
+        self.font(r, size=9.5, bold=True)
+        self.figure_no += 1
+        note = self.doc.add_paragraph()
+        note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        note.paragraph_format.space_after = Pt(6)
+        r = note.add_run(item.note)
+        self.font(r, size=9)
+
     def markdown_table(self, block: str) -> None:
         rows: list[list[str]] = []
         explicit_title: str | None = None
@@ -1161,9 +1218,17 @@ class ReportDoc:
                 fig = next((item for item in ENGINEERING_FIGURES if item.stem == stem), None)
                 if fig:
                     self.add_figure(fig)
+            elif line.startswith("[[CHAPTER_FIG:"):
+                marker, _, rest = line.partition("\n")
+                stem = marker.replace("[", "").replace("]", "").removeprefix("CHAPTER_FIG:").strip()
+                fig = next((item for item in CHAPTER4_AI_FIGURES if item.stem == stem), None)
+                if fig:
+                    self.add_chapter_figure(fig)
+                if rest.strip():
+                    self.para(rest.replace("\n", ""))
             elif line.startswith("[[SCREENSHOTS]]"):
                 self.h2("真实系统截图补充")
-                self.para("以下截图均来自本项目真实运行页面或已有项目图示。本次报告增强没有使用 AI 图像生成，也没有使用其他图像生成模型；如后续需要新增 AI 图像，必须按项目规则仅使用 gpt-image-2。")
+                self.para("以下截图均来自本项目真实运行页面或已有项目图示；第四章章节配图按项目规则仅使用 gpt-image-2 生成，未使用其他图像生成模型。")
                 for item in SCREENSHOT_FIGURES:
                     self.add_screenshot(item)
             elif line.startswith("**") and "\n|" in line:
@@ -1208,6 +1273,13 @@ def add_figure_markers(markdown: str) -> str:
     markdown = markdown.replace("图 [FIG:fig_e_reply_draft_audit_flow] 展示", "[[FIG:fig_e_reply_draft_audit_flow]]\n\n图 [FIG:fig_e_reply_draft_audit_flow] 展示")
     markdown = markdown.replace("图 [FIG:fig_f_image_risk_c2pa_flow] 展示", "[[FIG:fig_f_image_risk_c2pa_flow]]\n\n图 [FIG:fig_f_image_risk_c2pa_flow] 展示")
     markdown = markdown.replace("图 [FIG:fig_g_sla_ticket_flow] 展示", "[[FIG:fig_g_sla_ticket_flow]]\n\n图 [FIG:fig_g_sla_ticket_flow] 展示")
+    for fig in CHAPTER4_AI_FIGURES:
+        markdown = re.sub(
+            rf"(?m)^(##\s+{re.escape(fig.heading)}\s*)$",
+            rf"\1\n\n[[CHAPTER_FIG:{fig.stem}]]",
+            markdown,
+            count=1,
+        )
     markdown = markdown.replace("# 五、未来与展望", "[[SCREENSHOTS]]\n\n# 五、未来与展望")
     markdown = markdown.replace("[[[FIG:", "[[FIG:").replace("]]]", "]]")
     markdown = markdown.replace("图 [FIG:", "[FIG:")
@@ -1228,6 +1300,8 @@ def stats(markdown: str) -> dict[str, int]:
         "chinese_chars": sum(1 for char in markdown if "\u4e00" <= char <= "\u9fff"),
         "tables": len(re.findall(r"(?m)^\*\*表\s+\d+", markdown)),
         "engineering_figures": len(ENGINEERING_FIGURES),
+        "chapter4_ai_figures": sum(1 for item in CHAPTER4_AI_FIGURES if (REPORT_FIGURE_DIR / item.filename).exists()),
+        "chapter4_ai_markers": len(re.findall(r"\[\[CHAPTER_FIG:", markdown)),
         "screenshots": sum(1 for item in SCREENSHOT_FIGURES if (REPORT_FIGURE_DIR / item.filename).exists()),
     }
 
@@ -1235,6 +1309,11 @@ def stats(markdown: str) -> dict[str, int]:
 def render_pdf_and_pages() -> tuple[Path | None, int]:
     qa_dir = ROOT / "tmp" / "final-report-enhanced-render"
     qa_dir.mkdir(parents=True, exist_ok=True)
+    for old_page in qa_dir.glob("page-*.png"):
+        old_page.unlink()
+    old_pdf = qa_dir / (OUT_DOCX.stem + ".pdf")
+    if old_pdf.exists():
+        old_pdf.unlink()
     soffice = shutil.which("soffice") or r"C:\Program Files\LibreOffice\program\soffice.com"
     if not Path(soffice).exists():
         return None, 0
@@ -1263,6 +1342,7 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
                 f"- 工程图源目录：{REPORT_FIGURE_DIR}",
                 f"- 中文字符数：{info['chinese_chars']}",
                 f"- 新增工程图：{info['engineering_figures']} 张",
+                f"- 第四章 gpt-image-2 中文配图：{info['chapter4_ai_figures']} 张",
                 f"- 保留真实系统截图：{info['screenshots']} 张",
                 f"- 新增/整理表格：{info['tables']} 张",
                 f"- PDF 渲染页数：{page_count}",
@@ -1271,10 +1351,14 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
                 "## 新增工程图",
                 *[f"- {fig.title}：{fig.stem}.mmd / {fig.stem}.png" for fig in ENGINEERING_FIGURES],
                 "",
+                "## 第四章 gpt-image-2 中文配图",
+                *[f"- {fig.heading}：{fig.filename}" for fig in CHAPTER4_AI_FIGURES],
+                "",
                 "## 真实性说明",
                 "- 数据库字段按 sql/schema.sql 校对：reason_text、assigned_to、from_status/to_status、uploaded_by 等字段采用真实名称。",
                 "- service_ticket 当前 SQL 未声明 application_id 外键；报告改写为 after_sale_application.ticket_id 的业务回指关系。",
                 "- AI 草稿没有写成自动业务决策，图片风险与 C2PA 只写成可信度预审信号。",
+                "- 第四章新增章节配图均使用 gpt-image-2，提示词基于本项目 Spring Boot + Vue 3 + MySQL + LangChain4j、售后/工单/知识库/日志等真实模块组织，未使用其他 AI 图像生成模型。",
             ]
         ),
         encoding="utf-8",
@@ -1286,10 +1370,13 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
                 "",
                 f"- 中文字符数：{info['chinese_chars']}",
                 f"- 工程图：{info['engineering_figures']}",
+                f"- 第四章 gpt-image-2 中文配图：{info['chapter4_ai_figures']}",
+                f"- 第四章章节图标记：{info['chapter4_ai_markers']}",
                 f"- 真实截图：{info['screenshots']}",
                 f"- 表格：{info['tables']}",
                 f"- 渲染页数：{page_count}",
                 "",
+                "- [x] 第四章 4.1 至 4.24 每个小节均插入 gpt-image-2 中文配图",
                 "- [x] 新增数据库核心 ER 图",
                 "- [x] 新增售后状态机图",
                 "- [x] 新增顾客提交售后时序图",
@@ -1319,12 +1406,16 @@ def main() -> None:
     info = stats(markdown)
     print(f"DOCX: {OUT_DOCX}")
     print(f"Markdown: {OUT_MD}")
-    print(f"Figures: {info['engineering_figures']} engineering + {info['screenshots']} screenshots")
+    print(f"Figures: {info['engineering_figures']} engineering + {info['chapter4_ai_figures']} chapter4 gpt-image-2 + {info['screenshots']} screenshots")
     print(f"Tables: {info['tables']}")
     print(f"Chinese chars: {info['chinese_chars']}")
     print(f"Rendered pages: {page_count}")
     if info["engineering_figures"] < 7:
         raise SystemExit("Expected at least 7 engineering figures")
+    if info["chapter4_ai_figures"] != len(CHAPTER4_AI_FIGURES):
+        raise SystemExit("Expected all chapter 4 gpt-image-2 figures to exist")
+    if info["chapter4_ai_markers"] != len(CHAPTER4_AI_FIGURES):
+        raise SystemExit("Expected one gpt-image-2 figure marker for every chapter 4 subsection")
     if info["tables"] < 8:
         raise SystemExit("Expected at least 8 tables")
     if page_count <= 0:
