@@ -638,71 +638,16 @@ def render_figure(fig: ReportFigure) -> Path:
     return render_linear_flow(fig)
 
 
-def draw_list_panel(
-    draw: ImageDraw.ImageDraw,
-    box: tuple[int, int, int, int],
-    title: str,
-    items: tuple[str, ...],
-) -> None:
-    x1, y1, x2, y2 = box
-    draw.rectangle(box, fill="#ffffff", outline="#333333", width=2)
-    draw.rectangle((x1, y1, x2, y1 + 48), fill="#eeeeee", outline="#333333", width=2)
-    draw.text((x1 + 18, y1 + 12), title, font=load_font(23), fill="#111111")
-    y = y1 + 70
-    for idx, item in enumerate(items):
-        if y + 32 > y2 - 16:
-            break
-        draw.ellipse((x1 + 22, y + 7, x1 + 34, y + 19), fill="#555555")
-        for line in wrap_text(draw, item, load_font(19), x2 - x1 - 62)[:2]:
-            draw.text((x1 + 46, y), line, font=load_font(19), fill="#222222")
-            y += 26
-        if idx < len(items) - 1:
-            y += 8
-
-
-def render_chapter_figure(fig: ChapterFigure) -> Path:
-    image = Image.new("RGB", (1600, 980), "#ffffff")
-    draw = ImageDraw.Draw(image)
-    draw_header(draw, fig.title, "模块流程与数据关系示意")
-
-    draw_list_panel(draw, (75, 190, 440, 430), "页面入口", fig.entry)
-    draw_list_panel(draw, (1160, 190, 1525, 430), "验证要点", fig.checks)
-    draw_list_panel(draw, (75, 610, 440, 850), "数据支撑", fig.data)
-
-    flow_y = 485
-    flow_items = fig.flow or ("页面操作", "业务校验", "数据落库", "结果回显")
-    box_w = 220 if len(flow_items) <= 5 else 190
-    gap = 30 if len(flow_items) <= 5 else 22
-    total_w = len(flow_items) * box_w + (len(flow_items) - 1) * gap
-    x = 800 - total_w // 2
-    flow_boxes: list[tuple[int, int, int, int]] = []
-    for idx, item in enumerate(flow_items):
-        box = (x + idx * (box_w + gap), flow_y, x + idx * (box_w + gap) + box_w, flow_y + 96)
-        flow_boxes.append(box)
-        draw.rectangle(box, fill="#fafafa", outline="#333333", width=2)
-        draw.rectangle((box[0], box[1], box[0] + 38, box[3]), fill="#eeeeee", outline="#333333", width=2)
-        draw_centered_text(draw, (box[0], box[1], box[0] + 38, box[3]), str(idx + 1), load_font(22), "#111111")
-        draw_centered_text(draw, (box[0] + 42, box[1] + 8, box[2] - 8, box[3] - 8), item, load_font(21), "#111111")
-        if idx:
-            draw_arrow(draw, (flow_boxes[idx - 1][2], flow_y + 48), (box[0], flow_y + 48), "#333333")
-
-    center_box = (560, 190, 1040, 370)
-    draw.rectangle(center_box, fill="#f7f7f7", outline="#111111", width=3)
-    draw_centered_text(draw, center_box, fig.heading + "\n实现链路", load_font(27), "#111111")
-    draw_arrow(draw, (440, 310), (560, 280), "#333333")
-    draw_arrow(draw, (1040, 280), (1160, 310), "#333333")
-    draw.line((800, 370, 800, 450), fill="#333333", width=2)
-    draw.line((520, 610, 1525, 610), fill="#dddddd", width=1)
-
-    draw.rectangle((520, 650, 1525, 850), fill="#fafafa", outline="#555555", width=2)
-    draw.text((545, 674), "章节说明", font=load_font(24), fill="#111111")
-    caption_lines = wrap_text(draw, fig.note, load_font(21), 920)
-    for idx, line in enumerate(caption_lines[:4]):
-        draw.text((545, 718 + idx * 30), line, font=load_font(21), fill="#222222")
-    draw.line((70, 905, 1530, 905), fill="#cccccc", width=1)
-    draw.text((78, 922), "图示重点：页面操作、业务规则、数据库记录和验证要点保持一致。", font=load_font(20), fill="#444444")
-    image.save(REPORT_FIGURE_DIR / fig.filename)
-    return REPORT_FIGURE_DIR / fig.filename
+def crop_engineering_figure(path: Path, kind: str) -> None:
+    image = Image.open(path)
+    top = 135
+    bottom = {
+        "layers": 740,
+        "er": 930,
+        "state": 800,
+    }.get(kind, 690)
+    bottom = min(bottom, image.height)
+    image.crop((0, top, image.width, bottom)).save(path)
 
 
 def copy_screenshots() -> None:
@@ -1467,9 +1412,7 @@ def write_summary(markdown: str, pdf: Path | None, page_count: int) -> None:
 def main() -> None:
     REPORT_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     for fig in ENGINEERING_FIGURES:
-        render_figure(fig)
-    for fig in CHAPTER4_SECTION_FIGURES:
-        render_chapter_figure(fig)
+        crop_engineering_figure(render_figure(fig), fig.kind)
     copy_screenshots()
     markdown = add_figure_markers(build_markdown())
     OUT_MD.write_text(markdown, encoding="utf-8")
