@@ -3,6 +3,22 @@ SET NAMES utf8mb4;
 
 START TRANSACTION;
 
+DELETE FROM evidence_audit
+WHERE application_id IN (
+  SELECT id FROM after_sale_application WHERE application_no LIKE 'OPSASA%'
+)
+   OR evidence_id IN (
+  SELECT e.id
+  FROM after_sale_evidence e
+  JOIN after_sale_application a ON e.application_id=a.id
+  WHERE a.application_no LIKE 'OPSASA%'
+);
+
+DELETE FROM after_sale_risk_assessment
+WHERE application_id IN (
+  SELECT id FROM after_sale_application WHERE application_no LIKE 'OPSASA%'
+);
+
 DELETE FROM service_review
 WHERE application_id IN (
   SELECT id FROM after_sale_application WHERE application_no LIKE 'OPSASA%'
@@ -68,6 +84,8 @@ WHERE session_no LIKE 'OPSCS%';
 
 DELETE FROM after_sale_application
 WHERE application_no LIKE 'OPSASA%';
+
+DELETE FROM product_issue_alert;
 
 DELETE FROM demo_order
 WHERE order_no LIKE 'OPS2026%';
@@ -162,31 +180,33 @@ UNION ALL SELECT 'OPSCS202605120007', o.user_id, o.id, '投诉人工介入', 'AD
 UNION ALL SELECT 'OPSCS202605120008', o.user_id, o.id, '投影仪退货寄回确认', 'WEB', 'ACTIVE', 'RETURN_APPLY', '用户已填写寄回物流，等待仓库确认收货。', '2026-05-12 15:20:00', '2026-05-12 16:05:00', NULL FROM demo_order o WHERE o.order_no='OPS202605120020'
 UNION ALL SELECT 'OPSCS202605120009', o.user_id, o.id, '蓝牙音箱换货审核', 'WEB', 'ACTIVE', 'EXCHANGE_APPLY', '用户上传破音视频，系统建议审核通过并安排换新。', '2026-05-12 16:40:00', '2026-05-12 17:00:00', NULL FROM demo_order o WHERE o.order_no='OPS202605120022';
 
-INSERT INTO chat_message(session_id, role, content, message_type, seq_no, reply_to_id, intent_code, source_type, created_at)
-SELECT s.id, 'USER', '这个耳机右耳总是断连，可以直接换新吗？', 'TEXT', 1, NULL, 'EXCHANGE_APPLY', NULL, '2026-05-11 20:12:00' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
-UNION ALL SELECT s.id, 'ASSISTANT', '可以先为您按换货申请处理。请上传右耳断连的视频或检测截图，客服会优先核验。', 'TEXT', 2, NULL, 'EXCHANGE_APPLY', 'AI_ENHANCED', '2026-05-11 20:12:08' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
-UNION ALL SELECT s.id, 'USER', '我明天要出差，能不能快一点处理？', 'TEXT', 3, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 11:03:00' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
-UNION ALL SELECT s.id, 'ASSISTANT', '已为您标记高优先级，并生成待审核记录，客服会在今天内给出换货结果。', 'TEXT', 4, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 11:03:10' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
-UNION ALL SELECT s.id, 'USER', '空气炸锅退货已经寄回了，退款什么时候到账？', 'TEXT', 1, NULL, 'REFUND_PROGRESS', NULL, '2026-05-09 15:58:00' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
-UNION ALL SELECT s.id, 'ASSISTANT', '仓库已经确认收货，退款会按原支付渠道退回，通常 1-3 个工作日到账。', 'TEXT', 2, NULL, 'REFUND_PROGRESS', 'AI_ENHANCED', '2026-05-09 15:58:08' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
-UNION ALL SELECT s.id, 'USER', '我刚看到已经退回了，谢谢。', 'TEXT', 3, NULL, 'REFUND_PROGRESS', NULL, '2026-05-09 16:38:00' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
-UNION ALL SELECT s.id, 'ASSISTANT', '不客气，售后单已完成，如后续还有问题可以继续联系我们。', 'TEXT', 4, NULL, 'REFUND_PROGRESS', 'RULE_TEMPLATE', '2026-05-09 16:38:07' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
-UNION ALL SELECT s.id, 'USER', '键盘退款为什么还没到账？', 'TEXT', 1, NULL, 'REFUND_PROGRESS', NULL, '2026-05-12 08:32:00' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
-UNION ALL SELECT s.id, 'ASSISTANT', '您的退款申请已审核通过，目前处于原路退款处理中，我会同步给人工客服跟进。', 'TEXT', 2, NULL, 'REFUND_PROGRESS', 'AI_ENHANCED', '2026-05-12 08:32:09' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
-UNION ALL SELECT s.id, 'USER', '今天必须给我结果。', 'TEXT', 3, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 08:48:00' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
-UNION ALL SELECT s.id, 'ASSISTANT', '已升级为紧急退款工单，客服主管会优先核对退款通道状态。', 'TEXT', 4, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 08:48:10' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
-UNION ALL SELECT s.id, 'USER', '手表表带有磨损，而且之前客服一直没人回。', 'TEXT', 1, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 11:45:00' FROM chat_session s WHERE s.session_no='OPSCS202605120004'
-UNION ALL SELECT s.id, 'ASSISTANT', '抱歉给您带来不好的体验。请补充表带近照和包装照，我会同步创建人工跟进。', 'TEXT', 2, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 11:45:12' FROM chat_session s WHERE s.session_no='OPSCS202605120004'
-UNION ALL SELECT s.id, 'USER', '物流三天不动了，显示器会不会丢件？', 'TEXT', 1, NULL, 'LOGISTICS_QUERY', NULL, '2026-05-12 16:02:00' FROM chat_session s WHERE s.session_no='OPSCS202605120005'
-UNION ALL SELECT s.id, 'ASSISTANT', '物流超过 48 小时未更新，建议先由客服联系承运商核实，如疑似丢件可申请平台介入。', 'TEXT', 2, NULL, 'LOGISTICS_QUERY', 'AI_ENHANCED', '2026-05-12 16:02:08' FROM chat_session s WHERE s.session_no='OPSCS202605120005'
-UNION ALL SELECT s.id, 'USER', '平板已经激活还能七天无理由退吗？', 'TEXT', 1, NULL, 'RULE_EXPLAIN', NULL, '2026-05-10 10:22:00' FROM chat_session s WHERE s.session_no='OPSCS202605120006'
-UNION ALL SELECT s.id, 'ASSISTANT', '已激活且影响二次销售的商品通常不支持无理由退货，但如果存在质量问题可以走检测维修。', 'TEXT', 2, NULL, 'RULE_EXPLAIN', 'AI_ENHANCED', '2026-05-10 10:22:10' FROM chat_session s WHERE s.session_no='OPSCS202605120006'
-UNION ALL SELECT s.id, 'USER', '客服一直拖，我要投诉。', 'TEXT', 1, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 14:42:00' FROM chat_session s WHERE s.session_no='OPSCS202605120007'
-UNION ALL SELECT s.id, 'ASSISTANT', '已识别为投诉转人工场景，并建议主管在 SLA 内处理。', 'TEXT', 2, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 14:42:07' FROM chat_session s WHERE s.session_no='OPSCS202605120007'
-UNION ALL SELECT s.id, 'USER', '投影仪已经寄回，物流单号是 SF123456789。', 'TEXT', 1, NULL, 'RETURN_APPLY', NULL, '2026-05-12 15:22:00' FROM chat_session s WHERE s.session_no='OPSCS202605120008'
-UNION ALL SELECT s.id, 'ASSISTANT', '已记录寄回物流单号，当前状态为等待商家确认收货，确认后会进入退款流程。', 'TEXT', 2, NULL, 'RETURN_APPLY', 'AI_ENHANCED', '2026-05-12 15:22:08' FROM chat_session s WHERE s.session_no='OPSCS202605120008'
-UNION ALL SELECT s.id, 'USER', '蓝牙音箱低音一开就破音，我发了视频。', 'TEXT', 1, NULL, 'EXCHANGE_APPLY', NULL, '2026-05-12 16:42:00' FROM chat_session s WHERE s.session_no='OPSCS202605120009'
-UNION ALL SELECT s.id, 'ASSISTANT', '视频凭证已经命中换货规则，建议审核通过并安排同款换新。', 'TEXT', 2, NULL, 'EXCHANGE_APPLY', 'AI_ENHANCED', '2026-05-12 16:42:09' FROM chat_session s WHERE s.session_no='OPSCS202605120009';
+INSERT INTO chat_message(session_id, role, content, message_type, file_url, original_filename, content_type, file_size, seq_no, reply_to_id, intent_code, source_type, created_at)
+SELECT s.id, 'USER', '这个耳机右耳总是断连，可以直接换新吗？', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'EXCHANGE_APPLY', NULL, '2026-05-11 20:12:00' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
+UNION ALL SELECT s.id, 'ASSISTANT', '可以先为您按换货申请处理。请上传右耳断连的视频或检测截图，客服会优先核验。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'EXCHANGE_APPLY', 'AI_ENHANCED', '2026-05-11 20:12:08' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
+UNION ALL SELECT s.id, 'USER', '我上传一张截图，右下角能看到“豆包AI生成”水印，请帮我判断能不能作为售后凭证。', 'IMAGE', '/uploads/demo/ai-risk-evidence.png', '豆包AI生成-售后凭证演示.png', 'image/png', 128432, 3, NULL, 'EXCHANGE_APPLY', NULL, '2026-05-11 20:13:00' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
+UNION ALL SELECT s.id, 'ASSISTANT', '这张图片存在 AI 生成水印和来源不清风险，只能作为沟通材料，建议补充原始实拍照片、故障视频和序列号照片后由客服人工复核。', 'TEXT', NULL, NULL, NULL, NULL, 4, NULL, 'EXCHANGE_APPLY', 'AI_ENHANCED', '2026-05-11 20:13:12' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
+UNION ALL SELECT s.id, 'USER', '我明天要出差，能不能快一点处理？', 'TEXT', NULL, NULL, NULL, NULL, 5, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 11:03:00' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
+UNION ALL SELECT s.id, 'ASSISTANT', '已为您标记高优先级，并生成待审核记录，客服会在今天内给出换货结果。', 'TEXT', NULL, NULL, NULL, NULL, 6, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 11:03:10' FROM chat_session s WHERE s.session_no='OPSCS202605120001'
+UNION ALL SELECT s.id, 'USER', '空气炸锅退货已经寄回了，退款什么时候到账？', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'REFUND_PROGRESS', NULL, '2026-05-09 15:58:00' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
+UNION ALL SELECT s.id, 'ASSISTANT', '仓库已经确认收货，退款会按原支付渠道退回，通常 1-3 个工作日到账。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'REFUND_PROGRESS', 'AI_ENHANCED', '2026-05-09 15:58:08' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
+UNION ALL SELECT s.id, 'USER', '我刚看到已经退回了，谢谢。', 'TEXT', NULL, NULL, NULL, NULL, 3, NULL, 'REFUND_PROGRESS', NULL, '2026-05-09 16:38:00' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
+UNION ALL SELECT s.id, 'ASSISTANT', '不客气，售后单已完成，如后续还有问题可以继续联系我们。', 'TEXT', NULL, NULL, NULL, NULL, 4, NULL, 'REFUND_PROGRESS', 'RULE_TEMPLATE', '2026-05-09 16:38:07' FROM chat_session s WHERE s.session_no='OPSCS202605120002'
+UNION ALL SELECT s.id, 'USER', '键盘退款为什么还没到账？', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'REFUND_PROGRESS', NULL, '2026-05-12 08:32:00' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
+UNION ALL SELECT s.id, 'ASSISTANT', '您的退款申请已审核通过，目前处于原路退款处理中，我会同步给人工客服跟进。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'REFUND_PROGRESS', 'AI_ENHANCED', '2026-05-12 08:32:09' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
+UNION ALL SELECT s.id, 'USER', '今天必须给我结果。', 'TEXT', NULL, NULL, NULL, NULL, 3, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 08:48:00' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
+UNION ALL SELECT s.id, 'ASSISTANT', '已升级为紧急退款工单，客服主管会优先核对退款通道状态。', 'TEXT', NULL, NULL, NULL, NULL, 4, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 08:48:10' FROM chat_session s WHERE s.session_no='OPSCS202605120003'
+UNION ALL SELECT s.id, 'USER', '手表表带有磨损，而且之前客服一直没人回。', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 11:45:00' FROM chat_session s WHERE s.session_no='OPSCS202605120004'
+UNION ALL SELECT s.id, 'ASSISTANT', '抱歉给您带来不好的体验。请补充表带近照和包装照，我会同步创建人工跟进。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 11:45:12' FROM chat_session s WHERE s.session_no='OPSCS202605120004'
+UNION ALL SELECT s.id, 'USER', '物流三天不动了，显示器会不会丢件？', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'LOGISTICS_QUERY', NULL, '2026-05-12 16:02:00' FROM chat_session s WHERE s.session_no='OPSCS202605120005'
+UNION ALL SELECT s.id, 'ASSISTANT', '物流超过 48 小时未更新，建议先由客服联系承运商核实，如疑似丢件可申请平台介入。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'LOGISTICS_QUERY', 'AI_ENHANCED', '2026-05-12 16:02:08' FROM chat_session s WHERE s.session_no='OPSCS202605120005'
+UNION ALL SELECT s.id, 'USER', '平板已经激活还能七天无理由退吗？', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'RULE_EXPLAIN', NULL, '2026-05-10 10:22:00' FROM chat_session s WHERE s.session_no='OPSCS202605120006'
+UNION ALL SELECT s.id, 'ASSISTANT', '已激活且影响二次销售的商品通常不支持无理由退货，但如果存在质量问题可以走检测维修。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'RULE_EXPLAIN', 'AI_ENHANCED', '2026-05-10 10:22:10' FROM chat_session s WHERE s.session_no='OPSCS202605120006'
+UNION ALL SELECT s.id, 'USER', '客服一直拖，我要投诉。', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'COMPLAINT_TRANSFER', NULL, '2026-05-12 14:42:00' FROM chat_session s WHERE s.session_no='OPSCS202605120007'
+UNION ALL SELECT s.id, 'ASSISTANT', '已识别为投诉转人工场景，并建议主管在 SLA 内处理。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'COMPLAINT_TRANSFER', 'AI_ENHANCED', '2026-05-12 14:42:07' FROM chat_session s WHERE s.session_no='OPSCS202605120007'
+UNION ALL SELECT s.id, 'USER', '投影仪已经寄回，物流单号是 SF123456789。', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'RETURN_APPLY', NULL, '2026-05-12 15:22:00' FROM chat_session s WHERE s.session_no='OPSCS202605120008'
+UNION ALL SELECT s.id, 'ASSISTANT', '已记录寄回物流单号，当前状态为等待商家确认收货，确认后会进入退款流程。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'RETURN_APPLY', 'AI_ENHANCED', '2026-05-12 15:22:08' FROM chat_session s WHERE s.session_no='OPSCS202605120008'
+UNION ALL SELECT s.id, 'USER', '蓝牙音箱低音一开就破音，我发了视频。', 'TEXT', NULL, NULL, NULL, NULL, 1, NULL, 'EXCHANGE_APPLY', NULL, '2026-05-12 16:42:00' FROM chat_session s WHERE s.session_no='OPSCS202605120009'
+UNION ALL SELECT s.id, 'ASSISTANT', '视频凭证已经命中换货规则，建议审核通过并安排同款换新。', 'TEXT', NULL, NULL, NULL, NULL, 2, NULL, 'EXCHANGE_APPLY', 'AI_ENHANCED', '2026-05-12 16:42:09' FROM chat_session s WHERE s.session_no='OPSCS202605120009';
 
 INSERT INTO intent_record(session_id, message_id, intent_code, intent_name, confidence, method, slots_json, created_at)
 SELECT s.id, m.id, m.intent_code,
@@ -231,6 +251,24 @@ where s.session_no like 'OPSCS%'
   and m.role='ASSISTANT'
   and m.source_type='AI_ENHANCED';
 
+INSERT INTO ai_call_log(session_id, message_id, provider, model_name, request_summary, response_summary, status, prompt_tokens, completion_tokens, latency_ms, error_message, created_at)
+SELECT s.id, m.id, 'local-fallback', 'rule-template',
+       '演示样例：模型未启用时仍按本地规则模板回复退款进度',
+       LEFT(m.content, 300), 'SKIPPED', 0, 0, 18, '模型链路跳过，本地规则兜底生成稳定回复。',
+       DATE_ADD(m.created_at, INTERVAL 2 SECOND)
+from chat_message m
+join chat_session s on m.session_id=s.id
+where s.session_no='OPSCS202605120002'
+  and m.seq_no=4
+UNION ALL SELECT s.id, m.id, 'openai-compatible', 'gpt-4o-mini',
+       '演示样例：投诉场景模型网关超时，系统记录失败并转人工工单',
+       LEFT(m.content, 300), 'FAILED', 620, 0, 3000, '模型网关超时，已切换为本地兜底话术并生成工单。',
+       DATE_ADD(m.created_at, INTERVAL 2 SECOND)
+from chat_message m
+join chat_session s on m.session_id=s.id
+where s.session_no='OPSCS202605120004'
+  and m.seq_no=2;
+
 INSERT INTO process_trace(session_id, message_id, step_name, step_status, detail_json, created_at)
 SELECT s.id, m.id, 'INTENT_RECOGNIZE', 'SUCCESS', JSON_OBJECT('intentCode', m.intent_code, 'confidence', 0.91), DATE_ADD(m.created_at, INTERVAL 1 SECOND)
 from chat_message m join chat_session s on m.session_id=s.id
@@ -247,6 +285,49 @@ UNION ALL
 SELECT s.id, m.id, 'BUSINESS_TOOL_CALLS', 'SUCCESS', JSON_OBJECT('orderBound', s.order_id is not null), DATE_ADD(m.created_at, INTERVAL 4 SECOND)
 from chat_message m join chat_session s on m.session_id=s.id
 where s.session_no like 'OPSCS%' and m.role='ASSISTANT';
+
+INSERT INTO process_trace(session_id, message_id, step_name, step_status, detail_json, created_at)
+SELECT s.id, m.id, 'CHAT_IMAGE_RISK_SCAN', 'SUCCESS',
+       JSON_OBJECT(
+         'title', '聊天图片风险预审',
+         'summary', '聊天图片存在明显 AI 生成水印和来源不清风险，建议要求用户补充原始实拍照片、故障视频和序列号照片。',
+         'auditStatus', 'RISKY',
+         'sufficiencyLevel', 'PARTIAL',
+         'authenticityRisk', 'HIGH',
+         'aiGeneratedRisk', 'HIGH',
+         'tamperRisk', 'MEDIUM',
+         'c2paStatus', 'NOT_FOUND',
+         'c2paProvider', NULL,
+         'c2paGenerator', NULL,
+         'visionStatus', 'SUCCESS',
+         'visionModel', 'gpt-4o-mini',
+         'imageRisk', JSON_OBJECT(
+           'auditStatus', 'RISKY',
+           'sufficiencyLevel', 'PARTIAL',
+           'authenticityRisk', 'HIGH',
+           'aiGeneratedRisk', 'HIGH',
+           'tamperRisk', 'MEDIUM',
+           'metadataSignal', 'C2PA 内容凭证检测：未发现可用内容凭证，不能据此证明图片来源；图片文件名和说明包含 AI 生成来源信号。',
+           'visualSignal', '视觉模型预审：画面右下角出现“豆包AI生成”水印，图片只能作为沟通材料，不能直接作为最终售后凭证。',
+           'watermarkSignal', '聊天图片可见“豆包AI生成”水印，按疑似 AIGC 来源处理。',
+           'c2paStatus', 'NOT_FOUND',
+           'c2paProvider', NULL,
+           'c2paGenerator', NULL,
+           'c2paSignal', '未发现 C2PA 内容凭证；缺失凭证不能证明图片真实或虚假，只能作为来源缺失信号。',
+           'visionStatus', 'SUCCESS',
+           'visionModel', 'gpt-4o-mini',
+           'visionSignal', '识别到 AI 平台水印和合成图风格，建议要求原始实拍材料。',
+           'requiredEvidence', '补充原始实拍照片、故障连续视频、商品序列号照片和包装配件照片；必要时人工复核。',
+           'requiredEvidenceList', JSON_ARRAY('补充原始实拍照片', '补充故障连续视频', '补充商品序列号照片', '补充包装配件照片'),
+           'summary', '聊天图片存在明显 AI 生成水印和来源不清风险，建议要求用户补充原始实拍材料并人工复核。'
+         )
+       ),
+       DATE_ADD(m.created_at, INTERVAL 1 SECOND)
+from chat_message m
+join chat_session s on m.session_id=s.id
+where s.session_no='OPSCS202605120001'
+  and m.message_type='IMAGE'
+  and m.file_url='/uploads/demo/ai-risk-evidence.png';
 
 INSERT INTO service_ticket(ticket_no, session_id, message_id, order_id, user_id, intent_code, priority, status, customer_issue, ai_summary, suggested_action, assigned_to, created_at, updated_at, resolved_at, deleted)
 SELECT 'OPSTK202605120001', s.id, NULL, s.order_id, s.user_id, 'EXCHANGE_APPLY', 'HIGH', 'PROCESSING', '耳机右耳断连，客户要求今天内给出换货结果。', 'AI 判断为高优先级换货诉求，证据待核验。', '核对视频凭证，若故障成立则创建换新单。', '陈磊（客服专员）', '2026-05-12 11:05:00', '2026-05-12 11:12:00', NULL, 0 FROM chat_session s WHERE s.session_no='OPSCS202605120001'
@@ -294,7 +375,7 @@ join user_account u on a.assigned_to=u.id
 where a.application_no like 'OPSASA%';
 
 INSERT INTO after_sale_evidence(application_id, evidence_type, file_url, content, uploaded_by, created_at)
-SELECT a.id, 'IMAGE', '/demo/evidence/ops-earphone-disconnect.jpg', '耳机断连视频截图，右耳连接状态反复断开。', a.user_id, '2026-05-11 20:18:00' from after_sale_application a where a.application_no='OPSASA202605120001'
+SELECT a.id, 'IMAGE', '/uploads/demo/ai-risk-evidence.png', '耳机断连凭证截图，图片右下角可见“豆包AI生成”水印，需要补充原始实拍和连续故障视频。', a.user_id, '2026-05-11 20:18:00' from after_sale_application a where a.application_no='OPSASA202605120001'
 UNION ALL SELECT a.id, 'IMAGE', '/demo/evidence/ops-air-fryer-scratch.jpg', '空气炸锅内胆掉漆照片，影响正常使用。', a.user_id, '2026-04-21 10:25:00' from after_sale_application a where a.application_no='OPSASA202605120002'
 UNION ALL SELECT a.id, 'VIDEO', '/demo/evidence/ops-keyboard-repeat.mp4', '键盘空格键连续触发的视频凭证。', a.user_id, '2026-05-02 10:48:00' from after_sale_application a where a.application_no='OPSASA202605120003'
 UNION ALL SELECT a.id, 'TEXT', NULL, '用户称表带有磨损，客服要求补充近照和包装照。', a.user_id, '2026-05-12 11:50:00' from after_sale_application a where a.application_no='OPSASA202605120004'
@@ -302,6 +383,119 @@ UNION ALL SELECT a.id, 'LOGISTICS_NO', NULL, 'YT7382916405', a.user_id, '2026-05
 UNION ALL SELECT a.id, 'IMAGE', '/demo/evidence/ops-missing-filter.jpg', '配件包实拍，缺少滤芯。', a.user_id, '2026-05-11 09:20:00' from after_sale_application a where a.application_no='OPSASA202605120006'
 UNION ALL SELECT a.id, 'TEXT', NULL, '学习平板已激活，包装缺少封签。', a.user_id, '2026-05-03 16:20:00' from after_sale_application a where a.application_no='OPSASA202605120007'
 UNION ALL SELECT a.id, 'VIDEO', '/demo/evidence/ops-speaker-noise.mp4', '蓝牙音箱低音破音视频，声音失真明显。', a.user_id, '2026-05-12 16:45:00' from after_sale_application a where a.application_no='OPSASA202605120011';
+
+INSERT INTO evidence_audit(audit_no, application_id, evidence_id, audit_status, sufficiency_level, authenticity_risk, ai_generated_risk, tamper_risk, metadata_signal, visual_signal, watermark_signal, required_evidence, audit_detail_json, ai_summary, ai_status, ai_error_message, created_at)
+SELECT 'OPSEAUD202605120001', a.id, e.id, 'RISKY', 'PARTIAL', 'HIGH', 'HIGH', 'MEDIUM',
+       'C2PA 内容凭证检测未发现可用来源凭证；文件名和凭证描述包含 AI 生成来源信号。',
+       '凭证能说明用户反馈的问题，但图片右下角存在明显“豆包AI生成”水印，不能直接作为最终审核依据。',
+       '可见“豆包AI生成”水印，按疑似 AIGC 来源处理。',
+       '补充原始实拍照片；补充连续故障视频；补充商品序列号照片；补充包装配件照片',
+       JSON_OBJECT('ruleVersion','demo-evidence-audit-v1','c2paStatus','NOT_FOUND','riskScore',88,'source','demo-usage-data'),
+       '系统识别到 AI 生成水印和来源不清风险，建议只作为沟通材料，要求用户补充原始实拍与故障视频后人工复核。',
+       'SKIPPED', '演示库预置审核结果，本地规则兜底生成。', '2026-05-12 11:14:00'
+from after_sale_application a
+join after_sale_evidence e on e.application_id=a.id
+where a.application_no='OPSASA202605120001'
+  and e.file_url='/uploads/demo/ai-risk-evidence.png'
+UNION ALL SELECT 'OPSEAUD202605120002', a.id, e.id, 'MANUAL_REVIEW', 'PARTIAL', 'MEDIUM', 'LOW', 'LOW',
+       '未发现明确元数据异常，但缺少近距离实拍角度。',
+       '表带磨损诉求与文字说明一致，仍需补充近照和包装照。',
+       '未发现明确水印或生成平台来源信号。',
+       '补充表带近照；补充包装照片；补充购买后首次发现问题的时间说明',
+       JSON_OBJECT('ruleVersion','demo-evidence-audit-v1','riskScore',45,'source','demo-usage-data'),
+       '该投诉类凭证建议进入人工复核，客服需结合表带近照、包装和等待时长一起处理。',
+       'SKIPPED', '演示库预置审核结果，本地规则兜底生成。', '2026-05-12 12:14:00'
+from after_sale_application a
+join after_sale_evidence e on e.application_id=a.id
+where a.application_no='OPSASA202605120004'
+  and e.evidence_type='TEXT'
+UNION ALL SELECT 'OPSEAUD202605120003', a.id, e.id, 'PASS', 'SUFFICIENT', 'LOW', 'LOW', 'LOW',
+       '凭证描述和文件类型完整，未发现明显元数据异常信号。',
+       '视频凭证与低音破音诉求一致，可作为换货审核的初步依据。',
+       '未发现明确水印或生成平台来源信号。',
+       '当前凭证基本充分，客服仍需结合订单规则复核。',
+       JSON_OBJECT('ruleVersion','demo-evidence-audit-v1','riskScore',12,'source','demo-usage-data'),
+       '当前凭证较充分，暂未发现明显 AI 生成或篡改风险信号，可进入标准换货审核。',
+       'SKIPPED', '演示库预置审核结果，本地规则兜底生成。', '2026-05-12 16:48:00'
+from after_sale_application a
+join after_sale_evidence e on e.application_id=a.id
+where a.application_no='OPSASA202605120011'
+  and e.evidence_type='VIDEO';
+
+INSERT INTO after_sale_risk_assessment(assessment_no, application_id, risk_level, risk_score, risk_tags, risk_reasons, suggested_action, rule_detail_json, ai_summary, ai_status, ai_error_message, created_at, updated_at)
+SELECT 'OPSRISK202605120001', a.id, 'HIGH', 82, '疑似 AI 凭证，证据不足，SLA 临近，商品集中问题',
+       '凭证图片存在 AI 生成水印；用户期望当天处理；同类耳机断连诉求集中出现；距离 SLA 截止较近',
+       '建议资深客服人工复核，先要求原始实拍和连续故障视频，不直接退款或驳回。',
+       JSON_OBJECT('ruleVersion','after-sale-risk-v1','refundAmount',329.00,'evidenceAuditCount',1,'topProductIssueAlert','OPSPIA202605120001','source','demo-usage-data'),
+       '系统评估为高风险：图片来源存疑、证据不足且用户要求快速处理，应由客服人工复核后再推进换货。',
+       'SKIPPED', '演示库预置风险评估，本地规则兜底生成。', '2026-05-12 11:16:00', '2026-05-12 11:16:00'
+from after_sale_application a where a.application_no='OPSASA202605120001'
+UNION ALL SELECT 'OPSRISK202605120002', a.id, 'HIGH', 76, '投诉风险，证据不足，SLA 已超时，低满意度历史',
+       '当前为投诉类售后；处于待补材料状态；SLA 截止时间已过；需要主管优先跟进',
+       '建议主管先安抚并承诺处理时限，同时要求用户补充表带近照和包装照。',
+       JSON_OBJECT('ruleVersion','after-sale-risk-v1','refundAmount',459.00,'status','NEED_MORE_EVIDENCE','source','demo-usage-data'),
+       '系统评估为高风险：投诉、补证不足和 SLA 超时叠加，建议主管优先人工处理。',
+       'SKIPPED', '演示库预置风险评估，本地规则兜底生成。', '2026-05-12 12:20:00', '2026-05-12 12:20:00'
+from after_sale_application a where a.application_no='OPSASA202605120004'
+UNION ALL SELECT 'OPSRISK202605120003', a.id, 'MEDIUM', 48, '高金额，SLA 临近，大额退货',
+       '投影仪退货金额较高；等待仓库确认收货；需要避免退款确认超时',
+       '建议催促仓库扫描退回包裹，确认收货后再触发退款。',
+       JSON_OBJECT('ruleVersion','after-sale-risk-v1','refundAmount',699.00,'status','WAIT_SELLER_RECEIVE','source','demo-usage-data'),
+       '系统评估为中风险：金额较高且处于仓库确认节点，需要跟进但不应跳过收货确认。',
+       'SKIPPED', '演示库预置风险评估，本地规则兜底生成。', '2026-05-12 16:12:00', '2026-05-12 16:12:00'
+from after_sale_application a where a.application_no='OPSASA202605120010';
+
+UPDATE after_sale_application a
+JOIN after_sale_risk_assessment r ON r.application_id=a.id
+SET a.risk_level=r.risk_level
+WHERE a.application_no IN ('OPSASA202605120001','OPSASA202605120004','OPSASA202605120010');
+
+INSERT INTO product_issue_alert(alert_no, product_name, issue_keyword, issue_count, application_count, ticket_count, low_rating_count, refund_amount, time_window_days, alert_level, trend_score, sample_application_ids, sample_reasons, suggested_action, status, created_at, updated_at)
+SELECT 'OPSPIA202605120001', '无线蓝牙耳机 Pro', '断连', 5, 1, 1, 0, 329.00, 7, 'HIGH', 88,
+       CAST(a.id AS CHAR),
+       '耳机右耳偶发断连；聊天图片凭证存在“豆包AI生成”水印；客户要求当天处理，需人工复核',
+       '近期同款耳机集中出现断连反馈，建议运营检查批次和质检记录，客服侧暂停直接通过可疑凭证，要求补充原始实拍和连续故障视频。',
+       'OPEN', '2026-05-12 11:18:00', '2026-05-12 11:18:00'
+from after_sale_application a
+join demo_order o on a.order_id=o.id
+where a.application_no='OPSASA202605120001'
+UNION ALL SELECT 'OPSPIA202605120002', '机械键盘', '连击', 3, 1, 1, 0, 299.00, 7, 'MEDIUM', 58,
+       CAST(a.id AS CHAR),
+       '空格键连续触发；退款催促；建议抽查同批次轴体和售后检测视频',
+       '建议客服补充键盘按键检测话术，运营抽查同批次青轴键盘的出库质检记录。',
+       'OPEN', '2026-05-12 09:12:00', '2026-05-12 09:12:00'
+from after_sale_application a
+where a.application_no='OPSASA202605120003'
+UNION ALL SELECT 'OPSPIA202605120003', '蓝牙音箱', '破音', 2, 1, 0, 0, 199.00, 7, 'MEDIUM', 46,
+       CAST(a.id AS CHAR),
+       '低音破音视频较充分；同类音频质量问题需要继续观察',
+       '建议运营继续观察音箱低音破音反馈，客服审核通过后同步记录故障频次。',
+       'WATCHING', '2026-05-12 17:08:00', '2026-05-12 17:08:00'
+from after_sale_application a
+where a.application_no='OPSASA202605120011';
+
+INSERT INTO after_sale_process_log(application_id, operator_id, operator_name, operator_role, action, from_status, to_status, remark, created_at)
+SELECT a.id, a.assigned_to, u.display_name, 'ADMIN', 'EVIDENCE_AUDIT', a.status, a.status,
+       CONCAT('凭证审计 ', ea.audit_no, '：', ea.audit_status, '，AI生成风险 ', ea.ai_generated_risk, '，建议 ', ea.required_evidence),
+       ea.created_at
+from evidence_audit ea
+join after_sale_application a on ea.application_id=a.id
+left join user_account u on a.assigned_to=u.id
+where ea.audit_no like 'OPSEAUD%'
+UNION ALL SELECT a.id, a.assigned_to, u.display_name, 'ADMIN', 'RISK_ASSESSMENT', a.status, a.status,
+       CONCAT('售后风险评估 ', r.assessment_no, '：', r.risk_level, ' / ', r.risk_score, ' 分；', r.risk_tags),
+       r.created_at
+from after_sale_risk_assessment r
+join after_sale_application a on r.application_id=a.id
+left join user_account u on a.assigned_to=u.id
+where r.assessment_no like 'OPSRISK%'
+UNION ALL SELECT a.id, a.assigned_to, u.display_name, 'ADMIN', 'PRODUCT_ISSUE_ALERT', a.status, a.status,
+       CONCAT('商品质量预警 ', p.alert_no, '：', p.product_name, ' / ', p.issue_keyword, '，等级 ', p.alert_level, '，趋势分 ', p.trend_score),
+       p.created_at
+from product_issue_alert p
+join after_sale_application a on find_in_set(CAST(a.id AS CHAR), p.sample_application_ids)
+left join user_account u on a.assigned_to=u.id
+where p.alert_no like 'OPSPIA%';
 
 INSERT INTO reply_draft(application_id, ticket_id, draft_content, source_type, status, risk_level, knowledge_refs, ai_status, ai_provider, ai_model_name, audit_remark, created_by, used_at, created_at, updated_at)
 SELECT a.id, a.ticket_id, '您好，已收到您关于耳机右耳断连的反馈。请您保留商品与包装，并上传断连视频，我们将在今天内完成审核；若故障属实，将优先为您安排同款换新。', 'AI', 'DRAFT', 'MEDIUM', '换货处理规则;质量问题凭证要求', 'SUCCESS', 'openai-compatible', 'gpt-4o-mini', '待客服核验凭证后发送', a.assigned_to, NULL, '2026-05-12 11:10:00', '2026-05-12 11:10:00'
@@ -311,7 +505,34 @@ from after_sale_application a where a.application_no='OPSASA202605120003'
 UNION ALL SELECT a.id, a.ticket_id, '您好，关于表带磨损和等待时间的问题我们已升级人工处理。请补充表带近照和包装照，我们会在 SLA 时限内完成复核。', 'TEMPLATE', 'USED', 'HIGH', '投诉转人工规则;补充凭证模板', 'SKIPPED', 'local-fallback', 'local-rule-template', '本地兜底模板已采用', a.assigned_to, '2026-05-12 12:16:00', '2026-05-12 12:12:00', '2026-05-12 12:16:00'
 from after_sale_application a where a.application_no='OPSASA202605120004'
 UNION ALL SELECT a.id, a.ticket_id, '您好，您寄回的投影仪包裹已经进入仓库确认队列，我们会催促仓库优先扫描，确认后立即为您推进退款。', 'AI', 'DRAFT', 'MEDIUM', '退货寄回确认;大额订单优先处理', 'SUCCESS', 'openai-compatible', 'gpt-4o-mini', '待仓库确认后发送', a.assigned_to, NULL, '2026-05-12 16:00:00', '2026-05-12 16:00:00'
-from after_sale_application a where a.application_no='OPSASA202605120010';
+from after_sale_application a where a.application_no='OPSASA202605120010'
+UNION ALL SELECT a.id, a.ticket_id, '您好，图片已足以证明耳机存在问题，我们可以直接为您退款。', 'AI', 'DISCARDED', 'HIGH', '换货处理规则;凭证真实性审核', 'SUCCESS', 'openai-compatible', 'gpt-4o-mini', '客服废弃：忽略了 AI 生成水印和补证要求，不能直接发送给客户。', a.assigned_to, NULL, '2026-05-12 11:22:00', '2026-05-12 11:26:00'
+from after_sale_application a where a.application_no='OPSASA202605120001';
+
+INSERT INTO after_sale_process_log(application_id, operator_id, operator_name, operator_role, action, from_status, to_status, remark, created_at)
+SELECT a.id, d.created_by, u.display_name, 'AI', 'GENERATE_REPLY_DRAFT', a.status, a.status,
+       CONCAT('生成回复草稿：', LEFT(d.draft_content, 120)),
+       d.created_at
+from reply_draft d
+join after_sale_application a on d.application_id=a.id
+left join user_account u on d.created_by=u.id
+where a.application_no like 'OPSASA%'
+UNION ALL SELECT a.id, d.created_by, u.display_name, 'ADMIN', 'USE_REPLY_DRAFT', a.status, a.status,
+       CONCAT('采纳回复草稿：', coalesce(d.audit_remark, '客服确认后发送')),
+       d.used_at
+from reply_draft d
+join after_sale_application a on d.application_id=a.id
+left join user_account u on d.created_by=u.id
+where a.application_no like 'OPSASA%'
+  and d.status='USED'
+UNION ALL SELECT a.id, d.created_by, u.display_name, 'ADMIN', 'DISCARD_REPLY_DRAFT', a.status, a.status,
+       CONCAT('废弃回复草稿：', coalesce(d.audit_remark, '客服确认不采用')),
+       d.updated_at
+from reply_draft d
+join after_sale_application a on d.application_id=a.id
+left join user_account u on d.created_by=u.id
+where a.application_no like 'OPSASA%'
+  and d.status='DISCARDED';
 
 INSERT INTO service_review(application_id, user_id, rating, tags, comment, created_at)
 SELECT a.id, a.user_id, 5, '响应及时,退款清晰', '客服说明很清楚，退款也按时到账。', '2026-05-09 17:20:00' from after_sale_application a where a.application_no='OPSASA202605120002'
