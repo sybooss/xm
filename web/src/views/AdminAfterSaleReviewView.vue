@@ -120,7 +120,7 @@
                 <strong>{{ evidence.content }}</strong>
                 <el-button size="small" type="primary" :loading="auditingEvidenceId === evidence.id" @click="auditEvidence(evidence)">重新审核</el-button>
               </div>
-              <div v-if="evidence.fileUrl" class="image-preview-box">
+              <div v-if="isImageEvidence(evidence)" class="image-preview-box">
                 <strong>图片凭证预览</strong>
                 <img class="evidence-preview" :src="evidenceImageUrl(evidence.fileUrl)" alt="图片凭证预览" />
               </div>
@@ -216,7 +216,7 @@
                 <span>{{ evidence.createdAt }}</span>
               </div>
               <p>{{ evidence.content }}</p>
-              <div v-if="evidence.fileUrl" class="image-preview-box">
+              <div v-if="isImageEvidence(evidence)" class="image-preview-box">
                 <strong>图片凭证预览</strong>
                 <img class="evidence-preview" :src="evidenceImageUrl(evidence.fileUrl)" alt="图片凭证预览" />
               </div>
@@ -528,6 +528,17 @@ function evidenceImageUrl(fileUrl) {
     return `${apiBase}${fileUrl}`
   }
   return fileUrl
+}
+
+function isImageEvidence(evidence) {
+  const fileUrl = evidence?.fileUrl || ''
+  if (!fileUrl) {
+    return false
+  }
+  if (evidence?.evidenceType === 'IMAGE') {
+    return true
+  }
+  return /\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(fileUrl)
 }
 
 onMounted(() => {

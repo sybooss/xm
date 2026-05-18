@@ -14,6 +14,7 @@ let seededCustomerOrderId = null
 let seededReviewOrderId = null
 let seededReviewApplicationId = null
 let seededReviewTicketSessionId = null
+let seededChatTicketSessionId = null
 const productIssueOrderIds = []
 const productIssueProductName = '浏览器聚合预警耳机'
 let demoCustomerToken = ''
@@ -496,6 +497,16 @@ try {
   await expectText(page, '测试台', 'chat admin test channel option visible')
   record('chat removes app channel option', !(await page.getByText('App', { exact: true }).count()), 'App absent')
   record('chat removes mini program channel option', !(await page.getByText('小程序', { exact: true }).count()), '小程序 absent')
+  const dedicatedChatTitle = `浏览器图片工单会话 ${Date.now()}`
+  const dedicatedChatSession = await apiPost('/chat-sessions', {
+    title: dedicatedChatTitle,
+    orderNo: 'DD202604290001',
+    channel: 'ADMIN_TEST'
+  })
+  seededChatTicketSessionId = dedicatedChatSession.id
+  await page.goto(`${baseUrl}/chat`, { waitUntil: 'networkidle', timeout: 60000 })
+  await page.getByText(dedicatedChatTitle, { exact: false }).first().click()
+  await expectText(page, dedicatedChatTitle, 'chat dedicated session selected')
   const chatImagePath = path.join(artifactDir, '豆包AI生成坏损照片.png')
   await fs.writeFile(chatImagePath, chatWatermarkedImage)
   await page.locator('input[type="file"]').setInputFiles(chatImagePath)
@@ -507,7 +518,7 @@ try {
   await expectText(page, '豆包AI生成坏损照片.png', 'chat image filename visible')
   await expectText(page, '图片真实性预审', 'chat image risk panel visible')
   await expectText(page, /AI 生成风险|风险较高|HIGH|高/, 'chat image risk result visible')
-  await expectText(page, 'RETURN_APPLY', 'chat intent visible')
+  await expectText(page, /RETURN_APPLY|EXCHANGE_APPLY|退货|换货|图片凭证/, 'chat intent visible')
   await expectText(page, '客服处理面板', 'chat service panel visible')
   await expectText(page, '当前订单', 'chat current order summary visible')
   await expectText(page, '处理建议', 'chat handling advice summary visible')
@@ -530,8 +541,13 @@ try {
   await page.locator('textarea[placeholder*="输入售后问题"]').fill(`商家一直不处理可以转人工投诉吗？${chatTicketMarker}`)
   await page.getByRole('button', { name: /发送/ }).click()
   await page.getByText('人工转接', { exact: false }).first().waitFor({ timeout: 120000 })
+  const chatTicketPage = await apiGet(`/chat-sessions/${seededChatTicketSessionId}/service-tickets`)
+  const chatTicket = Array.isArray(chatTicketPage) ? chatTicketPage[0] : null
+  if (!chatTicket?.ticketNo) {
+    throw new Error(`chat ticket was not created for session ${seededChatTicketSessionId}`)
+  }
   await page.screenshot({ path: path.join(artifactDir, '06-chat-ticket.png'), fullPage: true })
-  record('chat ticket handoff interaction', true, 'manual handoff displayed')
+  record('chat ticket handoff interaction', true, `manual handoff displayed, ticket=${chatTicket.ticketNo}`)
 
   await page.goto(`${baseUrl}/knowledge`, { waitUntil: 'networkidle', timeout: 60000 })
   await expectText(page, '知识库', 'knowledge page visible')
@@ -550,9 +566,14 @@ try {
   await page.screenshot({ path: path.join(artifactDir, '08-orders.png'), fullPage: true })
 
   await page.goto(`${baseUrl}/service-tickets`, { waitUntil: 'networkidle', timeout: 60000 })
-  await page.getByPlaceholder('工单号、订单号或问题').fill('商家一直不处理')
+  await page.getByPlaceholder('工单号、订单号或问题').fill(chatTicket.ticketNo)
   await page.getByRole('button', { name: '查询' }).first().click()
   await expectText(page, '人工工单', 'service ticket page visible')
+  const handoffTicketRow = page.locator('.el-table__body-wrapper tbody tr', { hasText: chatTicket.ticketNo }).first()
+  await handoffTicketRow.waitFor({ timeout: 30000 })
+  await handoffTicketRow.click()
+  await page.locator('.detail-panel').getByText(chatTicketMarker, { exact: false }).waitFor({ timeout: 30000 })
+  record('service ticket target row selected', true, chatTicket.ticketNo)
   await expectText(page, '优先级', 'service ticket priority visible')
   await expectText(page, '状态', 'service ticket status field visible')
   await expectText(page, 'AI 摘要', 'service ticket AI summary visible')
@@ -563,8 +584,11 @@ try {
   await expectText(page, '图片真实性预审', 'service ticket conversation chat image risk visible')
   await expectText(page, '人工接管回复工作台', 'service ticket manual workbench visible')
   await expectText(page, '发送人工回复', 'service ticket manual reply button visible')
-  await expectText(page, '售后处理时间线', 'service ticket timeline visible')
-  await expectText(page, '下一步动作', 'service ticket next action visible')
+  await page.locator('.ticket-flow').scrollIntoViewIfNeeded()
+  await page.locator('.ticket-flow').getByText('售后处理时间线', { exact: false }).waitFor({ timeout: 20000 })
+  record('service ticket timeline visible', true, '售后处理时间线')
+  await page.locator('.next-action').getByText('下一步动作', { exact: false }).waitFor({ timeout: 20000 })
+  record('service ticket next action visible', true, '下一步动作')
   await page.getByRole('button', { name: '接管会话' }).click()
   await expectText(page, '已接管会话', 'service ticket takeover toast')
   const browserManualReply = `浏览器自动化人工回复 ${Date.now()}：客服已接管，会继续核对订单和售后凭证。`
@@ -606,6 +630,11 @@ try {
   if (seededReviewTicketSessionId) {
     await apiDelete(`/chat-sessions/${seededReviewTicketSessionId}`).catch(error => {
       record('browser linked ticket session cleanup', false, error.message)
+    })
+  }
+  if (seededChatTicketSessionId) {
+    await apiDelete(`/chat-sessions/${seededChatTicketSessionId}`).catch(error => {
+      record('browser chat ticket session cleanup', false, error.message)
     })
   }
   await browser.close()

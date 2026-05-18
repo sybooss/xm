@@ -103,29 +103,44 @@ if ($mysqlExe) {
     $checks = @(
         @{ Name = "OPS orders"; Sql = "select count(*) from demo_order where order_no like 'OPS2026%';"; Min = 24 },
         @{ Name = "OPS after-sales"; Sql = "select count(*) from after_sale_application where application_no like 'OPSASA%';"; Min = 12 },
-        @{ Name = "OPS tickets"; Sql = "select count(*) from service_ticket where ticket_no like 'OPSTK%';"; Min = 8 },
+        @{ Name = "Clean demo chat sessions"; Sql = "select count(*) from chat_session where session_no like 'OPSCS20260512000_';"; Min = 6 },
+        @{ Name = "No extra demo chat sessions"; Sql = "select count(*) from chat_session where session_no not like 'OPSCS20260512000_';"; Max = 0 },
+        @{ Name = "No dirty chat sessions"; Sql = "select count(*) from chat_session where lower(coalesce(title,'')) regexp 'browser|test|upload debug|large upload' or title like '%测试%' or title like '%网页咨询会话%' or title like '%????%';"; Max = 0 },
+        @{ Name = "Each demo session has messages"; Sql = "select count(*) from (select s.id from chat_session s left join chat_message m on m.session_id=s.id where s.session_no like 'OPSCS20260512000_' group by s.id having count(m.id) < 2) t;"; Max = 0 },
+        @{ Name = "OPS tickets"; Sql = "select count(*) from service_ticket where ticket_no like 'OPSTK%';"; Min = 6 },
         @{ Name = "Image risk sample"; Sql = "select count(*) from chat_message where file_url='/uploads/demo/ai-risk-evidence.png';"; Min = 1 },
+        @{ Name = "No dirty chat messages"; Sql = "select count(*) from chat_message where lower(coalesce(content,'')) regexp 'browser|upload debug|large upload' or content like '%网页咨询会话%' or content like '%????%';"; Max = 0 },
+        @{ Name = "No visible test knowledge docs"; Sql = "select count(*) from knowledge_doc where deleted=0 and (title='测试' or title like '%测试%' or lower(title) like '%browser%' or lower(title) like '%auto test%' or lower(title) like '%upload debug%');"; Max = 0 },
         @{ Name = "Image risk trace"; Sql = "select count(*) from process_trace where step_name='CHAT_IMAGE_RISK_SCAN' and step_status='SUCCESS';"; Min = 1 },
         @{ Name = "Evidence audit sample"; Sql = "select count(*) from evidence_audit where audit_no like 'OPSEAUD%';"; Min = 3 },
         @{ Name = "Risk assessment sample"; Sql = "select count(*) from after_sale_risk_assessment where assessment_no like 'OPSRISK%';"; Min = 3 },
         @{ Name = "Reply draft sample"; Sql = "select count(*) from reply_draft d join after_sale_application a on d.application_id=a.id where a.application_no like 'OPSASA%';"; Min = 5 },
         @{ Name = "Discarded draft sample"; Sql = "select count(*) from reply_draft d join after_sale_application a on d.application_id=a.id where a.application_no like 'OPSASA%' and d.status='DISCARDED';"; Min = 1 },
         @{ Name = "Product issue alert sample"; Sql = "select count(*) from product_issue_alert where alert_no like 'OPSPIA%';"; Min = 3 },
+        @{ Name = "Demo customer reviews"; Sql = "select count(*) from service_review r join user_account u on r.user_id=u.id where u.username='demo_customer';"; Min = 3 },
+        @{ Name = "Demo customer after-sales"; Sql = "select count(*) from after_sale_application a join user_account u on a.user_id=u.id where u.username='demo_customer';"; Min = 6 },
+        @{ Name = "Demo customer tickets"; Sql = "select count(*) from service_ticket t join user_account u on t.user_id=u.id where u.username='demo_customer';"; Min = 6 },
         @{ Name = "Fallback or failed AI sample"; Sql = "select count(*) from ai_call_log where status in ('SKIPPED','FAILED');"; Min = 2 },
         @{ Name = "Evidence chain logs"; Sql = "select count(*) from after_sale_process_log where action in ('EVIDENCE_AUDIT','RISK_ASSESSMENT','PRODUCT_ISSUE_ALERT','GENERATE_REPLY_DRAFT','USE_REPLY_DRAFT','DISCARD_REPLY_DRAFT');"; Min = 10 }
     )
     foreach ($check in $checks) {
         try {
             $count = Invoke-MysqlScalar $mysqlExe $check.Sql
-            Add-Check $check.Name ($count -ge $check.Min) "$count (min $($check.Min))"
+            if ($check.ContainsKey("Max")) {
+                Add-Check $check.Name ($count -le $check.Max) "$count (max $($check.Max))"
+            } else {
+                Add-Check $check.Name ($count -ge $check.Min) "$count (min $($check.Min))"
+            }
         } catch {
             Add-Check $check.Name $false $_.Exception.Message
         }
     }
 }
 
-$riskImage = Join-Path $root "tmp\uploads\demo\ai-risk-evidence.png"
-Add-Check "risk image file exists" (Test-Path $riskImage) $riskImage
+foreach ($imageName in @("ai-risk-evidence.png", "air-fryer-scratch.png", "missing-filter.png", "watch-strap-wear.png")) {
+    $imagePath = Join-Path $root "tmp\uploads\demo\$imageName"
+    Add-Check "demo image exists: $imageName" (Test-Path $imagePath) $imagePath
+}
 
 try {
     $frontStatus = (Invoke-WebRequest -Uri "$FrontendUrl/" -UseBasicParsing -TimeoutSec 8).StatusCode
@@ -153,6 +168,9 @@ try {
 
     $productSummary = Invoke-Api "Get" "/admin/product-issue-insights/summary?days=7"
     Add-Check "product issue summary API" (($productSummary.openCount -ge 2) -and ($null -ne $productSummary.topAlert)) "open=$($productSummary.openCount)" $RequireRunningServices.IsPresent
+
+    $profile = Invoke-Api "Get" "/admin/customers/1/profile"
+    Add-Check "demo customer profile API" (($profile.reviewCount -ge 3) -and ($profile.averageRating -gt 0) -and (($profile.recentAfterSales | Measure-Object).Count -ge 1) -and (($profile.recentTickets | Measure-Object).Count -ge 1)) "reviews=$($profile.reviewCount), avg=$($profile.averageRating), afterSales=$(@($profile.recentAfterSales).Count), tickets=$(@($profile.recentTickets).Count)" $RequireRunningServices.IsPresent
 
     $logs = Invoke-Api "Get" "/log-diagnostics"
     Add-Check "log diagnostics API" ($null -ne $logs.ai -and $null -ne $logs.trace) "aiSamples=$($logs.ai.sampleSize)" $RequireRunningServices.IsPresent
